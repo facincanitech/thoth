@@ -376,7 +376,7 @@ function App() {
 
   useEffect(() => {
     if (selected) localStorage.setItem('flux-last-conversation', selected.id)
-    else localStorage.removeItem('flux-last-conversation')
+    else if (restoredSelectedRef.current) localStorage.removeItem('flux-last-conversation')
   }, [selected?.id])
 
   useEffect(() => {

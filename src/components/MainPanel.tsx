@@ -403,6 +403,11 @@ export function MainPanel({ me, conversation, onBack, onConversationUpdate, bloc
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const requestedInlineRef = useRef<Set<string>>(new Set())
   const attachMenuRef = useRef<HTMLDivElement>(null)
+  const composerTextareaRef = useRef<HTMLTextAreaElement>(null)
+
+  useEffect(() => {
+    return () => { composerTextareaRef.current?.blur() }
+  }, [])
   const attachBtnRef = useRef<HTMLButtonElement>(null)
   const emojiMenuRef = useRef<HTMLDivElement>(null)
   const emojiBtnRef = useRef<HTMLButtonElement>(null)
@@ -2696,6 +2701,7 @@ export function MainPanel({ me, conversation, onBack, onConversationUpdate, bloc
         <div className="composer-input-row">
           <div className="input">
             <textarea
+              ref={composerTextareaRef}
               value={draft}
               onChange={handleChange}
               onKeyDown={handleKeyDown}
