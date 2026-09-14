@@ -234,14 +234,14 @@ export function MainPanel({ me, conversation, onBack, onConversationUpdate, bloc
     setStickerManagerView('form')
   }
 
-  const MAX_STICKER_IMAGE_BYTES = 300 * 1024
+  const MAX_STICKER_IMAGE_BYTES = 500 * 1024
 
   async function pickStickerImage(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     e.target.value = ''
     if (!file) return
     if (file.size > MAX_STICKER_IMAGE_BYTES) {
-      setNewStickerError('Imagem muito grande, escolhe uma menor (até 300KB)')
+      setNewStickerError('Imagem muito grande, escolhe uma menor (até 500KB)')
       return
     }
     setNewStickerError(null)
@@ -939,7 +939,7 @@ export function MainPanel({ me, conversation, onBack, onConversationUpdate, bloc
     }
   }
 
-  const MAX_WINK_IMAGE_BYTES = 300 * 1024
+  const MAX_WINK_IMAGE_BYTES = 500 * 1024
   const MAX_WINK_SOUND_BYTES = 150 * 1024
 
   async function pickWinkImage(e: React.ChangeEvent<HTMLInputElement>) {
@@ -947,7 +947,7 @@ export function MainPanel({ me, conversation, onBack, onConversationUpdate, bloc
     e.target.value = ''
     if (!file) return
     if (file.size > MAX_WINK_IMAGE_BYTES) {
-      setNewWinkError('Imagem muito grande, escolhe uma menor (até 300KB, tipo figurinha)')
+      setNewWinkError('Imagem muito grande, escolhe uma menor (até 500KB, tipo figurinha)')
       return
     }
     setNewWinkError(null)
