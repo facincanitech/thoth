@@ -294,16 +294,17 @@ export function MainPanel({ me, conversation, onBack, onConversationUpdate, bloc
 
   async function sendGif(gif: GifResult) {
     if (!me || !conversation) return
-    setShowWinks(false)
     try {
       const { error } = await supabase
         .from('messages')
         .insert({ conversation_id: conversation.id, author_id: me.id, content: gif.url, kind: 'gif' })
       if (error) throw error
+      setShowWinks(false)
       const recipientIds = Object.keys(members).filter((id) => id !== me.id)
       sendPush(recipientIds, displayName(me), 'mandou um gif', conversation.id)
     } catch (err) {
       console.error('sendGif failed', err)
+      setGifError('Não consegui mandar esse gif. Tenta outro.')
     }
   }
 

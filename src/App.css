@@ -939,9 +939,9 @@ body{
 .wink-picker-tabs button.active{background:var(--btn-custom,var(--accent-dim-bg));color:var(--on-button,var(--accent-text))}
 .wink-picker-grid{display:flex;flex-wrap:wrap;gap:6px;max-height:340px;overflow-y:auto}
 .wink-picker-grid button{font-size:1.5rem;background:none;border:0;cursor:pointer;padding:4px;border-radius:6px}
-.wink-picker-custom{padding:0;width:32px;height:32px;overflow:hidden;border-radius:6px}
+.wink-picker-custom{padding:0;width:56px;height:56px;overflow:hidden;border-radius:8px}
 .wink-picker-custom img{width:100%;height:100%;object-fit:cover;display:block}
-.wink-picker-add{opacity:.7}
+.wink-picker-add{opacity:.7;width:56px;height:56px;display:grid;place-items:center}
 .gif-picker{display:flex;flex-direction:column;gap:6px;width:300px;max-width:100%}
 .gif-picker input[type="text"]{
   width:100%;background:var(--bg-deep);border:1px solid var(--line-2);border-radius:8px;
