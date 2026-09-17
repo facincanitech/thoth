@@ -9,10 +9,10 @@ const tauriChatId = isTauriDesktop ? new URLSearchParams(window.location.search)
 
 async function boot() {
   // ThothChat Messenger (versao desktop) tem visual proprio e fixo, sem sistema
-  // de tema - o CSS dele fica isolado em thothchat-messenger/msn.css, carregado
+  // de tema - o CSS dele fica isolado em thothchat-messenger/thothmessenger.css, carregado
   // so quando o app roda dentro do Tauri. Nunca usa data-theme nem Frutiger/Retro.
   if (isTauriDesktop) {
-    await import('../thothchat-messenger/msn.css')
+    await import('../thothchat-messenger/thothmessenger.css')
   }
 
   createRoot(document.getElementById('root')!).render(

@@ -42,7 +42,7 @@ function App() {
 
   useEffect(() => {
     // ThothChat Messenger (desktop/Tauri) tem visual proprio e fixo, sem sistema de
-    // tema - o CSS dele (thothchat-messenger/msn.css) e carregado em main.tsx antes
+    // tema - o CSS dele (thothchat-messenger/thothmessenger.css) e carregado em main.tsx antes
     // do app montar e nao depende de data-theme nenhum. Nao mexe nisso aqui.
     if (isTauriDesktop) return
     if (theme === 'dark') delete document.documentElement.dataset.theme
