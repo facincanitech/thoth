@@ -236,7 +236,7 @@ type OutgoingRequest = {
 }
 
 type BlockedUser = { id: string; username: string; email: string }
-type Friend = { id: string; username: string; display_name: string | null; avatar_url: string | null }
+type Friend = { id: string; username: string; display_name: string | null; avatar_url: string | null; name_style_color: string | null }
 
 export function ChatList({
   me,
@@ -663,7 +663,7 @@ export function ChatList({
     const { data } = await supabase
       .from('friend_requests')
       .select(
-        'from_id, to_id, from_profile:profiles!friend_requests_from_id_fkey(id, username, display_name, avatar_url), to_profile:profiles!friend_requests_to_id_fkey(id, username, display_name, avatar_url)',
+        'from_id, to_id, from_profile:profiles!friend_requests_from_id_fkey(id, username, display_name, avatar_url, name_style_color), to_profile:profiles!friend_requests_to_id_fkey(id, username, display_name, avatar_url, name_style_color)',
       )
       .eq('status', 'accepted')
       .or(`from_id.eq.${me.id},to_id.eq.${me.id}`)
@@ -1701,6 +1701,13 @@ export function ChatList({
                       <IconHeart size={17} />
                       <span>Comunidades em alta</span>
                     </button>
+                    <button
+                      type="button"
+                      onClick={() => { setQuickMenuOpen(false); window.open('./desktop-msn/index.html', '_blank') }}
+                    >
+                      <IconGroup size={17} />
+                      <span>Teste: desktop MSN</span>
+                    </button>
                   </div>
                 </>
               )}
@@ -1811,7 +1818,7 @@ export function ChatList({
                   onClick={() => selectConversation(c)}
                   onContextMenu={(e) => handleContextMenu(e, c)}
                 >
-                  <div className="photo">
+                  <div className="photo" style={{ borderColor: c.nameStyleColor || 'transparent' }}>
                     {c.avatarUrl ? <img src={c.avatarUrl} alt="" /> : c.label[0]?.toUpperCase()}
                   </div>
                   <div className="chat-info">
@@ -1903,7 +1910,7 @@ export function ChatList({
                       <IconGrip size={14} />
                     </span>
                   )}
-                  <div className="photo">
+                  <div className="photo" style={{ borderColor: c.nameStyleColor || 'transparent' }}>
                     {c.avatarUrl ? <img src={c.avatarUrl} alt="" /> : c.label[0]?.toUpperCase()}
                   </div>
                   <div className="chat-info">
@@ -2021,7 +2028,7 @@ export function ChatList({
               {friends.length === 0 && <span className="invite-code">você ainda não tem amigos</span>}
               {friends.map((f) => (
                 <div key={f.id} className="friend-request-row">
-                  <div className="photo" style={{ width: 40, height: 40, overflow: 'hidden' }}>
+                  <div className="photo" style={{ width: 40, height: 40, overflow: 'hidden', borderColor: f.name_style_color || 'transparent' }}>
                     {f.avatar_url ? <img src={f.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : f.username[0]?.toUpperCase()}
                   </div>
                   <div className="friend-request-info">

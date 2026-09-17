@@ -2022,7 +2022,11 @@ export function MainPanel({ me, conversation, onBack, onConversationUpdate, bloc
         >
           <div
             className="header-photo"
-            style={{ overflow: 'hidden', ...(!otherMember && !(conversation.image_url && !groupImageFailed) ? { background: colorFromId(conversation.id), color: '#fff' } : {}) }}
+            style={{
+              overflow: 'hidden',
+              borderColor: otherMember?.name_style_color || 'transparent',
+              ...(!otherMember && !(conversation.image_url && !groupImageFailed) ? { background: colorFromId(conversation.id), color: '#fff' } : {}),
+            }}
           >
             {otherMember?.avatar_url ? (
               <img src={otherMember.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
