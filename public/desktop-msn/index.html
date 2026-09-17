@@ -53,12 +53,16 @@
         </header>
         <nav class="menubar"><button>Arquivo</button><button>Editar</button><button>Ações</button><button>Ajuda</button></nav>
         <header class="chat-person">
-          <div class="avatar big green">M</div>
+          <div class="avatar-frame frame-lime"><div class="avatar big green">M</div></div>
           <div><strong>Marina</strong><span><i class="status-dot online"></i> Disponível</span><small>“Ouvindo Sonor enquanto trabalho”</small></div>
           <button class="profile-button">Ver perfil</button>
         </header>
         <nav class="actionbar" aria-label="Ações da conversa">
-          <button>Chamada</button><button>Vídeo</button><button>Adicionar</button><button>Chamar atenção</button><button>Mais</button>
+          <button><span class="action-icon phone-icon" aria-hidden="true"></span>Chamada</button>
+          <button><span class="action-icon camera-icon" aria-hidden="true"></span>Vídeo</button>
+          <button><span class="action-icon add-icon" aria-hidden="true"></span>Adicionar</button>
+          <button data-sound="nudge"><span class="action-icon nudge-icon" aria-hidden="true"></span>Chamar atenção</button>
+          <button><span class="action-icon more-icon" aria-hidden="true"></span>Mais</button>
         </nav>
         <div class="conversation-layout">
           <section class="conversation">
@@ -66,21 +70,68 @@
               <p class="session-note">Você iniciou uma conversa com Marina.</p>
               <article class="message incoming"><strong>Marina diz:</strong><div>Oii! Você viu a comunidade nova?</div><time>16:42</time></article>
               <article class="message outgoing"><strong>Você diz:</strong><div>Vi sim, ficou muito com cara de internet antiga haha</div><time>16:43</time></article>
-              <article class="message incoming"><strong>Marina diz:</strong><div>Era exatamente isso que eu queria :)</div><time>16:43</time></article>
+              <article class="message incoming"><strong>Marina diz:</strong><div>Era exatamente isso que eu queria <span class="inline-emoticon" title="Feliz">😊</span></div><time>16:43</time></article>
               <p class="typing">Marina está digitando ao vivo...</p>
             </div>
-            <div class="formatbar"><button>N</button><button><i>I</i></button><button><u>S</u></button><span></span><button>Emoticons</button><button>Wink</button><button>Arquivo</button></div>
+            <div class="formatbar">
+              <button>N</button><button><i>I</i></button><button><u>S</u></button><span></span>
+              <button class="emoticon-toggle" aria-expanded="false"><span class="toolbar-face">☺</span> Emoticons</button>
+              <button data-sound="wink"><span class="toolbar-wink">W</span> Wink</button><button>Arquivo</button>
+              <div class="emoticon-picker" hidden>
+                <div class="picker-title">Emoticons do Thoth Messenger</div>
+                <div class="emoticon-grid">
+                  <button data-emoticon="😊" title="Feliz">😊</button><button data-emoticon="😂" title="Rindo">😂</button>
+                  <button data-emoticon="😉" title="Piscando">😉</button><button data-emoticon="😍" title="Apaixonado">😍</button>
+                  <button data-emoticon="😎" title="Legal">😎</button><button data-emoticon="😛" title="Língua">😛</button>
+                  <button data-emoticon="😮" title="Surpreso">😮</button><button data-emoticon="😢" title="Triste">😢</button>
+                  <button data-emoticon="😡" title="Bravo">😡</button><button data-emoticon="🤔" title="Pensando">🤔</button>
+                  <button data-emoticon="❤️" title="Coração">❤️</button><button data-emoticon="👍" title="Legal">👍</button>
+                </div>
+              </div>
+            </div>
             <div class="composer"><textarea aria-label="Mensagem" placeholder="Digite uma mensagem..."></textarea><button class="send">Enviar</button></div>
             <div class="composer-note">Tudo o que você digita aparece ao vivo.</div>
           </section>
           <aside class="display-panel">
-            <div class="display-picture green">M</div>
+            <div class="avatar-frame display-frame frame-lime"><div class="display-picture green">M</div></div>
             <button>Alterar exibição</button>
-            <div class="display-picture me"><img src="./toth_chat.png" alt="Seu avatar" /></div>
+            <div class="avatar-frame display-frame frame-cyan self-frame"><div class="display-picture me"><img src="./toth_chat.png" alt="Seu avatar" /></div></div>
           </aside>
         </div>
         <footer class="chat-footer"><span class="secure">● Conversa protegida</span><span>Thoth Messenger</span></footer>
       </section>
     </main>
+    <audio id="sound-nudge" preload="auto" src="../sounds/wink-knock-knock.m4a"></audio>
+    <audio id="sound-wink" preload="auto" src="../sounds/wink-kiss.mp3"></audio>
+    <script>
+      const composer = document.querySelector('.composer textarea')
+      const picker = document.querySelector('.emoticon-picker')
+      const toggle = document.querySelector('.emoticon-toggle')
+      toggle?.addEventListener('click', () => {
+        const opening = picker.hasAttribute('hidden')
+        picker.toggleAttribute('hidden')
+        toggle.setAttribute('aria-expanded', String(opening))
+      })
+      document.querySelectorAll('[data-emoticon]').forEach((button) => {
+        button.addEventListener('click', () => {
+          composer.value += `${composer.value ? ' ' : ''}${button.dataset.emoticon}`
+          composer.focus()
+          picker.setAttribute('hidden', '')
+          toggle.setAttribute('aria-expanded', 'false')
+        })
+      })
+      document.querySelectorAll('[data-sound]').forEach((button) => {
+        button.addEventListener('click', () => {
+          const audio = document.querySelector(`#sound-${button.dataset.sound}`)
+          audio.currentTime = 0
+          audio.play().catch(() => {})
+          if (button.dataset.sound === 'nudge') {
+            const windowElement = document.querySelector('.chat-window')
+            windowElement.classList.remove('nudging')
+            requestAnimationFrame(() => windowElement.classList.add('nudging'))
+          }
+        })
+      })
+    </script>
   </body>
 </html>
