@@ -41,12 +41,10 @@ function App() {
   })
 
   useEffect(() => {
-    // Desktop (Tauri) tem tema proprio e exclusivo (thothchat-messenger), separado
-    // do Frutiger Aero do mobile/web - nao usa o seletor normal de Aparencia por enquanto.
-    if (isTauriDesktop) {
-      document.documentElement.dataset.theme = 'thothchat-messenger'
-      return
-    }
+    // ThothChat Messenger (desktop/Tauri) tem visual proprio e fixo, sem sistema de
+    // tema - o CSS dele (thothchat-messenger/msn.css) e carregado em main.tsx antes
+    // do app montar e nao depende de data-theme nenhum. Nao mexe nisso aqui.
+    if (isTauriDesktop) return
     if (theme === 'dark') delete document.documentElement.dataset.theme
     else document.documentElement.dataset.theme = theme
     try {

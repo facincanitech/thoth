@@ -7,12 +7,19 @@ import { isTauriDesktop } from './lib/platform.ts'
 
 const tauriChatId = isTauriDesktop ? new URLSearchParams(window.location.search).get('tauriChat') : null
 
-if (isTauriDesktop) {
-  document.documentElement.dataset.theme = 'thothchat-messenger'
+async function boot() {
+  // ThothChat Messenger (versao desktop) tem visual proprio e fixo, sem sistema
+  // de tema - o CSS dele fica isolado em thothchat-messenger/msn.css, carregado
+  // so quando o app roda dentro do Tauri. Nunca usa data-theme nem Frutiger/Retro.
+  if (isTauriDesktop) {
+    await import('../thothchat-messenger/msn.css')
+  }
+
+  createRoot(document.getElementById('root')!).render(
+    <StrictMode>
+      {tauriChatId ? <DesktopChatWindow conversationId={tauriChatId} /> : <App />}
+    </StrictMode>,
+  )
 }
 
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    {tauriChatId ? <DesktopChatWindow conversationId={tauriChatId} /> : <App />}
-  </StrictMode>,
-)
+boot()
