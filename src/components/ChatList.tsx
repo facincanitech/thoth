@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Capacitor } from '@capacitor/core'
 import { supabase } from '../lib/supabase'
+import thothLogo from '../../logo/toth_chat.png'
 import { getErrorMessage } from '../lib/errors'
 import { sanitizeImageUrl } from '../lib/imageUrl'
 import { uploadImage } from '../lib/uploadImage'
@@ -1586,6 +1587,27 @@ export function ChatList({
         : panelView === 'group'
           ? 'Novo grupo'
           : (friendsView === 'add' ? 'Adicionar amigo' : 'Amigos')
+
+  if (isTauriDesktop && !me) {
+    async function handleDesktopGoogleLogin() {
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: { redirectTo: 'ferus://callback', queryParams: { prompt: 'select_account' }, skipBrowserRedirect: true },
+      })
+      if (error || !data?.url) return
+      const { open } = await import('@tauri-apps/plugin-shell')
+      await open(data.url)
+    }
+    return (
+      <section className="msn-login-screen">
+        <img src={thothLogo} alt="" className="msn-login-logo" />
+        <h1>ThothChat Messenger</h1>
+        <button type="button" className="msn-login-google" onClick={handleDesktopGoogleLogin}>
+          Entrar com Google
+        </button>
+      </section>
+    )
+  }
 
   if (isTauriDesktop) {
     const favoriteConvs = conversations.filter((c) => c.isFavorite && !c.isArchived)

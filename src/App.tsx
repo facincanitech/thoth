@@ -71,6 +71,25 @@ function App() {
   }, [])
 
   useEffect(() => {
+    if (!isTauriDesktop) return
+    function handleDeepLinkUrl(url: string) {
+      const hashIndex = url.indexOf('#')
+      if (hashIndex === -1) return
+      const params = new URLSearchParams(url.slice(hashIndex + 1))
+      const access_token = params.get('access_token')
+      const refresh_token = params.get('refresh_token')
+      if (access_token && refresh_token) {
+        supabase.auth.setSession({ access_token, refresh_token })
+      }
+    }
+    let unlisten: (() => void) | undefined
+    import('@tauri-apps/api/event').then(({ listen }) =>
+      listen<string>('deep-link', (event) => handleDeepLinkUrl(event.payload)),
+    ).then((fn) => { unlisten = fn })
+    return () => unlisten?.()
+  }, [])
+
+  useEffect(() => {
     let hiddenAt: number | null = null
     function onVisibility() {
       if (document.hidden) {

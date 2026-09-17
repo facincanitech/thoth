@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Capacitor } from '@capacitor/core'
 import { supabase } from '../lib/supabase'
+import { isTauriDesktop } from '../lib/platform'
 
 type Props = {
   onClose: () => void
@@ -11,6 +12,21 @@ export function AuthModal({ onClose }: Props) {
 
   async function handleGoogle() {
     setError(null)
+    if (isTauriDesktop) {
+      // Google bloqueia login OAuth dentro de uma webview embutida - abre no
+      // navegador padrao do sistema, o retorno vem via deep link (ferus://callback)
+      // capturado no App.tsx.
+      const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: { redirectTo: 'ferus://callback', queryParams: { prompt: 'select_account' }, skipBrowserRedirect: true },
+      })
+      if (oauthError) { setError(oauthError.message); return }
+      if (data?.url) {
+        const { open } = await import('@tauri-apps/plugin-shell')
+        await open(data.url)
+      }
+      return
+    }
     const redirectTo = Capacitor.isNativePlatform()
       ? 'ferus://callback'
       : `${window.location.origin}${import.meta.env.BASE_URL}`

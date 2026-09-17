@@ -36,3 +36,17 @@
 .msn-unread{min-width:18px;padding:2px 5px;border-radius:9px;background:#ef7b32;color:#fff;text-align:center;font-size:10px;flex-shrink:0}
 .msn-footer button{border:0;background:none;color:#0069a6;font-size:11px;cursor:pointer}
 .msn-empty{padding:10px 8px;font-size:11px;color:#728894}
+
+/* Tela de login (janela principal, antes de autenticar) */
+.msn-login-screen{
+  height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;
+  padding:24px;background:radial-gradient(circle at 50% 0,#eefdff 0 15%,transparent 55%),linear-gradient(180deg,#5fb8df,#bfeafb 60%,#75c8c3);
+  text-align:center;
+}
+.msn-login-logo{width:84px;height:84px;object-fit:contain;filter:drop-shadow(0 6px 10px rgb(0 55 85 / 30%))}
+.msn-login-screen h1{margin:0;font-size:16px;color:#123d57}
+.msn-login-google{
+  border:1px solid #08729f;border-radius:4px;padding:10px 22px;font-size:13px;font-weight:600;color:#fff;cursor:pointer;
+  background:linear-gradient(180deg,#49bee9,#13a3dc 48%,#087caf);box-shadow:inset 0 1px rgb(255 255 255 / 65%),0 3px 8px rgb(0 55 85 / 25%);
+}
+.msn-login-google:hover{filter:brightness(1.05)}
