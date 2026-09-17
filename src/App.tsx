@@ -20,7 +20,7 @@ import { readCache, writeCache } from './lib/cache'
 import { pickTextColor } from './lib/appTheme'
 import './App.css'
 
-type Theme = 'dark' | 'light' | 'contrast'
+type Theme = 'dark' | 'light' | 'contrast' | 'frutiger'
 
 function App() {
   useEffect(() => {
@@ -30,7 +30,7 @@ function App() {
   const [theme, setTheme] = useState<Theme>(() => {
     try {
       const saved = localStorage.getItem('ferus-theme')
-      if (saved === 'dark' || saved === 'light' || saved === 'contrast') return saved
+      if (saved === 'dark' || saved === 'light' || saved === 'contrast' || saved === 'frutiger') return saved
     } catch {
       // ignore
     }

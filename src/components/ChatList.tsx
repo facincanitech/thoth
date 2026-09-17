@@ -198,8 +198,8 @@ type Props = {
   communityTab: 'home' | 'info' | 'members' | 'settings'
   onCommunityTabChange: (tab: 'home' | 'info' | 'members' | 'settings') => void
   onCommunityBack: () => void
-  theme: 'dark' | 'light' | 'contrast'
-  onThemeChange: (theme: 'dark' | 'light' | 'contrast') => void
+  theme: 'dark' | 'light' | 'contrast' | 'frutiger'
+  onThemeChange: (theme: 'dark' | 'light' | 'contrast' | 'frutiger') => void
   statusOpen: boolean
   onStatusOpenChange: (open: boolean) => void
   onOpenStatus: () => void
@@ -2398,7 +2398,14 @@ export function ChatList({
                 className={`theme-option${theme === 'light' ? ' active' : ''}`}
                 onClick={() => onThemeChange('light')}
               >
-                Claro
+                Retro
+              </button>
+              <button
+                type="button"
+                className={`theme-option${theme === 'frutiger' ? ' active' : ''}`}
+                onClick={() => onThemeChange('frutiger')}
+              >
+                Frutiger Aero
               </button>
               <button
                 type="button"

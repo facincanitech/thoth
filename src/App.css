@@ -31,7 +31,7 @@
   --shadow:0 12px 36px rgb(0 0 0 / 22%);
 }
 
-:root:not([data-theme="light"]){
+:root:not([data-theme="light"]):not([data-theme="frutiger"]){
   color-scheme: dark;
 }
 
@@ -46,6 +46,25 @@
   --danger:#bd3543; --scrollbar:#b7d4e6; --green:#5fb4e2; --green2:#4a9bc7;
   --rail-bg:#d8ebf7; --rail-icon:#3f5b6d;
   --shadow:0 12px 36px rgb(8 125 172 / 12%);
+}
+
+/* Tema Frutiger Aero (visual estilo MSN/Vista/Skype antigo) - clone estrutural
+   do tema "light" (Retro/Orkut), so as cores mudam. Toda regra
+   "[data-theme=light] .x{...}" tem uma gemea "[data-theme=frutiger] .x{...}"
+   logo abaixo dela no resto do arquivo, com os MESMOS valores por enquanto -
+   e so trocar os valores dessas regras pra dar a cara do Frutiger Aero, a
+   estrutura ja existe. */
+[data-theme="frutiger"]{
+  color-scheme: light;
+  --bg:#a7c6e5; --panel:#fff; --panel2:#ffffff; --line:#7ba7d1; --text:#0a2e57;
+  --text-base:#0a2e57;
+  --muted:#4a6d8f; --bubble:#dceafb; --hover:#dceafb; --input:#ffffff;
+  --bg-deep:#a7c6e5; --bg-panel:#fff; --bg-surface:#fff; --bg-surface-2:#ffffff;
+  --bg-selected:#dceafb; --line-2:#7ba7d1; --muted-2:#4a6d8f; --text-secondary:#2c5480;
+  --accent-text:#0054e3; --avatar-bg:#dceafb; --accent-dim-bg:#dceafb; --danger-bg:#fcebed;
+  --danger:#bd3543; --scrollbar:#7ba7d1; --green:#316ac5; --green2:#1d4fa3;
+  --rail-bg:#a7c6e5; --rail-icon:#0a2e57;
+  --shadow:0 12px 36px rgb(10 46 87 / 16%);
 }
 
 [data-theme="contrast"]{
@@ -147,16 +166,27 @@ body{
 }
 .filter-tab.active{background:var(--btn-custom,var(--accent-dim-bg));border-color:var(--btn-custom,var(--accent-dim-bg))}
 [data-theme="light"] .filter-tab{background:#fff;border-color:#a8c9e0}
+[data-theme="frutiger"] .filter-tab{background:#fff;border-color:#a8c9e0}
 [data-theme="light"] .filter-tab.active{background:var(--btn-custom,#087dac);border-color:var(--btn-custom,#087dac)}
+[data-theme="frutiger"] .filter-tab.active{background:var(--btn-custom,#087dac);border-color:var(--btn-custom,#087dac)}
 [data-theme="light"] .filter-tab.active .filter,[data-theme="light"] .filter-tab.active .filter-grip{color:var(--on-button,#fff)}
+[data-theme="frutiger"] .filter-tab.active .filter,[data-theme="frutiger"] .filter-tab.active .filter-grip{color:var(--on-button,#fff)}
 [data-theme="light"] .chats{background:#d8ebf7;border-right:1px solid #a8c9e0}
+[data-theme="frutiger"] .chats{background:#d8ebf7;border-right:1px solid #a8c9e0}
 [data-theme="light"] .top{background:#d8ebf7}
+[data-theme="frutiger"] .top{background:#d8ebf7}
 [data-theme="light"] .chat-list{background:#fff;margin:2px 10px 10px;padding-top:10px;border-radius:16px}
+[data-theme="frutiger"] .chat-list{background:#fff;margin:2px 10px 10px;padding-top:10px;border-radius:16px}
 [data-theme="light"] .filter-more-btn{background:#fff;border-color:#a8c9e0}
+[data-theme="frutiger"] .filter-more-btn{background:#fff;border-color:#a8c9e0}
 [data-theme="light"] .filter-more-btn.active{background:var(--btn-custom,#087dac);border-color:var(--btn-custom,#087dac);color:#fff}
+[data-theme="frutiger"] .filter-more-btn.active{background:var(--btn-custom,#087dac);border-color:var(--btn-custom,#087dac);color:#fff}
 [data-theme="light"] .filter-popup{background:#eef8ff;border-color:#a8c9e0}
+[data-theme="frutiger"] .filter-popup{background:#eef8ff;border-color:#a8c9e0}
 [data-theme="light"] .chat-header{background:#eef8ff}
+[data-theme="frutiger"] .chat-header{background:#eef8ff}
 [data-theme="light"] .rail{border-right:1px solid #a8c9e0}
+[data-theme="frutiger"] .rail{border-right:1px solid #a8c9e0}
 .filter-tab.dragging{opacity:.5}
 .filter-grip{
   display:flex;align-items:center;padding:0 1px 0 7px;color:var(--muted);
@@ -211,6 +241,7 @@ body{
 .row{display:flex;justify-content:space-between;align-items:center;gap:8px}
 .name{font-size:14px;font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.5}
 [data-theme="light"] .name{color:#0d1520}
+[data-theme="frutiger"] .name{color:#0d1520}
 .time{font-size:12px;color:var(--muted)}
 .preview{
   margin-top:3px;color:var(--muted);font-size:12px;white-space:nowrap;
@@ -411,7 +442,9 @@ body{
 }
 .compose-btn.recording{background:var(--green);color:var(--on-button,#fff);animation:pulse 1.2s ease-in-out infinite}
 [data-theme="light"] .composer-icons{background:#fff;border-radius:14px;padding:4px;gap:2px}
+[data-theme="frutiger"] .composer-icons{background:#fff;border-radius:14px;padding:4px;gap:2px}
 [data-theme="light"] .compose-btn:hover,[data-theme="light"] .compose-btn.active{background:var(--green);color:var(--on-button,#fff)}
+[data-theme="frutiger"] .compose-btn:hover,[data-theme="frutiger"] .compose-btn.active{background:var(--green);color:var(--on-button,#fff)}
 @keyframes pulse{
   0%,100%{box-shadow:0 0 0 0 rgba(229,72,77,.5)}
   50%{box-shadow:0 0 0 8px rgba(229,72,77,0)}
@@ -440,6 +473,7 @@ body{
 .status-progress-fill{height:100%;background:#fff;animation:status-bar-grow 5s linear forwards}
 .status-composer-topbar{display:flex;justify-content:space-between;align-items:center;padding:12px}
 [data-theme="light"] .status-composer-topbar{background:#fff;border-radius:16px;margin:10px}
+[data-theme="frutiger"] .status-composer-topbar{background:#fff;border-radius:16px;margin:10px}
 
 .media-note{font-size:11px;color:var(--muted-2);text-align:center;padding:4px 0;margin:0;background:var(--bg-panel)}
 
@@ -539,11 +573,17 @@ body{
 .settings-community-identity{text-align:center;padding:8px 0 22px}
 .settings-community-identity .group-info-avatar{width:56px;height:56px;border-radius:18px;font-size:20px}
 [data-theme="light"] .community-settings-box{background:#fff;border-radius:16px;padding:16px;width:100%}
+[data-theme="frutiger"] .community-settings-box{background:#fff;border-radius:16px;padding:16px;width:100%}
 [data-theme="light"] .modal-card.settings-sheet{background:#d8ebf7}
+[data-theme="frutiger"] .modal-card.settings-sheet{background:#d8ebf7}
 [data-theme="light"] .settings-topbar{background:#d8ebf7;border-bottom-color:#a8c9e0}
+[data-theme="frutiger"] .settings-topbar{background:#d8ebf7;border-bottom-color:#a8c9e0}
 [data-theme="light"] .settings-identity{background:#fff;border:1px solid #a8c9e0;border-radius:16px;padding:16px;margin-bottom:14px}
+[data-theme="frutiger"] .settings-identity{background:#fff;border:1px solid #a8c9e0;border-radius:16px;padding:16px;margin-bottom:14px}
 [data-theme="light"] .settings-sections{background:#fff;border:1px solid #a8c9e0;border-radius:16px;padding:0 10px}
+[data-theme="frutiger"] .settings-sections{background:#fff;border:1px solid #a8c9e0;border-radius:16px;padding:0 10px}
 [data-theme="light"] .settings-permissions{border-top:1px solid #a8c9e0;margin-top:4px}
+[data-theme="frutiger"] .settings-permissions{border-top:1px solid #a8c9e0;margin-top:4px}
 .settings-disclosure{border-bottom:1px solid var(--line)}
 .settings-disclosure>summary{list-style:none;display:flex;gap:15px;align-items:center;min-height:66px;padding:14px 5px;font-size:14px;font-weight:600;cursor:pointer;color:var(--text-base)}
 .settings-disclosure>summary::-webkit-details-marker{display:none}
@@ -665,15 +705,24 @@ body{
 }
 .new-conv-option span{font-size:16px}
 [data-theme="light"] .new-conv-panel{background:#d8ebf7}
+[data-theme="frutiger"] .new-conv-panel{background:#d8ebf7}
 [data-theme="light"] .new-conv-list{background:#d8ebf7}
+[data-theme="frutiger"] .new-conv-list{background:#d8ebf7}
 [data-theme="light"] .new-conv-panel .chat-list{background:#d8ebf7;border-top:0;flex:1}
+[data-theme="frutiger"] .new-conv-panel .chat-list{background:#d8ebf7;border-top:0;flex:1}
 [data-theme="light"] .new-conv-panel .chat-list .chat{background:#fff}
+[data-theme="frutiger"] .new-conv-panel .chat-list .chat{background:#fff}
 [data-theme="light"] .new-conv-panel .chat-list .chat.selected{background:#eef8ff}
+[data-theme="frutiger"] .new-conv-panel .chat-list .chat.selected{background:#eef8ff}
 .section-label{display:block;margin:6px 0;padding:10px 22px;font-size:.8rem;color:var(--muted);text-transform:uppercase}
 [data-theme="light"] .section-label{background:#fff;color:#1c2733;font-weight:700}
+[data-theme="frutiger"] .section-label{background:#fff;color:#1c2733;font-weight:700}
 [data-theme="light"] .new-conv-header{background:#fff}
+[data-theme="frutiger"] .new-conv-header{background:#fff}
 [data-theme="light"] .new-conv-option{background:#fff}
+[data-theme="frutiger"] .new-conv-option{background:#fff}
 [data-theme="light"] .option-icon{background:var(--btn-custom,#087dac);color:var(--on-button,#fff)}
+[data-theme="frutiger"] .option-icon{background:var(--btn-custom,#087dac);color:var(--on-button,#fff)}
 .option-icon{
   width:44px;height:44px;border-radius:14px;background:var(--btn-custom,var(--accent-dim-bg));color:var(--on-button,var(--accent-text));
   display:grid;place-items:center;font-size:20px;font-weight:700;flex-shrink:0;
@@ -713,6 +762,7 @@ body{
 .new-conv-form input:disabled{opacity:.6}
 .terms-text p{font-size:.85rem;line-height:1.5;color:var(--text-secondary);margin:0}
 [data-theme="light"] .terms-text{background:#fff;border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:12px}
+[data-theme="frutiger"] .terms-text{background:#fff;border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:12px}
 
 .option-subtitle{font-size:12px;color:var(--muted);margin-top:2px}
 
@@ -876,7 +926,9 @@ body{
 .friend-request-row button{padding:7px 14px;font-size:.78rem;border-radius:10px;border:1px solid var(--line-2);background:var(--bg-panel);color:var(--text);cursor:pointer;flex-shrink:0}
 .friend-request-row button.decline{background:var(--danger-bg);color:var(--danger);border-color:var(--danger-bg)}
 [data-theme="light"] .friend-request-list{background:#fff;border-radius:16px;padding:10px;gap:2px}
+[data-theme="frutiger"] .friend-request-list{background:#fff;border-radius:16px;padding:10px;gap:2px}
 [data-theme="light"] .friend-request-row{background:transparent;border-radius:10px}
+[data-theme="frutiger"] .friend-request-row{background:transparent;border-radius:10px}
 .request-menu{
   position:absolute;top:30px;right:0;background:var(--bg-surface);border:1px solid var(--line-2);
   border-radius:8px;padding:4px;min-width:100px;z-index:45;box-shadow:0 8px 24px #0006;
@@ -896,6 +948,7 @@ body{
 .quick-actions-menu button span{font-size:.66rem;color:var(--text-base)}
 .quick-actions-menu button svg{flex-shrink:0}
 [data-theme="light"] .quick-actions-menu button:hover{background:var(--bg-surface-2)}
+[data-theme="frutiger"] .quick-actions-menu button:hover{background:var(--bg-surface-2)}
 
 .context-menu-backdrop{position:fixed;inset:0;z-index:60}
 .context-menu{
@@ -1044,6 +1097,7 @@ body{
   display:flex;align-items:center;border-bottom:1px solid var(--line-2);flex-shrink:0;
 }
 [data-theme="light"] .community-sidebar-topbar{background:#fff;border-bottom-color:#c7dced}
+[data-theme="frutiger"] .community-sidebar-topbar{background:#fff;border-bottom-color:#c7dced}
 .community-sidebar-photo{
   width:150px;height:200px;border-radius:14px;overflow:hidden;background:var(--line);
   display:grid;place-items:center;font-size:40px;font-weight:700;color:var(--muted);
@@ -1059,9 +1113,13 @@ body{
 }
 .community-sidebar-nav.active{background:var(--btn-custom,var(--accent-dim-bg));color:var(--on-button,var(--accent-text));font-weight:600}
 [data-theme="light"] .community-sidebar-nav.active{background:var(--btn-custom,#087dac);color:var(--on-button,#fff)}
+[data-theme="frutiger"] .community-sidebar-nav.active{background:var(--btn-custom,#087dac);color:var(--on-button,#fff)}
 [data-theme="light"] .community-sidebar{background:#d8ebf7}
+[data-theme="frutiger"] .community-sidebar{background:#d8ebf7}
 [data-theme="light"] .community-sidebar-box{background:#fff;border-radius:16px;padding:16px;margin-top:18px}
+[data-theme="frutiger"] .community-sidebar-box{background:#fff;border-radius:16px;padding:16px;margin-top:18px}
 [data-theme="light"] .chat-header.community-header{background:#fff}
+[data-theme="frutiger"] .chat-header.community-header{background:#fff}
 .chat-header.community-header{min-height:100px}
 .community-header-description{
   font-size:12px;color:var(--text-secondary);margin:2px 0 0;line-height:1.4;overflow-wrap:anywhere;
@@ -1089,9 +1147,13 @@ body{
 .community-info-grid span{color:var(--muted)}
 .community-info-grid strong{font-weight:600;overflow-wrap:anywhere}
 [data-theme="light"] .community-info-box{background:#fff;border-radius:16px;padding:16px;width:100%}
+[data-theme="frutiger"] .community-info-box{background:#fff;border-radius:16px;padding:16px;width:100%}
 [data-theme="light"] .community-info-notice-yellow{background:#fefdcf;border:1px solid #eee4a8;width:100%}
+[data-theme="frutiger"] .community-info-notice-yellow{background:#fefdcf;border:1px solid #eee4a8;width:100%}
 [data-theme="light"] .community-info-notice-yellow strong,[data-theme="light"] .community-info-notice-yellow span{color:#6b5f1a}
+[data-theme="frutiger"] .community-info-notice-yellow strong,[data-theme="frutiger"] .community-info-notice-yellow span{color:#6b5f1a}
 [data-theme="light"] .community-members-box{background:#fff;border-radius:16px;padding:16px;width:100%}
+[data-theme="frutiger"] .community-members-box{background:#fff;border-radius:16px;padding:16px;width:100%}
 .community-member-page{background:var(--bg-panel);border:1px solid var(--line-2);border-radius:16px;padding:4px 16px}
 .community-member-page .member-table-row:last-child{border-bottom:0}
 .community-description{color:var(--text-secondary);font-size:14px;line-height:1.65;padding:0 4px;overflow-wrap:anywhere}
