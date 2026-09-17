@@ -33,6 +33,10 @@ docs/downloads/*.apk
 # Private project notes (context for future sessions, not for public repo)
 CLAUDE.md
 
+# Tauri desktop build artifacts (compilados localmente, nao versionados)
+src-tauri/target/
+src-tauri/gen/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

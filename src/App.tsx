@@ -22,6 +22,8 @@ import './App.css'
 
 type Theme = 'dark' | 'light' | 'contrast' | 'frutiger'
 
+const isTauriDesktop = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window
+
 function App() {
   useEffect(() => {
     document.title = `ThothChat v${APP_VERSION}`
@@ -34,7 +36,7 @@ function App() {
     } catch {
       // ignore
     }
-    return 'light'
+    return isTauriDesktop ? 'frutiger' : 'light'
   })
 
   useEffect(() => {
