@@ -17,6 +17,7 @@ import { isTauriDesktop } from '../lib/platform'
 import {
   IconArchive,
   IconArrowLeft,
+  IconBell,
   IconBellOff,
   IconChevronDown,
   IconEdit,
@@ -1585,6 +1586,95 @@ export function ChatList({
         : panelView === 'group'
           ? 'Novo grupo'
           : (friendsView === 'add' ? 'Adicionar amigo' : 'Amigos')
+
+  if (isTauriDesktop) {
+    const favoriteConvs = conversations.filter((c) => c.isFavorite && !c.isArchived)
+    const regularConvs = conversations.filter((c) => !c.isFavorite && !c.isArchived && c.type === 'dm')
+    const groupConvs = conversations.filter((c) => c.type === 'group' && !c.isArchived)
+    const q = query.toLowerCase()
+    const matches = (label: string) => label.toLowerCase().includes(q)
+
+    return (
+      <section className="msn-contacts-window">
+        <div className="msn-identity-card">
+          <div className="msn-avatar-me">
+            {me?.avatar_url ? <img src={me.avatar_url} alt="" /> : (me?.display_name || me?.username || 'V')[0]?.toUpperCase()}
+          </div>
+          <div className="msn-identity-copy">
+            <strong>{me ? displayName(me) : 'Você'}</strong>
+            <span className="msn-presence">{me?.status || 'Disponível'}</span>
+          </div>
+          <button type="button" className="msn-mail-button" title="Notificações" onClick={() => onAccountOpenChange(true)}>
+            <IconBell size={18} />
+          </button>
+        </div>
+        <div className="msn-search-row">
+          <input type="search" placeholder="Pesquisar contatos ou conversas" value={query} onChange={(e) => setQuery(e.target.value)} />
+        </div>
+        {incoming.length > 0 && (
+          <div className="msn-notice">
+            Você tem {incoming.length} {incoming.length === 1 ? 'convite novo' : 'convites novos'}.{' '}
+            <button type="button" onClick={() => { setFriendsView('list'); onPanelViewChange('friends'); onPanelOpenChange(true) }}>Ver agora</button>
+          </div>
+        )}
+        <section className="msn-contact-list">
+          {favoriteConvs.length > 0 && (
+            <details open>
+              <summary className="msn-contact-group-title">Favoritos <small>{favoriteConvs.length}</small></summary>
+              {favoriteConvs.filter((c) => matches(c.label)).map((c) => (
+                <button key={c.id} type="button" className="msn-contact" onClick={() => onSelect(c)}>
+                  <AvatarBox src={c.avatarUrl} id={c.id} fallbackLetter={c.label[0]?.toUpperCase()} className="msn-contact-avatar" />
+                  <div className="msn-contact-info">
+                    <strong>{c.label}</strong>
+                  </div>
+                  {c.unreadCount > 0 && <b className="msn-unread">{c.unreadCount}</b>}
+                </button>
+              ))}
+            </details>
+          )}
+          <details open>
+            <summary className="msn-contact-group-title">Conversas <small>{regularConvs.length}</small></summary>
+            {regularConvs.length === 0 && <p className="msn-empty">nenhuma conversa ainda</p>}
+            {regularConvs.filter((c) => matches(c.label)).map((c) => (
+              <button key={c.id} type="button" className="msn-contact" onClick={() => onSelect(c)}>
+                <AvatarBox src={c.avatarUrl} id={c.id} fallbackLetter={c.label[0]?.toUpperCase()} className="msn-contact-avatar" />
+                <div className="msn-contact-info">
+                  <strong>{c.label}</strong>
+                </div>
+                {c.unreadCount > 0 && <b className="msn-unread">{c.unreadCount}</b>}
+              </button>
+            ))}
+          </details>
+          {(groupConvs.length > 0 || myCommunities.length > 0) && (
+            <details open>
+              <summary className="msn-contact-group-title">Grupos e comunidades <small>{groupConvs.length + myCommunities.length}</small></summary>
+              {groupConvs.filter((c) => matches(c.label)).map((c) => (
+                <button key={c.id} type="button" className="msn-contact" onClick={() => onSelect(c)}>
+                  <AvatarBox src={c.avatarUrl} id={c.id} fallbackLetter={c.label[0]?.toUpperCase()} className="msn-contact-avatar" />
+                  <div className="msn-contact-info">
+                    <strong>{c.label}</strong>
+                  </div>
+                  {c.unreadCount > 0 && <b className="msn-unread">{c.unreadCount}</b>}
+                </button>
+              ))}
+              {myCommunities.filter((c) => matches(c.name || '')).map((c) => (
+                <button key={c.id} type="button" className="msn-contact" onClick={() => onSelectCommunity(c)}>
+                  <AvatarBox src={c.image_url} id={c.id} fallbackLetter={(c.name || 'C')[0]?.toUpperCase()} className="msn-contact-avatar" />
+                  <div className="msn-contact-info">
+                    <strong>{c.name}</strong>
+                  </div>
+                </button>
+              ))}
+            </details>
+          )}
+        </section>
+        <footer className="msn-footer">
+          <button type="button" onClick={() => { onPanelViewChange('contact'); onPanelOpenChange(true) }}>Adicionar contato</button>
+          <span>ThothChat</span>
+        </footer>
+      </section>
+    )
+  }
 
   return (
     <section className="chats">

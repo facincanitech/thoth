@@ -9,3 +9,30 @@
 .emoji-picker,.wink-picker,.attach-menu,.request-menu,.filter-popup,.modal-card,.profile-popup{border:1px solid #6fa5be;border-radius:5px;background:linear-gradient(#fff,#e2f2f8);box-shadow:0 6px 18px #00375247}.emoji-picker button,.wink-picker-grid button{border:1px solid transparent;background:#fff}.nudge-btn,.compose-btn[title="Chamar atenção"]{border-color:#d59721!important;background:linear-gradient(#fff9c7,#f6d55c)!important;color:#95600a!important}
 /* reservas para componentes MSN que serao ligados depois */
 .msn-identity-card{min-height:104px;display:flex;align-items:center;gap:12px;padding:13px 14px;background:linear-gradient(#e9f8ff,#cbeaf7);border-bottom:1px solid #91b9cb}.msn-notice{padding:7px 11px;background:#fffbd2;border-bottom:1px solid #e8df89}.msn-contact-group-title{height:27px;font-weight:bold}.msn-footer{height:31px;display:flex;align-items:center;justify-content:space-between;padding:0 10px;background:linear-gradient(#eaf6fb,#cfe7f1);border-top:1px solid #91b9cb}
+
+/* Tela de contatos (janela principal) - estrutura ligada aos dados reais do app,
+   portada do mockup public/desktop-msn/msn.css (janela .contacts-window). */
+.msn-avatar-me{width:67px;height:67px;border-radius:9px;flex:none;border:3px solid #fff;outline:1px solid #76a9c0;box-shadow:0 2px 5px rgb(22 77 103 / 25%);overflow:hidden}
+.msn-avatar-me img{width:100%;height:100%;object-fit:cover}
+.msn-identity-copy{display:flex;flex:1;min-width:0;flex-direction:column}
+.msn-identity-copy strong{font-size:16px;color:#123d57}
+.msn-presence{font-size:12px;color:#4b6d7d;display:flex;align-items:center;gap:5px}
+.msn-presence::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:#70bd1f}
+.msn-mail-button{border:0;background:none;color:#0069a6;font-size:13px;cursor:pointer}
+.msn-search-row{padding:8px;background:#f5fbfe;border-bottom:1px solid #bdd7e3}
+.msn-search-row input{width:100%;height:28px;padding:0 9px;border:1px solid #88b3c7;background:#fff;box-shadow:inset 0 1px 2px rgb(0 53 81 / 12%);border-radius:0}
+.msn-notice button{border:0;background:none;color:#0069a6;text-decoration:underline;padding:0;cursor:pointer}
+.msn-contact-list{flex:1;overflow:auto;background:#fff;padding:4px 6px}
+.msn-contact-list details summary{height:27px;display:flex;align-items:center;gap:5px;font-weight:600;font-size:12px;cursor:pointer;color:#244e66;list-style:none}
+.msn-contact-list details summary::-webkit-details-marker{display:none}
+.msn-contact-list .msn-contact-group-title small{font-weight:400;color:#6f8997;margin-left:2px}
+.msn-contact{width:100%;height:52px;display:flex;align-items:center;gap:9px;padding:4px 7px;border:1px solid transparent;background:none;text-align:left;cursor:pointer;border-radius:0}
+.msn-contact:hover{background:linear-gradient(#f4fcff,#dceff7);border-color:#b2d1df}
+.msn-contact-info{display:flex;flex:1;min-width:0;flex-direction:column}
+.msn-contact-info strong{font-size:12px;font-weight:600;color:#123d57;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.msn-contact-info small{margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#728894;font-size:10px}
+.msn-contact-avatar{width:36px;height:36px;border-radius:5px;flex:none;overflow:hidden;border:2px solid #fff;outline:1px solid #76a9c0}
+.msn-contact-avatar img{width:100%;height:100%;object-fit:cover}
+.msn-unread{min-width:18px;padding:2px 5px;border-radius:9px;background:#ef7b32;color:#fff;text-align:center;font-size:10px;flex-shrink:0}
+.msn-footer button{border:0;background:none;color:#0069a6;font-size:11px;cursor:pointer}
+.msn-empty{padding:10px 8px;font-size:11px;color:#728894}
