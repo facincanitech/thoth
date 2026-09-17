@@ -227,7 +227,7 @@ body{
 .photo{
   width:46px;height:46px;border-radius:15px;object-fit:cover;flex:none;
   background:linear-gradient(135deg,var(--avatar-bg),var(--bg-surface-2));display:grid;place-items:center;
-  font-weight:700;overflow:hidden;
+  font-weight:700;overflow:hidden;border:2px solid var(--accent-text);
 }
 .photo img{width:100%;height:100%;object-fit:cover}
 .chat-info{min-width:0;flex:1}
@@ -259,7 +259,7 @@ body{
   min-height:84px;background:var(--rail-bg,var(--bg-surface));color:var(--rail-icon,inherit);border-bottom:1px solid var(--line);
   display:flex;align-items:center;padding:14px 28px;gap:13px;flex-shrink:0;
 }
-.header-photo{width:44px;height:44px;flex-shrink:0;border-radius:14px;overflow:hidden;background:var(--avatar-bg);display:grid;place-items:center;font-weight:700}
+.header-photo{width:44px;height:44px;flex-shrink:0;border-radius:14px;overflow:hidden;background:var(--avatar-bg);display:grid;place-items:center;font-weight:700;border:2px solid var(--accent-text)}
 .header-photo img{width:100%;height:100%;object-fit:cover;display:block}
 .presence-dot{
   position:absolute;bottom:0;right:0;width:12px;height:12px;border-radius:50%;
@@ -1414,7 +1414,7 @@ body{
 }
 [data-theme="frutiger"] .chat.selected::before{background:linear-gradient(#9bdd3f,#4c990d);width:4px}
 [data-theme="frutiger"] .photo,[data-theme="frutiger"] .header-photo{
-  border-radius:8px;border:2px solid #fff;outline:1px solid #7bb9d5;box-shadow:0 2px 5px rgb(20 91 126 / 20%);
+  border-radius:8px;border:2px solid var(--accent-text);box-shadow:0 2px 5px rgb(20 91 126 / 20%);
 }
 
 [data-theme="frutiger"] .main{
