@@ -53,18 +53,11 @@
    "[data-theme=light] .x{...}" tem uma gemea "[data-theme=frutiger] .x{...}"
    logo abaixo dela no resto do arquivo, com os MESMOS valores por enquanto -
    e so trocar os valores dessas regras pra dar a cara do Frutiger Aero, a
-   estrutura ja existe. */
+   estrutura ja existe. A paleta de cor de verdade (variaveis) fica no bloco
+   "[data-theme=frutiger]" mais abaixo no arquivo (secao "Frutiger Aero / MSN
+   Messenger"), que e o que realmente vale - esse aqui so define color-scheme. */
 [data-theme="frutiger"]{
   color-scheme: light;
-  --bg:#a7c6e5; --panel:#fff; --panel2:#ffffff; --line:#7ba7d1; --text:#0a2e57;
-  --text-base:#0a2e57;
-  --muted:#4a6d8f; --bubble:#dceafb; --hover:#dceafb; --input:#ffffff;
-  --bg-deep:#a7c6e5; --bg-panel:#fff; --bg-surface:#fff; --bg-surface-2:#ffffff;
-  --bg-selected:#dceafb; --line-2:#7ba7d1; --muted-2:#4a6d8f; --text-secondary:#2c5480;
-  --accent-text:#0054e3; --avatar-bg:#dceafb; --accent-dim-bg:#dceafb; --danger-bg:#fcebed;
-  --danger:#bd3543; --scrollbar:#7ba7d1; --green:#316ac5; --green2:#1d4fa3;
-  --rail-bg:#a7c6e5; --rail-icon:#0a2e57;
-  --shadow:0 12px 36px rgb(10 46 87 / 16%);
 }
 
 [data-theme="contrast"]{
@@ -1414,7 +1407,12 @@ body{
 }
 [data-theme="frutiger"] .chat.selected::before{background:linear-gradient(#9bdd3f,#4c990d);width:4px}
 [data-theme="frutiger"] .photo,[data-theme="frutiger"] .header-photo{
-  border-radius:8px;box-shadow:0 2px 5px rgb(20 91 126 / 20%);
+  position:relative;border-radius:8px;
+  box-shadow:inset 0 2px 2px rgb(255 255 255 / 85%),inset 0 -2px 4px rgb(0 89 130 / 25%),0 3px 7px rgb(12 83 115 / 28%);
+}
+[data-theme="frutiger"] .photo::before,[data-theme="frutiger"] .header-photo::before{
+  content:"";position:absolute;z-index:1;inset:2px 15% auto;height:35%;border-radius:6px;
+  background:linear-gradient(rgb(255 255 255 / 78%),rgb(255 255 255 / 4%));pointer-events:none;
 }
 
 [data-theme="frutiger"] .main{
@@ -1451,7 +1449,7 @@ body{
 [data-theme="frutiger"] .icon-btn:hover,[data-theme="frutiger"] .compose-btn:hover{
   background:linear-gradient(#fff,#dff3fb);border-color:#85bdd7;color:#087dac;box-shadow:inset 0 1px #fff;
 }
-[data-theme="frutiger"] .modal-card,[data-theme="frutiger"] .profile-popup,[data-theme="frutiger"] .filter-popup,[data-theme="frutiger"] .request-menu{
+[data-theme="frutiger"] .modal-card,[data-theme="frutiger"] .profile-popup,[data-theme="frutiger"] .filter-popup,[data-theme="frutiger"] .request-menu,[data-theme="frutiger"] .emoji-picker{
   background:linear-gradient(145deg,#fff 0%,#e3f6fd 100%);border:1px solid #70afd0;box-shadow:inset 0 1px #fff,var(--shadow);
 }
 [data-theme="frutiger"] .welcome-card{
