@@ -1814,13 +1814,6 @@ export function ChatList({
                       <IconHeart size={17} />
                       <span>Comunidades em alta</span>
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => { setQuickMenuOpen(false); window.open('./desktop-msn/index.html', '_blank') }}
-                    >
-                      <IconGroup size={17} />
-                      <span>Teste: desktop MSN</span>
-                    </button>
                   </div>
                 </>
               )}
