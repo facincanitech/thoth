@@ -19,6 +19,8 @@ import { promptDisableBatteryOptimization, promptFullScreenIntentPermission } fr
 import { readCache, writeCache } from './lib/cache'
 import { pickTextColor } from './lib/appTheme'
 import { isTauriDesktop } from './lib/platform'
+import { openChatWindow } from './lib/desktopWindows'
+import { DesktopTitleBar, DesktopMenuBar } from './components/DesktopChrome'
 import './App.css'
 
 type Theme = 'dark' | 'light' | 'contrast' | 'frutiger'
@@ -39,10 +41,10 @@ function App() {
   })
 
   useEffect(() => {
-    // Desktop (Tauri) tem tema proprio e exclusivo (msn-pc), separado do Frutiger
-    // Aero do mobile/web - nao usa o seletor normal de Aparencia por enquanto.
+    // Desktop (Tauri) tem tema proprio e exclusivo (thothchat-messenger), separado
+    // do Frutiger Aero do mobile/web - nao usa o seletor normal de Aparencia por enquanto.
     if (isTauriDesktop) {
-      document.documentElement.dataset.theme = 'msn-pc'
+      document.documentElement.dataset.theme = 'thothchat-messenger'
       return
     }
     if (theme === 'dark') delete document.documentElement.dataset.theme
@@ -540,7 +542,7 @@ function App() {
   const anyPanelOpen = panelOpen || accountOpen || groupsOpen || statusOpen
   const isGroupContext = selected?.type === 'group' || !!selectedCommunity
 
-  return (
+  const appTree = (
     <div className={`app${selected || selectedCommunity ? ' chat-open' : ''}${anyPanelOpen ? ' panel-open' : ''}${sidebarCollapsed && isGroupContext ? ' sidebar-collapsed' : ''}`}>
       <Rail
         me={profile}
@@ -564,7 +566,14 @@ function App() {
       <ChatList
         me={profile}
         selected={selected}
-        onSelect={(c) => { setSelectedCommunity(null); setSelected(c) }}
+        onSelect={(c) => {
+          if (isTauriDesktop) {
+            if (c) openChatWindow(c.id, c.name || 'Conversa')
+            return
+          }
+          setSelectedCommunity(null)
+          setSelected(c)
+        }}
         onSelectCommunity={(c) => { setSelected(null); setCommunityTab('home'); setSelectedCommunity(c) }}
         selectedCommunity={selectedCommunity}
         communityTab={communityTab}
@@ -607,7 +616,7 @@ function App() {
           sidebarCollapsed={sidebarCollapsed}
           onToggleSidebar={() => setSidebarCollapsed((v) => !v)}
         />
-      ) : (
+      ) : isTauriDesktop ? null : (
         <MainPanel
           me={profile}
           conversation={selected}
@@ -628,6 +637,18 @@ function App() {
       <CallOverlay ref={callOverlayRef} me={profile} />
     </div>
   )
+
+  if (isTauriDesktop) {
+    return (
+      <div className="desktop-window-shell">
+        <DesktopTitleBar title="ThothChat Messenger" />
+        <DesktopMenuBar items={['Arquivo', 'Contatos', 'Ferramentas', 'Ajuda']} />
+        {appTree}
+      </div>
+    )
+  }
+
+  return appTree
 }
 
 export default App
