@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "build:tauri": "cross-env VITE_TAURI=1 tsc -b && cross-env VITE_TAURI=1 vite build",
     "lint": "oxlint",
     "preview": "vite preview",
     "bump-version": "node -e \"const fs=require('fs');const v=JSON.parse(fs.readFileSync('version.json','utf8'));v.updates+=1;const tenths=Math.floor(v.updates/100);const major=1+Math.floor(tenths/10);const minor=tenths%10;v.version=major+'.'+minor+'.'+v.updates;fs.writeFileSync('version.json',JSON.stringify(v,null,2)+'\\n');fs.writeFileSync('src/version.ts','export const APP_VERSION = '+JSON.stringify(v.version)+'\\nexport const UPDATE_COUNT = '+v.updates+'\\nexport const APK_DOWNLOAD_URL = \\\"https://github.com/facincanitech/thothchat/releases/download/latest/thothchat.apk\\\"\\n');console.log('version',v.version,'updates',v.updates)\"",
@@ -31,6 +32,7 @@
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.4",
     "@vitejs/plugin-react": "^6.1.0",
+    "cross-env": "^10.1.0",
     "dotenv": "^17.4.2",
     "libsodium-wrappers": "^0.8.4",
     "oxlint": "^1.79.0",

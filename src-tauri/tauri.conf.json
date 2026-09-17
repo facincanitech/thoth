@@ -6,8 +6,8 @@
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:5173",
-    "beforeDevCommand": "npm run dev",
-    "beforeBuildCommand": "npm run build"
+    "beforeDevCommand": "cross-env VITE_TAURI=1 npm run dev",
+    "beforeBuildCommand": "npm run build:tauri"
   },
   "app": {
     "windows": [
