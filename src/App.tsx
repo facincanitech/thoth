@@ -18,11 +18,10 @@ import { registerPushNotifications, setCurrentConversationId, clearAllNotificati
 import { promptDisableBatteryOptimization, promptFullScreenIntentPermission } from './lib/batteryOpt'
 import { readCache, writeCache } from './lib/cache'
 import { pickTextColor } from './lib/appTheme'
+import { isTauriDesktop } from './lib/platform'
 import './App.css'
 
 type Theme = 'dark' | 'light' | 'contrast' | 'frutiger'
-
-const isTauriDesktop = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window
 
 function App() {
   useEffect(() => {
@@ -36,10 +35,16 @@ function App() {
     } catch {
       // ignore
     }
-    return isTauriDesktop ? 'frutiger' : 'light'
+    return 'light'
   })
 
   useEffect(() => {
+    // Desktop (Tauri) tem tema proprio e exclusivo (msn-pc), separado do Frutiger
+    // Aero do mobile/web - nao usa o seletor normal de Aparencia por enquanto.
+    if (isTauriDesktop) {
+      document.documentElement.dataset.theme = 'msn-pc'
+      return
+    }
     if (theme === 'dark') delete document.documentElement.dataset.theme
     else document.documentElement.dataset.theme = theme
     try {

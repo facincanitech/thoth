@@ -13,6 +13,7 @@ import { readCache, writeCache } from '../lib/cache'
 import { APP_VERSION, APK_DOWNLOAD_URL } from '../version'
 import { checkForUpdate } from '../lib/updateCheck'
 import { downloadAndInstallUpdate } from '../lib/appUpdate'
+import { isTauriDesktop } from '../lib/platform'
 import {
   IconArchive,
   IconArrowLeft,
@@ -2391,37 +2392,46 @@ export function ChatList({
               </button>
             </div>
 
-            <label style={{ marginTop: 14 }}>Tema</label>
-            <div className="theme-picker">
-              <button
-                type="button"
-                className={`theme-option${theme === 'dark' ? ' active' : ''}`}
-                onClick={() => onThemeChange('dark')}
-              >
-                Escuro
-              </button>
-              <button
-                type="button"
-                className={`theme-option${theme === 'light' ? ' active' : ''}`}
-                onClick={() => onThemeChange('light')}
-              >
-                Retro
-              </button>
-              <button
-                type="button"
-                className={`theme-option${theme === 'frutiger' ? ' active' : ''}`}
-                onClick={() => onThemeChange('frutiger')}
-              >
-                Frutiger Aero
-              </button>
-              <button
-                type="button"
-                className={`theme-option${theme === 'contrast' ? ' active' : ''}`}
-                onClick={() => onThemeChange('contrast')}
-              >
-                Alto contraste
-              </button>
-            </div>
+            {isTauriDesktop ? (
+              <>
+                <label style={{ marginTop: 14 }}>Tema</label>
+                <span className="invite-code">A versão desktop tem um tema próprio (ainda não é possível trocar por aqui) — mais opções chegam depois.</span>
+              </>
+            ) : (
+              <>
+                <label style={{ marginTop: 14 }}>Tema</label>
+                <div className="theme-picker">
+                  <button
+                    type="button"
+                    className={`theme-option${theme === 'dark' ? ' active' : ''}`}
+                    onClick={() => onThemeChange('dark')}
+                  >
+                    Escuro
+                  </button>
+                  <button
+                    type="button"
+                    className={`theme-option${theme === 'light' ? ' active' : ''}`}
+                    onClick={() => onThemeChange('light')}
+                  >
+                    Retro
+                  </button>
+                  <button
+                    type="button"
+                    className={`theme-option${theme === 'frutiger' ? ' active' : ''}`}
+                    onClick={() => onThemeChange('frutiger')}
+                  >
+                    Frutiger Aero
+                  </button>
+                  <button
+                    type="button"
+                    className={`theme-option${theme === 'contrast' ? ' active' : ''}`}
+                    onClick={() => onThemeChange('contrast')}
+                  >
+                    Alto contraste
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         )}
 
