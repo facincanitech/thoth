@@ -1616,11 +1616,17 @@ body{
   border-bottom:1px solid #08729f;text-shadow:0 1px #08729f;box-shadow:inset 0 1px rgb(255 255 255 / 65%);
   -webkit-app-region:drag;
 }
+.titlebar-orb{width:13px;height:13px;margin-right:7px;border:1px solid rgb(255 255 255 / 78%);border-radius:50%;background:radial-gradient(circle at 35% 28%,#fff 0 12%,#b9ed57 18%,#62ad17 58%,#2c7906 100%);box-shadow:0 1px 3px rgb(0 67 100 / 45%);pointer-events:none}
 .titlebar-brand{font-size:13px;font-weight:600;pointer-events:none}
 .window-controls{margin-left:auto;height:100%;display:flex;-webkit-app-region:no-drag}
-.window-controls span{width:31px;display:grid;place-items:center;border-left:1px solid rgb(0 75 112 / 35%);font-size:15px;cursor:pointer}
-.window-controls span:hover{background:rgb(255 255 255 / 15%)}
-.window-controls span:last-child:hover{background:linear-gradient(#f28b77,#c83e2f);border-radius:0 7px 0 0}
+.window-controls button{position:relative;width:34px;height:100%;display:grid;place-items:center;padding:0;border:0;border-left:1px solid rgb(0 75 112 / 35%);background:transparent;color:#fff;cursor:pointer}
+.window-controls button:hover{background:rgb(255 255 255 / 17%)}
+.window-controls button>span{position:relative;display:block;width:12px;height:10px;pointer-events:none}
+.window-minimize span::before{content:"";position:absolute;left:1px;right:1px;bottom:1px;height:1px;background:currentColor;box-shadow:0 1px rgb(0 81 118 / 45%)}
+.window-maximize span::before{content:"";position:absolute;inset:1px;border:1px solid currentColor;box-shadow:inset 0 2px rgb(255 255 255 / 28%)}
+.window-close span::before,.window-close span::after{content:"";position:absolute;left:5px;top:-1px;width:2px;height:14px;border-radius:1px;background:currentColor;box-shadow:0 1px rgb(92 25 17 / 35%)}
+.window-close span::before{transform:rotate(45deg)}.window-close span::after{transform:rotate(-45deg)}
+.window-controls .window-close:hover{background:linear-gradient(#f28b77,#c83e2f);border-radius:0 7px 0 0}
 .menubar{
   height:27px;display:flex;align-items:center;padding:0 7px;flex-shrink:0;
   background:linear-gradient(#fff,#e6f2f8);border-bottom:1px solid #91b9cb;
@@ -1629,3 +1635,32 @@ body{
 .menubar button:hover{text-decoration:underline;color:#0067a7}
 .desktop-window-shell{display:flex;flex-direction:column;height:100vh;overflow:hidden}
 .desktop-window-shell .app{flex:1;min-height:0}
+.desktop-chat-app{flex:1;min-height:0}
+
+/* acabamento MSN aplicado aos controles reais do desktop */
+[data-theme="thothchat-messenger"] .photo,[data-theme="thothchat-messenger"] .header-photo,[data-theme="thothchat-messenger"] .avatar-sm{
+  overflow:visible;border:4px solid #80c82d;outline:1px solid #4f8d12;
+  background:linear-gradient(145deg,#f5ffcf,#a8dc45 43%,#4b990f);padding:3px;
+  box-shadow:inset 0 2px 2px rgb(255 255 255 / 88%),inset 0 -2px 4px rgb(45 104 5 / 28%),0 3px 7px rgb(12 83 115 / 28%);
+}
+[data-theme="thothchat-messenger"] .photo img,[data-theme="thothchat-messenger"] .header-photo img,[data-theme="thothchat-messenger"] .avatar-sm img{
+  position:relative;z-index:0;border-radius:4px;background:#fff
+}
+[data-theme="thothchat-messenger"] .header-photo{width:52px;height:52px;border-radius:11px}
+[data-theme="thothchat-messenger"] .photo{width:50px;height:50px;border-radius:10px}
+[data-theme="thothchat-messenger"] .avatar-sm{border-width:2px;padding:1px;border-radius:6px}
+[data-theme="thothchat-messenger"] .emoji-picker,[data-theme="thothchat-messenger"] .wink-picker{
+  border-radius:5px;background:linear-gradient(#fff,#e2f2f8);border:1px solid #6fa5be;
+  box-shadow:inset 0 1px #fff,0 6px 18px rgb(0 55 82 / 28%);
+}
+[data-theme="thothchat-messenger"] .emoji-picker button{
+  border:1px solid transparent;border-radius:3px;background:#fff;filter:drop-shadow(0 1px 1px rgb(97 70 0 / 18%));
+}
+[data-theme="thothchat-messenger"] .emoji-picker button:hover{border-color:#77b3cf;background:#e8f8ff}
+[data-theme="thothchat-messenger"] .wink-picker-tabs button.active{
+  background:linear-gradient(#a7e94c,#65b417 52%,#4b960e);border:1px solid #408507;color:#fff;text-shadow:0 1px #397b08;
+}
+[data-theme="thothchat-messenger"] .compose-btn[title="Chamar atenção"]{border:1px solid #d59721;background:linear-gradient(#fff9c7,#f6d55c);color:#95600a;box-shadow:inset 0 1px #fff}
+[data-theme="thothchat-messenger"] .desktop-chat-shell .main{width:100%}
+[data-theme="thothchat-messenger"] .desktop-chat-shell .chat-header{min-height:88px;padding:12px 18px}
+[data-theme="thothchat-messenger"] .desktop-chat-shell .messages{padding:18px 22px}

@@ -14,10 +14,10 @@
       {
         "label": "main",
         "title": "ThothChat Messenger",
-        "width": 380,
-        "height": 700,
-        "minWidth": 320,
-        "minHeight": 500,
+        "width": 390,
+        "height": 720,
+        "minWidth": 340,
+        "minHeight": 540,
         "resizable": true,
         "fullscreen": false,
         "decorations": false
