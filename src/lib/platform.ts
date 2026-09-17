@@ -1,1 +1,3 @@
-export const isTauriDesktop = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window
+import { isTauri } from '@tauri-apps/api/core'
+
+export const isTauriDesktop = isTauri()

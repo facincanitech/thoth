@@ -18,6 +18,7 @@
     "@capacitor/local-notifications": "^8.3.1",
     "@capacitor/push-notifications": "^8.1.2",
     "@supabase/supabase-js": "^2.112.4",
+    "@tauri-apps/api": "^2.11.1",
     "hls.js": "^1.7.2",
     "react": "^19.2.8",
     "react-dom": "^19.2.8"
