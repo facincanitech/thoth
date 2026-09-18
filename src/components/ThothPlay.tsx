@@ -1,15 +1,19 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ChangeEvent } from 'react'
 import { Room, RoomEvent, Track, type RemoteParticipant, type LocalParticipant, type TrackPublication } from 'livekit-client'
 import { supabase } from '../lib/supabase'
 import { fetchLiveKitToken } from '../lib/livekit'
 import { displayName } from '../lib/displayName'
 import { AvatarBox } from './AvatarBox'
 import { getPresenceColor } from '../lib/presence'
+import { ReplayPlayer, type ReplayEvent } from './ReplayPlayer'
+import { uploadImage } from '../lib/uploadImage'
 import {
   IconArrowLeft, IconCopy, IconGamepad, IconHash, IconHeadphones, IconLock, IconLockOpen,
-  IconMic, IconMicOff, IconMonitorShare, IconPlus, IconSend, IconSettingsGear, IconVideo, IconVideoOff,
+  IconMic, IconMicOff, IconMonitorShare, IconPhoneOff, IconPlus, IconSend, IconSettingsGear, IconVideo, IconVideoOff,
 } from './icons'
 import type { PlayChannel, PlayGroup, PlayMessage, Profile } from '../types'
+
+const REPLAY_WINDOW_MS = 20000
 
 type Props = {
   me: Profile
@@ -27,6 +31,9 @@ export function ThothPlay({ me, onBack }: Props) {
   const [selectedChannel, setSelectedChannel] = useState<PlayChannel | null>(null)
   const [messages, setMessages] = useState<ChannelMessage[]>([])
   const [draft, setDraft] = useState('')
+  const [liveTyping, setLiveTyping] = useState<Record<string, string>>({})
+  const messagesChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null)
+  const replayBuffer = useRef<ReplayEvent[]>([])
   const [showCreate, setShowCreate] = useState(false)
   const [createError, setCreateError] = useState<string | null>(null)
   const [showJoin, setShowJoin] = useState(false)
@@ -58,10 +65,15 @@ export function ThothPlay({ me, onBack }: Props) {
     loadGroups()
   }, [me.id])
 
-  async function loadChannels(groupId: string) {
+  async function fetchChannels(groupId: string) {
     const { data } = await supabase.from('play_channels').select('*').eq('group_id', groupId).order('position', { ascending: true })
     const list = (data || []) as PlayChannel[]
     setChannels(list)
+    return list
+  }
+
+  async function loadChannels(groupId: string) {
+    const list = await fetchChannels(groupId)
     const firstText = list.find((c) => c.kind === 'text')
     if (firstText) openChannel(firstText)
   }
@@ -72,6 +84,24 @@ export function ThothPlay({ me, onBack }: Props) {
     setMessages([])
     await loadChannels(group.id)
   }
+
+  // Sincroniza a lista de canais em tempo real - sem isso, um canal criado em
+  // outra aba/dispositivo (ou por outro membro) so aparecia se vc reabrisse o
+  // grupo do zero.
+  useEffect(() => {
+    if (!selectedGroup) return
+    const channel = supabase
+      .channel(`play-channels:${selectedGroup.id}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'play_channels', filter: `group_id=eq.${selectedGroup.id}` },
+        () => fetchChannels(selectedGroup.id),
+      )
+      .subscribe()
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [selectedGroup?.id])
 
   async function loadMessages(channelId: string) {
     const { data } = await supabase.from('play_messages').select('*').eq('channel_id', channelId).order('created_at', { ascending: true }).limit(200)
@@ -91,9 +121,24 @@ export function ThothPlay({ me, onBack }: Props) {
   }
 
   useEffect(() => {
-    if (!selectedChannel || selectedChannel.kind !== 'text') return
+    replayBuffer.current = []
+    setLiveTyping({})
+    if (!selectedChannel || selectedChannel.kind !== 'text') {
+      messagesChannelRef.current = null
+      return
+    }
     const channel = supabase
       .channel(`play-messages:${selectedChannel.id}`)
+      .on('broadcast', { event: 'typing' }, ({ payload }) => {
+        const { userId, text } = payload as { userId: string; text: string }
+        if (userId === me.id) return
+        setLiveTyping((prev) => {
+          const next = { ...prev }
+          if (text) next[userId] = text
+          else delete next[userId]
+          return next
+        })
+      })
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'play_messages', filter: `channel_id=eq.${selectedChannel.id}` },
@@ -104,21 +149,50 @@ export function ThothPlay({ me, onBack }: Props) {
             const { data } = await supabase.from('profiles').select('*').eq('id', row.author_id).maybeSingle()
             author = (data as Profile) || undefined
           }
-          setMessages((prev) => [...prev, { ...row, author }])
+          setMessages((prev) => (prev.some((m) => m.id === row.id) ? prev : [...prev, { ...row, author }]))
+          setLiveTyping((prev) => {
+            const next = { ...prev }
+            delete next[row.author_id]
+            return next
+          })
         },
       )
       .subscribe()
+    messagesChannelRef.current = channel
     return () => {
       supabase.removeChannel(channel)
+      messagesChannelRef.current = null
     }
   }, [selectedChannel?.id])
+
+  function broadcastTyping(text: string) {
+    messagesChannelRef.current?.send({ type: 'broadcast', event: 'typing', payload: { userId: me.id, text } })
+  }
+
+  function handleDraftChange(text: string) {
+    setDraft(text)
+    const now = Date.now()
+    replayBuffer.current.push({ t: now, text })
+    replayBuffer.current = replayBuffer.current.filter((e) => now - e.t <= REPLAY_WINDOW_MS)
+    broadcastTyping(text)
+  }
 
   async function sendMessage() {
     if (!draft.trim() || !selectedChannel) return
     const content = draft.trim()
+    const eventsToStore = [...replayBuffer.current]
+    replayBuffer.current = []
+    broadcastTyping('')
     setDraft('')
-    const { error } = await supabase.from('play_messages').insert({ channel_id: selectedChannel.id, author_id: me.id, content })
-    if (error) console.error('send play message failed', error)
+    const { data: msg, error } = await supabase
+      .from('play_messages')
+      .insert({ channel_id: selectedChannel.id, author_id: me.id, content })
+      .select()
+      .single()
+    if (error) { console.error('send play message failed', error); return }
+    if (msg && eventsToStore.length > 1) {
+      await supabase.from('play_message_replays').insert({ message_id: msg.id, events: eventsToStore })
+    }
   }
 
   async function handleCreateGroup(name: string, description: string, isClosed: boolean, password: string) {
@@ -161,12 +235,14 @@ export function ThothPlay({ me, onBack }: Props) {
         channels={channels}
         selectedChannel={selectedChannel}
         messages={messages}
+        liveTyping={liveTyping}
         draft={draft}
-        onDraftChange={setDraft}
+        onDraftChange={handleDraftChange}
         onSend={sendMessage}
         onSelectChannel={openChannel}
         onBack={() => { setSelectedGroup(null); setSelectedChannel(null) }}
-        onChannelsChange={() => loadChannels(selectedGroup.id)}
+        onChannelsChange={() => fetchChannels(selectedGroup.id)}
+        onGroupUpdate={(patch) => setSelectedGroup((g) => (g ? { ...g, ...patch } : g))}
       />
     )
   }
@@ -274,19 +350,26 @@ type GroupViewProps = {
   channels: PlayChannel[]
   selectedChannel: PlayChannel | null
   messages: ChannelMessage[]
+  liveTyping: Record<string, string>
   draft: string
   onDraftChange: (v: string) => void
   onSend: () => void
   onSelectChannel: (c: PlayChannel) => void
   onBack: () => void
   onChannelsChange: () => void
+  onGroupUpdate: (patch: Partial<PlayGroup>) => void
 }
 
 type GroupMember = { profile: Profile; role: string }
 type VoiceParticipantInfo = { id: string; name: string }
 
-function GroupView({ me, group, channels, selectedChannel, messages, draft, onDraftChange, onSend, onSelectChannel, onBack, onChannelsChange }: GroupViewProps) {
+function GroupView({ me, group, channels, selectedChannel, messages, liveTyping, draft, onDraftChange, onSend, onSelectChannel, onBack, onChannelsChange, onGroupUpdate }: GroupViewProps) {
   const [showNewChannel, setShowNewChannel] = useState(false)
+  const [joinedVoiceChannel, setJoinedVoiceChannel] = useState<PlayChannel | null>(null)
+  const [openReplayId, setOpenReplayId] = useState<string | null>(null)
+  const [replayEvents, setReplayEvents] = useState<ReplayEvent[] | null>(null)
+  const [showProfile, setShowProfile] = useState(false)
+  const [showGroupInfo, setShowGroupInfo] = useState(false)
   const [newChannelName, setNewChannelName] = useState('')
   const [newChannelKind, setNewChannelKind] = useState<'text' | 'voice'>('text')
   const [copied, setCopied] = useState(false)
@@ -298,7 +381,16 @@ function GroupView({ me, group, channels, selectedChannel, messages, draft, onDr
 
   useEffect(() => {
     setVoiceParticipants([])
-  }, [selectedChannel?.id])
+  }, [joinedVoiceChannel?.id])
+
+  useEffect(() => {
+    // O indicador de compartilhamento de tela do WebView2 mostra o titulo do
+    // documento (quando disponivel) em vez do nome do app - deixa mais claro
+    // qual grupo esta sendo compartilhado.
+    const prevTitle = document.title
+    document.title = group.name
+    return () => { document.title = prevTitle }
+  }, [group.name])
 
   useEffect(() => {
     let cancelled = false
@@ -322,6 +414,7 @@ function GroupView({ me, group, channels, selectedChannel, messages, draft, onDr
   const onlineMembers = members.filter((m) => getPresenceColor(m.profile.last_seen_at, m.profile.is_idle) !== 'offline')
   const offlineMembers = members.filter((m) => getPresenceColor(m.profile.last_seen_at, m.profile.is_idle) === 'offline')
   const inVoiceIds = new Set(voiceParticipants.map((p) => p.id))
+  const myRole = members.find((m) => m.profile.id === me.id)?.role || null
 
   async function createChannel() {
     if (!newChannelName.trim()) return
@@ -334,20 +427,47 @@ function GroupView({ me, group, channels, selectedChannel, messages, draft, onDr
     onChannelsChange()
   }
 
+  function handleSelectChannel(c: PlayChannel) {
+    onSelectChannel(c)
+    if (c.kind === 'voice' && joinedVoiceChannel?.id !== c.id) {
+      setJoinedVoiceChannel(c)
+    }
+  }
+
+  function leaveVoice() {
+    setJoinedVoiceChannel(null)
+  }
+
+  async function openReplay(msg: ChannelMessage) {
+    if (openReplayId === msg.id) { setOpenReplayId(null); return }
+    setOpenReplayId(msg.id)
+    setReplayEvents(null)
+    const { data } = await supabase.from('play_message_replays').select('events').eq('message_id', msg.id).maybeSingle()
+    setReplayEvents((data?.events as ReplayEvent[]) || [])
+  }
+
   function copyInvite() {
     navigator.clipboard?.writeText(group.invite_code)
     setCopied(true)
     setTimeout(() => setCopied(false), 1500)
   }
 
+  const typingNames = Object.entries(liveTyping)
+    .map(([userId, text]) => ({ name: members.find((m) => m.profile.id === userId)?.profile ? displayName(members.find((m) => m.profile.id === userId)!.profile) : 'alguém', text }))
+
   return (
     <main className="play-group-view">
       <aside className="play-icon-rail">
         <button type="button" className="play-icon-rail-back" onClick={onBack} title="Voltar aos grupos"><IconArrowLeft size={18} /></button>
-        <button type="button" className="play-icon-rail-group" title={group.name}>
+        <button type="button" className="play-icon-rail-group" title={group.name} onClick={() => setShowGroupInfo(true)}>
           <AvatarBox src={group.image_url} id={group.id} fallbackLetter={group.name[0]?.toUpperCase()} className="play-group-avatar" />
         </button>
-        <span className="play-icon-rail-label">Sobre o grupo</span>
+        <button type="button" className="play-icon-rail-label play-icon-rail-label-btn" onClick={() => setShowGroupInfo(true)}>Sobre o grupo</button>
+        <div className="play-icon-rail-spacer" />
+        <button type="button" className="play-icon-rail-group play-icon-rail-profile" title="Perfil" onClick={() => setShowProfile(true)}>
+          <AvatarBox src={me.avatar_url} id={me.id} fallbackLetter={displayName(me)[0]?.toUpperCase()} className="play-group-avatar" />
+        </button>
+        <span className="play-icon-rail-label">Perfil</span>
       </aside>
 
       <div className="play-group-main">
@@ -359,7 +479,9 @@ function GroupView({ me, group, channels, selectedChannel, messages, draft, onDr
               <button type="button" className="play-invite-btn" onClick={copyInvite} title="Copiar código de convite">
                 <IconCopy size={12} /> {copied ? 'copiado!' : group.invite_code}
               </button>
-              <IconSettingsGear size={16} />
+              <button type="button" className="play-icon-rail-label-btn" onClick={() => setShowGroupInfo(true)} title="Configurações do grupo">
+                <IconSettingsGear size={16} />
+              </button>
             </div>
             {group.description && <span>{group.description}</span>}
           </div>
@@ -372,7 +494,7 @@ function GroupView({ me, group, channels, selectedChannel, messages, draft, onDr
               <button type="button" onClick={() => { setNewChannelKind('text'); setShowNewChannel(true) }}><IconPlus size={14} /></button>
             </div>
             {textChannels.map((c) => (
-              <button key={c.id} type="button" className={`play-channel-item${selectedChannel?.id === c.id ? ' active' : ''}`} onClick={() => onSelectChannel(c)}>
+              <button key={c.id} type="button" className={`play-channel-item${selectedChannel?.id === c.id ? ' active' : ''}`} onClick={() => handleSelectChannel(c)}>
                 <IconHash size={15} /> {c.name}
               </button>
             ))}
@@ -382,14 +504,22 @@ function GroupView({ me, group, channels, selectedChannel, messages, draft, onDr
             </div>
             {voiceChannels.map((c) => (
               <div key={c.id}>
-                <button type="button" className={`play-channel-item${selectedChannel?.id === c.id ? ' active' : ''}`} onClick={() => onSelectChannel(c)}>
+                <button type="button" className={`play-channel-item${selectedChannel?.id === c.id ? ' active' : ''}`} onClick={() => handleSelectChannel(c)}>
                   <IconVideo size={15} /> {c.name}
                 </button>
-                {selectedChannel?.id === c.id && voiceParticipants.map((p) => (
+                {joinedVoiceChannel?.id === c.id && voiceParticipants.map((p) => (
                   <div key={p.id} className="play-channel-voice-member">{p.name}</div>
                 ))}
               </div>
             ))}
+            {joinedVoiceChannel && (
+              <div className="play-voice-status-bar">
+                <span><IconVideo size={13} /> {joinedVoiceChannel.name}</span>
+                <button type="button" className="play-voice-disconnect" onClick={leaveVoice} title="Desconectar da chamada">
+                  <IconPhoneOff size={14} />
+                </button>
+              </div>
+            )}
           </aside>
 
           {!selectedChannel && <div className="play-channel-empty"><p>Escolha um canal</p></div>}
@@ -404,10 +534,25 @@ function GroupView({ me, group, channels, selectedChannel, messages, draft, onDr
                 {messages.length === 0 && <p className="play-empty">nenhuma mensagem ainda</p>}
                 {messages.map((m) => (
                   <div key={m.id} className="play-message">
-                    <AvatarBox src={m.author?.avatar_url} id={m.author_id} fallbackLetter={(m.author ? displayName(m.author) : '?')[0]?.toUpperCase()} className="avatar-sm" />
                     <div className="play-message-body">
-                      <strong>{m.author ? displayName(m.author) : '...'}</strong>
-                      <p>{m.content}</p>
+                      <div className="play-message-row">
+                        <strong>{m.author ? displayName(m.author) : '...'}</strong>
+                        <span className="play-message-time">{new Date(m.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
+                        <button type="button" className="play-replay-btn" onClick={() => openReplay(m)}>replay</button>
+                      </div>
+                      {openReplayId === m.id ? (
+                        replayEvents === null ? <p className="play-empty">carregando...</p> : replayEvents.length > 1 ? <ReplayPlayer events={replayEvents} /> : <p>{m.content}</p>
+                      ) : (
+                        <p>{m.content}</p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+                {typingNames.map((t, i) => (
+                  <div key={i} className="play-message play-message-live">
+                    <div className="play-message-body">
+                      <div className="play-message-row"><strong>{t.name}</strong><span className="play-message-time">digitando...</span></div>
+                      <p>{t.text}</p>
                     </div>
                   </div>
                 ))}
@@ -424,8 +569,16 @@ function GroupView({ me, group, channels, selectedChannel, messages, draft, onDr
             </div>
           )}
 
-          {selectedChannel?.kind === 'voice' && (
-            <VoiceChannel key={selectedChannel.id} me={me} channel={selectedChannel} onParticipantsChange={setVoiceParticipants} />
+          {selectedChannel?.kind === 'voice' && joinedVoiceChannel?.id !== selectedChannel.id && (
+            <div className="play-channel-empty">
+              <button type="button" className="google-btn" style={{ width: 'auto' }} onClick={() => setJoinedVoiceChannel(selectedChannel)}>Entrar na chamada</button>
+            </div>
+          )}
+
+          {joinedVoiceChannel && (
+            <div style={{ display: selectedChannel?.id === joinedVoiceChannel.id ? 'flex' : 'none', flex: 1, minWidth: 0, flexDirection: 'column', overflow: 'hidden' }}>
+              <VoiceChannel key={joinedVoiceChannel.id} me={me} channel={joinedVoiceChannel} onParticipantsChange={setVoiceParticipants} onLeave={leaveVoice} />
+            </div>
           )}
 
           <aside className="play-member-sidebar">
@@ -481,7 +634,148 @@ function GroupView({ me, group, channels, selectedChannel, messages, draft, onDr
           </div>
         </div>
       )}
+
+      <GroupInfoPanel
+        group={group}
+        myRole={myRole}
+        open={showGroupInfo}
+        onClose={() => setShowGroupInfo(false)}
+        onUpdate={onGroupUpdate}
+      />
+      <ProfilePanel me={me} open={showProfile} onClose={() => setShowProfile(false)} />
     </main>
+  )
+}
+
+function GroupInfoPanel({ group, myRole, open, onClose, onUpdate }: {
+  group: PlayGroup; myRole: string | null; open: boolean; onClose: () => void; onUpdate: (patch: Partial<PlayGroup>) => void
+}) {
+  const isOwner = myRole === 'owner'
+  const [name, setName] = useState(group.name)
+  const [description, setDescription] = useState(group.description || '')
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [confirmDelete, setConfirmDelete] = useState(false)
+
+  useEffect(() => {
+    setName(group.name)
+    setDescription(group.description || '')
+  }, [group.id, open])
+
+  async function save() {
+    setSaving(true)
+    setError(null)
+    const { error: err } = await supabase.from('play_groups').update({ name: name.trim(), description: description.trim() || null }).eq('id', group.id)
+    setSaving(false)
+    if (err) { setError(err.message); return }
+    onUpdate({ name: name.trim(), description: description.trim() || null })
+  }
+
+  async function deleteGroup() {
+    await supabase.from('play_groups').delete().eq('id', group.id)
+    onClose()
+    window.location.reload()
+  }
+
+  return (
+    <div className={`new-conv-panel${open ? ' open' : ''}`}>
+      <div className="new-conv-header">
+        <button type="button" className="icon-btn" onClick={onClose}><IconArrowLeft size={20} /></button>
+        <strong>Sobre o grupo</strong>
+      </div>
+      <div className="play-group-info-body">
+        <div className="play-group-info-avatar">
+          <AvatarBox src={group.image_url} id={group.id} fallbackLetter={group.name[0]?.toUpperCase()} className="play-group-avatar" />
+        </div>
+        {isOwner ? (
+          <>
+            <label>Nome</label>
+            <input value={name} onChange={(e) => setName(e.target.value)} />
+            <label style={{ marginTop: 10 }}>Descrição</label>
+            <input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Sem descrição" />
+            {error && <p className="auth-error">{error}</p>}
+            <button type="button" className="google-btn" style={{ marginTop: 10 }} disabled={saving || !name.trim()} onClick={save}>
+              {saving ? 'Salvando...' : 'Salvar'}
+            </button>
+          </>
+        ) : (
+          <>
+            <h2 style={{ margin: '8px 0 4px' }}>{group.name}</h2>
+            <p style={{ color: 'var(--text-secondary)' }}>{group.description || 'sem descrição'}</p>
+          </>
+        )}
+        <div className="play-group-info-badge">
+          {group.is_closed ? <><IconLock size={13} /> Grupo fechado</> : <><IconLockOpen size={13} /> Grupo aberto</>}
+        </div>
+
+        {isOwner && (
+          confirmDelete ? (
+            <div style={{ marginTop: 20 }}>
+              <p style={{ color: 'var(--danger, #e5484d)' }}>Excluir o grupo apaga todos os canais e mensagens. Não dá pra desfazer.</p>
+              <button type="button" className="settings-danger-btn" onClick={deleteGroup}>Confirmar exclusão</button>
+              <button type="button" className="modal-close" onClick={() => setConfirmDelete(false)}>cancelar</button>
+            </div>
+          ) : (
+            <button type="button" className="settings-danger-btn" style={{ marginTop: 20 }} onClick={() => setConfirmDelete(true)}>Excluir grupo</button>
+          )
+        )}
+      </div>
+    </div>
+  )
+}
+
+function ProfilePanel({ me, open, onClose }: { me: Profile; open: boolean; onClose: () => void }) {
+  const [displayNameDraft, setDisplayNameDraft] = useState(me.display_name || me.username)
+  const [statusDraft, setStatusDraft] = useState(me.status || '')
+  const [saving, setSaving] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const fileRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    setDisplayNameDraft(me.display_name || me.username)
+    setStatusDraft(me.status || '')
+  }, [me.id, open])
+
+  async function save() {
+    setSaving(true)
+    await supabase.from('profiles').update({ display_name: displayNameDraft.trim() || null, status: statusDraft.trim() || null }).eq('id', me.id)
+    setSaving(false)
+  }
+
+  async function handleAvatarPick(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploading(true)
+    try {
+      const url = await uploadImage(file, me.id, 'avatar')
+      await supabase.from('profiles').update({ avatar_url: url }).eq('id', me.id)
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  return (
+    <div className={`new-conv-panel${open ? ' open' : ''}`}>
+      <div className="new-conv-header">
+        <button type="button" className="icon-btn" onClick={onClose}><IconArrowLeft size={20} /></button>
+        <strong>Perfil</strong>
+      </div>
+      <div className="play-group-info-body">
+        <p style={{ color: 'var(--muted)', fontSize: 12 }}>Esse perfil é só do Thoth Play por enquanto - vamos integrar com a conta completa do app depois.</p>
+        <button type="button" className="play-group-info-avatar" onClick={() => fileRef.current?.click()} style={{ border: 0, cursor: 'pointer' }}>
+          <AvatarBox src={me.avatar_url} id={me.id} fallbackLetter={displayName(me)[0]?.toUpperCase()} className="play-group-avatar" />
+        </button>
+        <input ref={fileRef} type="file" accept="image/*" hidden onChange={handleAvatarPick} />
+        {uploading && <p className="play-empty">enviando foto...</p>}
+        <label>Nome de exibição</label>
+        <input value={displayNameDraft} onChange={(e) => setDisplayNameDraft(e.target.value)} />
+        <label style={{ marginTop: 10 }}>Status</label>
+        <input value={statusDraft} onChange={(e) => setStatusDraft(e.target.value)} placeholder="De boa" />
+        <button type="button" className="google-btn" style={{ marginTop: 10 }} disabled={saving} onClick={save}>
+          {saving ? 'Salvando...' : 'Salvar'}
+        </button>
+      </div>
+    </div>
   )
 }
 
@@ -493,7 +787,7 @@ type ParticipantTile = {
   videoTrack?: Track
 }
 
-function VoiceChannel({ me, channel, onParticipantsChange }: { me: Profile; channel: PlayChannel; onParticipantsChange: (p: VoiceParticipantInfo[]) => void }) {
+function VoiceChannel({ me, channel, onParticipantsChange, onLeave }: { me: Profile; channel: PlayChannel; onParticipantsChange: (p: VoiceParticipantInfo[]) => void; onLeave: () => void }) {
   const roomRef = useRef<Room | null>(null)
   const [connected, setConnected] = useState(false)
   const [connecting, setConnecting] = useState(true)
@@ -629,6 +923,9 @@ function VoiceChannel({ me, channel, onParticipantsChange }: { me: Profile; chan
             </button>
             <button type="button" className={`icon-btn${screenEnabled ? ' active' : ''}`} onClick={toggleScreenShare} title="Compartilhar tela">
               <IconMonitorShare size={20} />
+            </button>
+            <button type="button" className="icon-btn play-voice-leave" onClick={onLeave} title="Desconectar da chamada">
+              <IconPhoneOff size={20} />
             </button>
           </div>
         </>
