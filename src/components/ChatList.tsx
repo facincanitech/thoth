@@ -15,6 +15,7 @@ import { APP_VERSION, APK_DOWNLOAD_URL } from '../version'
 import { checkForUpdate } from '../lib/updateCheck'
 import { downloadAndInstallUpdate } from '../lib/appUpdate'
 import { isTauriDesktop } from '../lib/platform'
+import { getPresenceColor } from '../lib/presence'
 import {
   IconArchive,
   IconArrowLeft,
@@ -214,6 +215,8 @@ type ConvWithLabel = Conversation & {
   label: string
   avatarUrl: string | null
   otherId: string | null
+  otherLastSeenAt: string | null
+  otherIsIdle: boolean
   nameStyleFont: string | null
   nameStyleEffect: 'solid' | 'gradient' | 'neon' | 'prism' | null
   nameStyleColor: string | null
@@ -677,6 +680,8 @@ export function ChatList({
               label: p ? displayName(p) : 'conversa',
               avatarUrl: p?.avatar_url || null,
               otherId: p?.id || null,
+              otherLastSeenAt: p?.last_seen_at || null,
+              otherIsIdle: !!p?.is_idle,
               nameStyleFont: p?.name_style_font || null,
               nameStyleEffect: p?.name_style_effect || null,
               nameStyleColor: p?.name_style_color || null,
@@ -689,6 +694,8 @@ export function ChatList({
             label: c.name || 'grupo',
             avatarUrl: null,
             otherId: null,
+            otherLastSeenAt: null,
+            otherIsIdle: false,
             nameStyleFont: null,
             nameStyleEffect: null,
             nameStyleColor: null,
@@ -702,6 +709,8 @@ export function ChatList({
           label: p ? displayName(p) : 'conversa',
           avatarUrl: p?.avatar_url || null,
           otherId: p?.id || null,
+          otherLastSeenAt: p?.last_seen_at || null,
+          otherIsIdle: !!p?.is_idle,
           nameStyleFont: p?.name_style_font || null,
           nameStyleEffect: p?.name_style_effect || null,
           nameStyleColor: p?.name_style_color || null,
@@ -1712,7 +1721,10 @@ export function ChatList({
     const matches = (label: string) => label.toLowerCase().includes(q)
     const allDraggableIds = [...favoriteConvs, ...regularConvs, ...groupConvs, ...sortedCommunities].map((c) => c.id)
 
-    const contactRow = (id: string, label: string, avatarUrl: string | null | undefined, unreadCount: number, onClick: () => void) => (
+    const contactRow = (
+      id: string, label: string, avatarUrl: string | null | undefined, unreadCount: number, onClick: () => void,
+      presence?: { lastSeenAt: string | null; isIdle: boolean },
+    ) => (
       <button key={id} type="button" data-chat-id={id} className={`msn-contact${dragChatId === id ? ' dragging' : ''}`} onClick={onClick}>
         <span
           className="msn-contact-grip"
@@ -1726,6 +1738,7 @@ export function ChatList({
           <IconGrip size={12} />
         </span>
         <AvatarBox src={avatarUrl} id={id} fallbackLetter={label[0]?.toUpperCase()} className="msn-contact-avatar" />
+        {presence && <span className={`presence-dot ${getPresenceColor(presence.lastSeenAt, presence.isIdle)}`} />}
         <div className="msn-contact-info">
           <strong>{label}</strong>
         </div>
@@ -1746,11 +1759,13 @@ export function ChatList({
       return [...saved, ...rest]
     })().filter((k) => k === 'conversas' || sectionCount[k] > 0)
 
+    const dmPresence = (c: ConvWithLabel) => (c.otherId ? { lastSeenAt: c.otherLastSeenAt, isIdle: c.otherIsIdle } : undefined)
+
     const sectionContent = (key: string) => {
-      if (key === 'favoritos') return favoriteConvs.filter((c) => matches(c.label)).map((c) => contactRow(c.id, c.label, c.avatarUrl, c.unreadCount, () => onSelect(c)))
+      if (key === 'favoritos') return favoriteConvs.filter((c) => matches(c.label)).map((c) => contactRow(c.id, c.label, c.avatarUrl, c.unreadCount, () => onSelect(c), dmPresence(c)))
       if (key === 'conversas') {
         if (regularConvs.length === 0) return <p className="msn-empty">nenhuma conversa ainda</p>
-        return regularConvs.filter((c) => matches(c.label)).map((c) => contactRow(c.id, c.label, c.avatarUrl, c.unreadCount, () => onSelect(c)))
+        return regularConvs.filter((c) => matches(c.label)).map((c) => contactRow(c.id, c.label, c.avatarUrl, c.unreadCount, () => onSelect(c), dmPresence(c)))
       }
       if (key === 'grupos') return groupConvs.filter((c) => matches(c.label)).map((c) => contactRow(c.id, c.label, c.avatarUrl, c.unreadCount, () => onSelect(c)))
       return sortedCommunities.filter((c) => matches(c.name || '')).map((c) => contactRow(c.id, c.name || '', c.image_url, 0, () => onSelectCommunity(c)))

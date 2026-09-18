@@ -8,7 +8,6 @@ export function DesktopTitleBar({ title }: TitleBarProps) {
   const win = currentWindow()
   return (
     <header className="titlebar" data-tauri-drag-region>
-      <span className="titlebar-orb" aria-hidden="true" />
       <span className="titlebar-brand" data-tauri-drag-region>{title}</span>
       <div className="window-controls">
         <button type="button" className="window-minimize" aria-label="Minimizar" onClick={() => win.minimize()}><span /></button>
