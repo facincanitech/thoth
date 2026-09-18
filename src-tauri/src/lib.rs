@@ -39,8 +39,8 @@ pub fn run() {
         let show_item = MenuItem::with_id(app, "show", "Abrir", true, None::<&str>)?;
         let new_item = MenuItem::with_id(app, "new", "Novo contato", true, None::<&str>)?;
         let status_item = MenuItem::with_id(app, "status", "Status", true, None::<&str>)?;
-        let groups_item = MenuItem::with_id(app, "groups", "ThothChat - Grupos", true, None::<&str>)?;
-        let communities_item = MenuItem::with_id(app, "communities", "ThothChat - Comunidades", true, None::<&str>)?;
+        let groups_item = MenuItem::with_id(app, "groups", "Grupos", true, None::<&str>)?;
+        let communities_item = MenuItem::with_id(app, "communities", "Comunidades", true, None::<&str>)?;
         let quit_item = MenuItem::with_id(app, "quit", "Sair", true, None::<&str>)?;
         let sep1 = PredefinedMenuItem::separator(app)?;
         let sep2 = PredefinedMenuItem::separator(app)?;

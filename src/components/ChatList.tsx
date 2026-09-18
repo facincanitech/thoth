@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Capacitor } from '@capacitor/core'
 import { supabase } from '../lib/supabase'
 import thothLogo from '../../logo/toth_chat.png'
@@ -816,6 +816,18 @@ export function ChatList({
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'communities' },
         () => loadCommunities(),
+      )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'profiles' },
+        (payload) => {
+          const p = payload.new as Profile
+          setConversations((prev) => prev.map((c) => (
+            c.otherId === p.id
+              ? { ...c, avatarUrl: p.avatar_url || null, otherLastSeenAt: p.last_seen_at || null, otherIsIdle: !!p.is_idle }
+              : c
+          )))
+        },
       )
       .on(
         'postgres_changes',
@@ -1701,6 +1713,7 @@ export function ChatList({
     )
   }
 
+  let desktopContactsSurface: ReactNode = null
   if (isTauriDesktop) {
     const sortByChatOrder = <T extends { id: string }>(items: T[]): T[] => {
       if (!chatOrder.length) return items
@@ -1771,7 +1784,7 @@ export function ChatList({
       return sortedCommunities.filter((c) => matches(c.name || '')).map((c) => contactRow(c.id, c.name || '', c.image_url, 0, () => onSelectCommunity(c)))
     }
 
-    return (
+    desktopContactsSurface = (
       <section className="msn-contacts-window">
         <div className="msn-identity-card">
           <div className="msn-avatar-me">
@@ -1874,6 +1887,8 @@ export function ChatList({
             </button>
           </div>
         </div>
+      ) : isTauriDesktop ? (
+        desktopContactsSurface
       ) : (
         <>
           <div className="top">
