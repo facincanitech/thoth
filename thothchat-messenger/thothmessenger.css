@@ -16,6 +16,59 @@
 .desktop-window-shell .rail-brand{display:none!important}
 .desktop-window-shell .rail .spacer{display:block!important}
 .app{flex:1;min-width:0;min-height:0;display:flex;overflow:hidden;background:#fff}.rail{width:72px}.msn-contacts-window{flex:1;min-width:0}.desktop-window-shell:not(.desktop-chat-shell) .chats{width:100%;border:0;background:#fff;box-shadow:none}.top{min-height:118px;padding:17px 18px;background:radial-gradient(circle at 80% -30%,#fff,transparent 48%),linear-gradient(#f0fbff,#cceaf6);border-bottom:1px solid #86b8cf}.brand{font-size:17px;font-weight:bold;color:#123d57}.brand-caption{margin-top:6px;font-size:12px;color:#517487;font-style:italic}.search-wrap{padding:10px;background:#f5fbfe;border-bottom:1px solid #bad3de}.search{height:35px;border:1px solid #80afc4;border-radius:0;background:#fff}.filters{gap:4px;padding:8px 10px;background:linear-gradient(#fff,#e6f2f7);border-bottom:1px solid #9fc4d4}.filter-tab,.filter-more-btn{border-radius:3px!important;background:linear-gradient(#fff,#e5f1f6)!important}.filter-tab.active,.filter-more-btn.active{background:linear-gradient(#a8e555,#68b51c 53%,#47920d)!important;color:#fff!important}.chat-list{margin:0;padding:5px 7px;background:#fff}.chat{min-height:56px;margin:0;padding:5px 8px;border-radius:0}.chat:hover,.chat.selected{background:linear-gradient(#f5fcff,#dceff7);border-color:#acd0df}.chat.selected:before{display:none}
+
+/* Identidade MSN da navegacao do desktop. Fundo propositalmente limpo: sem
+   bolhas decorativas e sem indicadores verdes na barra. */
+.desktop-window-shell .rail{
+  width:80px!important;gap:10px!important;padding:12px 7px 10px!important;
+  color:#fff!important;
+  background:
+    linear-gradient(90deg,rgb(255 255 255 / 22%),transparent 9%,transparent 88%,rgb(0 75 112 / 22%)),
+    linear-gradient(180deg,#28c3ee 0%,#08a4db 42%,#0789bd 100%)!important;
+  border-right:1px solid #0877a5!important;
+  box-shadow:inset 1px 0 rgb(255 255 255 / 70%),inset -1px 0 rgb(255 255 255 / 38%),4px 0 10px rgb(0 77 111 / 13%);
+}
+.desktop-window-shell .rail:before{
+  content:"";position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(180deg,rgb(255 255 255 / 28%),transparent 12%,transparent 88%,rgb(0 73 108 / 12%));
+}
+.desktop-window-shell .rail-item,.desktop-window-shell .rail>.spacer{position:relative;z-index:1}
+.desktop-window-shell .rail-link{
+  min-height:62px;padding:8px 3px;gap:5px;border:1px solid transparent;border-radius:13px;
+  color:#fff;text-shadow:0 1px 1px rgb(0 69 104 / 62%);
+  background:transparent;box-shadow:none;
+  transition:background .14s ease,border-color .14s ease,box-shadow .14s ease,transform .14s ease;
+}
+.desktop-window-shell .rail-link:hover{
+  color:#fff;background:linear-gradient(180deg,rgb(255 255 255 / 25%),rgb(220 249 255 / 10%));
+  border-color:rgb(255 255 255 / 38%);box-shadow:inset 0 1px rgb(255 255 255 / 42%);
+}
+.desktop-window-shell .rail-link:active{transform:translateY(1px)}
+.desktop-window-shell .rail-link[aria-current="page"]{
+  color:#075d8c!important;text-shadow:none;
+  background:linear-gradient(180deg,#f9feff 0%,#e4f8ff 45%,#c7edfb 100%)!important;
+  border:1px solid #39a9d1!important;
+  box-shadow:inset 0 0 0 2px rgb(255 255 255 / 88%),inset 0 -4px 8px rgb(43 161 205 / 12%),0 2px 6px rgb(0 73 108 / 34%)!important;
+}
+.desktop-window-shell .rail-symbol{width:28px;height:27px;filter:drop-shadow(0 1px 1px rgb(0 75 110 / 45%))}
+.desktop-window-shell .rail-symbol svg{width:24px;height:24px;stroke-width:2}
+.desktop-window-shell .rail-link[aria-current="page"] .rail-symbol{filter:drop-shadow(0 1px #fff)}
+.desktop-window-shell .rail-label{font-size:10px;line-height:1.1;font-weight:700;letter-spacing:-.1px}
+.desktop-window-shell .rail-badge{
+  top:4px;right:3px;min-width:16px;width:auto;height:15px;padding:0 4px;border-radius:7px!important;
+  color:#fff;background:linear-gradient(#ffbd62,#e77a18)!important;border:1px solid #c45d08;
+  box-shadow:inset 0 1px rgb(255 255 255 / 65%),0 1px 3px rgb(0 71 104 / 40%);
+}
+.desktop-window-shell .rail-account{
+  min-height:70px;padding-top:7px;background:linear-gradient(180deg,rgb(255 255 255 / 16%),rgb(0 104 151 / 12%));
+  border-color:rgb(255 255 255 / 30%);box-shadow:inset 0 1px rgb(255 255 255 / 28%);
+}
+.desktop-window-shell .rail-account .avatar-sm{
+  width:36px;height:36px;padding:3px;border:2px solid #a9ecff!important;border-radius:8px;
+  background:linear-gradient(145deg,#fff,#72d7ee 48%,#0788ba);color:#075d8c;
+  box-shadow:inset 0 1px #fff,0 2px 5px rgb(0 67 99 / 42%);
+}
+.desktop-window-shell .rail-account .avatar-sm img{border-radius:4px}
 /* Moldura "vidro" MSN - 1 contorno so (sem outline por fora, so o border com
    gradiente de vidro por baixo), azul por padrao (neutro, sem presenca), muda
    pra verde/vermelho quando o avatar tem um .presence-dot irmao. !important
@@ -69,6 +122,80 @@
 .msn-contact-avatar img{width:100%;height:100%;object-fit:cover}
 .msn-unread{min-width:18px;padding:2px 5px;border-radius:9px;background:#ef7b32;color:#fff;text-align:center;font-size:10px;flex-shrink:0}
 .msn-empty{padding:10px 8px;font-size:11px;color:#728894}
+
+/* Acabamento das duas janelas independentes (contatos e conversa). */
+.titlebar{
+  height:42px;padding-left:11px;color:#fff;background:linear-gradient(180deg,#242424,#151515 58%,#101010);
+  border-bottom:1px solid #050505;box-shadow:inset 0 1px rgb(255 255 255 / 14%),0 1px #42c8ed;text-shadow:0 1px #000;
+}
+.titlebar-logo{width:22px;height:22px;margin-right:9px;filter:drop-shadow(0 1px 1px #000)}
+.titlebar-brand{font-size:14px;font-weight:700}
+.window-controls button{width:42px;border-left-color:#ffffff1c}
+.window-controls button:hover{background:#ffffff17}
+.desktop-window-shell{border-color:#0876a3;border-radius:7px 7px 5px 5px;box-shadow:inset 0 0 0 1px #ffffff8c,0 12px 35px #00304852}
+
+.msn-identity-card{
+  min-height:112px;padding:14px 15px;gap:13px;
+  background:radial-gradient(circle at 88% -35%,#fff 0 12%,transparent 48%),linear-gradient(180deg,#effbff,#ccebf7);
+  border-bottom:1px solid #83b9ce;box-shadow:inset 0 1px #fff;
+}
+.msn-avatar-me{width:70px;height:70px;border-width:3px!important;box-shadow:inset 0 1px #fff,0 3px 7px rgb(0 72 104 / 28%)}
+.msn-identity-copy strong{font-size:18px;line-height:1.15;color:#083e63;text-shadow:0 1px #fff}
+.msn-presence{margin-top:4px;font-size:12px;line-height:1.35;color:#416d82}
+.msn-mail-button{width:36px;height:36px;border:1px solid transparent;border-radius:7px;display:grid;place-items:center}
+.msn-mail-button:hover{border-color:#9acbdd;background:linear-gradient(#fff,#d9f1fa);box-shadow:inset 0 1px #fff}
+.msn-search-row{padding:9px 10px;background:linear-gradient(#f7fcfe,#e6f4f9);border-bottom-color:#a8cedd}
+.msn-search-row input{
+  height:34px;padding:0 11px;border-color:#7fb2c8;border-radius:1px;
+  box-shadow:inset 0 1px 3px rgb(0 53 81 / 13%),0 1px #fff;font-size:12px;
+}
+.msn-contact-list{padding:6px 8px;background:linear-gradient(90deg,#fff,#fbfdfe 78%,#f3fafc)}
+.msn-contact-list details summary{height:31px;font-size:13px;color:#123f5d;text-shadow:0 1px #fff}
+.msn-contact-list .msn-contact-group-title small{color:#63869a}
+.msn-contact{height:56px;gap:8px;padding:5px 8px;border-radius:7px}
+.msn-contact:hover{
+  background:linear-gradient(180deg,#f7fdff,#d9f1fa);border-color:#8bc5dc;
+  box-shadow:inset 0 1px #fff,0 1px 3px rgb(0 75 108 / 12%);
+}
+.msn-contact-avatar{width:40px;height:40px;border-radius:7px}
+.msn-contact-info strong{font-size:12px;color:#073f68}
+
+.desktop-chat-shell .main{background:#eef8fc;border-top:1px solid #bce9f7}
+.desktop-chat-shell .chat-header{
+  min-height:112px;padding:13px 18px;gap:14px;
+  background:radial-gradient(circle at 86% -40%,#fff 0 10%,transparent 46%),linear-gradient(180deg,#effbff,#c8eaf7);
+  border-bottom:1px solid #79b6cd;box-shadow:inset 0 1px #fff,0 1px #dff7ff;color:#103f5d;
+}
+.desktop-chat-shell .header-photo{width:72px;height:72px;border-radius:9px}
+.desktop-chat-shell .header-name{font-size:19px;color:#06477a;text-shadow:0 1px #fff}
+.desktop-chat-shell .header-status-phrase{display:block;flex-basis:100%;margin-top:1px;color:#486f82;font-size:12px}
+.desktop-chat-shell .header-actions{align-self:stretch;gap:8px;margin-right:0}
+.desktop-chat-shell .header-actions .icon-btn{
+  width:54px;height:64px;align-self:center;border:1px solid #9ccddd;border-radius:7px;
+  color:#0876ab;background:linear-gradient(180deg,rgb(255 255 255 / 82%),rgb(205 238 249 / 72%));
+  box-shadow:inset 0 1px #fff,0 1px 3px rgb(0 77 110 / 16%);text-shadow:0 1px #fff;
+}
+.desktop-chat-shell .header-actions .icon-btn:hover{background:linear-gradient(#fff,#c0eafa);border-color:#58aed0;color:#055a87}
+.desktop-chat-shell .messages{
+  margin:10px 10px 0;padding:20px 22px;background:#fff;border:1px solid #89bdd1;border-radius:5px;
+  box-shadow:inset 0 1px 3px rgb(0 57 84 / 8%),0 1px #fff;scrollbar-gutter:stable;
+}
+.desktop-chat-shell .date{border-radius:4px;background:#eff8fc;border-color:#b9d7e3}
+.desktop-chat-shell .composer{
+  min-height:148px;margin:9px 10px 10px;padding:0;gap:0;background:linear-gradient(#edf9fd,#d8f0f8);
+  border:1px solid #86bdd2;border-radius:6px;box-shadow:inset 0 1px #fff;color:#123d57;
+}
+.desktop-chat-shell .composer-icons{min-height:39px;padding:5px 8px;background:linear-gradient(#fbfeff,#dceef5);border-bottom-color:#9fc6d6}
+.desktop-chat-shell .compose-btn{width:34px;height:28px;border:1px solid transparent;border-radius:4px;color:#0874a6}
+.desktop-chat-shell .compose-btn:hover{border-color:#8fc2d6;background:linear-gradient(#fff,#d6edf6);box-shadow:inset 0 1px #fff}
+.desktop-chat-shell .composer-input-row{padding:9px;gap:9px}
+.desktop-chat-shell .input{min-height:76px;padding:8px 10px;border-color:#77afc7;border-radius:2px;box-shadow:inset 0 1px 3px rgb(0 52 78 / 13%)}
+.desktop-chat-shell .input textarea{font:13px Tahoma,"Segoe UI",Arial,sans-serif}
+.desktop-chat-shell .send{
+  width:86px;height:42px;border:1px solid #408507;border-radius:4px;
+  background:linear-gradient(#b7ef67,#66bc18 52%,#46910b);box-shadow:inset 0 1px rgb(255 255 255 / 75%),0 2px 4px rgb(38 100 0 / 24%);
+}
+.desktop-chat-shell .send:hover{filter:brightness(1.05)}
 
 /* Tela de login (janela principal, antes de autenticar) */
 .msn-login-screen{
