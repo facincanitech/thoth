@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { displayName } from '../lib/displayName'
-import { IconBell, IconChat, IconGroup, IconHeart, IconPlus, IconStar, IconStatus, IconUser } from './icons'
+import { IconBell, IconChat, IconGamepad, IconGroup, IconHeart, IconPlus, IconStar, IconStatus, IconUser } from './icons'
 import type { Profile } from '../types'
 import thothLogo from '../../logo/toth_chat.png'
 
@@ -13,12 +13,13 @@ type Props = {
   onOpenGroups: () => void
   onOpenCommunities: () => void
   onOpenStatus: () => void
+  onOpenPlay: () => void
   onGoHome: () => void
   nudgeCount: number
-  activeSection: 'chats' | 'new' | 'groups' | 'communities' | 'account' | 'status'
+  activeSection: 'chats' | 'new' | 'groups' | 'communities' | 'account' | 'status' | 'play'
 }
 
-export function Rail({ me, onRequireAuth, onNewConversation, onOpenAccount, onOpenGroups, onOpenCommunities, onOpenStatus, onGoHome, nudgeCount, activeSection }: Props) {
+export function Rail({ me, onRequireAuth, onNewConversation, onOpenAccount, onOpenGroups, onOpenCommunities, onOpenStatus, onOpenPlay, onGoHome, nudgeCount, activeSection }: Props) {
   const [pendingCount, setPendingCount] = useState(0)
 
   useEffect(() => {
@@ -85,6 +86,14 @@ export function Rail({ me, onRequireAuth, onNewConversation, onOpenAccount, onOp
     onOpenStatus()
   }
 
+  function handlePlayClick() {
+    if (!me) {
+      onRequireAuth()
+      return
+    }
+    onOpenPlay()
+  }
+
   return (
     <aside className="rail" aria-label="Navegação principal">
       <div className="rail-brand" aria-label="ThothChat">
@@ -130,6 +139,11 @@ export function Rail({ me, onRequireAuth, onNewConversation, onOpenAccount, onOp
         aria-current={activeSection === 'communities' ? 'page' : undefined}>
         <span className="rail-symbol"><IconHeart /></span>
         <span className="rail-label">Comunidades</span>
+      </button>
+      <button type="button" className="rail-item rail-link" title="Thoth Play" onClick={handlePlayClick}
+        aria-current={activeSection === 'play' ? 'page' : undefined}>
+        <span className="rail-symbol"><IconGamepad /></span>
+        <span className="rail-label">Play</span>
       </button>
       <div className="spacer" />
       <button

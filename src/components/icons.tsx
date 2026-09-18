@@ -456,3 +456,27 @@ export function IconPanelLeft({ size = 20 }: IconProps) {
     </svg>
   )
 }
+
+export function IconGamepad({ size = 20 }: IconProps) {
+  return (
+    <svg {...base} width={size} height={size}>
+      <rect x="2" y="7" width="20" height="11" rx="5.5" />
+      <line x1="7" y1="10" x2="7" y2="14" />
+      <line x1="5" y1="12" x2="9" y2="12" />
+      <circle cx="15" cy="10.5" r="1" fill="currentColor" stroke="none" />
+      <circle cx="17.5" cy="13" r="1" fill="currentColor" stroke="none" />
+    </svg>
+  )
+}
+
+export function IconMonitorShare({ size = 20 }: IconProps) {
+  return (
+    <svg {...base} width={size} height={size}>
+      <rect x="2" y="4" width="20" height="13" rx="2" />
+      <line x1="8" y1="21" x2="16" y2="21" />
+      <line x1="12" y1="17" x2="12" y2="21" />
+      <path d="M9 13l3-3 3 3" />
+      <line x1="12" y1="10" x2="12" y2="15" />
+    </svg>
+  )
+}

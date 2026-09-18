@@ -55,6 +55,41 @@ export type TypingPayload = {
 
 export type PanelView = 'root' | 'contact' | 'group' | 'friends'
 
+export type PlayGroup = {
+  id: string
+  name: string
+  description: string | null
+  image_url: string | null
+  is_closed: boolean
+  invite_code: string
+  created_by: string
+  created_at: string
+}
+
+export type PlayGroupMember = {
+  group_id: string
+  user_id: string
+  role: 'owner' | 'admin' | 'member'
+  joined_at: string
+}
+
+export type PlayChannel = {
+  id: string
+  group_id: string
+  name: string
+  kind: 'text' | 'voice'
+  position: number
+  created_at: string
+}
+
+export type PlayMessage = {
+  id: string
+  channel_id: string
+  author_id: string
+  content: string
+  created_at: string
+}
+
 export type Bot = {
   id: string
   slug: string

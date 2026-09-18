@@ -6,6 +6,7 @@ import { Rail } from './components/Rail'
 import { ChatList } from './components/ChatList'
 import { MainPanel } from './components/MainPanel'
 import { CommunityView } from './components/CommunityView'
+import { ThothPlay } from './components/ThothPlay'
 import { AuthModal } from './components/AuthModal'
 import { CallOverlay, type CallOverlayHandle } from './components/CallOverlay'
 import type { Community, Conversation, PanelView, Profile } from './types'
@@ -202,6 +203,7 @@ function App() {
   const [groupsOpen, setGroupsOpen] = useState(false)
   const [groupsSection, setGroupsSection] = useState<'groups' | 'communities'>('groups')
   const [statusOpen, setStatusOpen] = useState(false)
+  const [playOpen, setPlayOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [blockedIds, setBlockedIds] = useState<Set<string>>(new Set())
 
@@ -503,6 +505,7 @@ function App() {
       setStatusOpen(false)
       setAccountOpen(false)
       setGroupsOpen(false)
+      setPlayOpen(false)
       setPanelView('root')
       setPanelOpen(true)
     })
@@ -513,6 +516,7 @@ function App() {
       setStatusOpen(false)
       setPanelOpen(false)
       setGroupsOpen(false)
+      setPlayOpen(false)
       setAccountOpen(true)
       setAccountResetKey((k) => k + 1)
     })
@@ -523,6 +527,7 @@ function App() {
       setStatusOpen(false)
       setPanelOpen(false)
       setAccountOpen(false)
+      setPlayOpen(false)
       setGroupsRestoreView('group-root')
       setGroupsSection('groups')
       setGroupsOpen(true)
@@ -539,6 +544,7 @@ function App() {
       setStatusOpen(false)
       setPanelOpen(false)
       setAccountOpen(false)
+      setPlayOpen(false)
       setGroupsRestoreView('community-root')
       setGroupsSection('communities')
       setGroupsOpen(true)
@@ -557,6 +563,7 @@ function App() {
     setAccountOpen(false)
     setGroupsOpen(false)
     setStatusOpen(false)
+    setPlayOpen(false)
   }
 
   function openStatus() {
@@ -565,12 +572,25 @@ function App() {
     setPanelOpen(false)
     setAccountOpen(false)
     setGroupsOpen(false)
+    setPlayOpen(false)
     setStatusOpen(true)
     try {
       localStorage.setItem('ferus-visited-status', '1')
     } catch {
       // ignore
     }
+  }
+
+  function openPlay() {
+    requireAuth(() => {
+      setSelected(null)
+      setSelectedCommunity(null)
+      setPanelOpen(false)
+      setAccountOpen(false)
+      setGroupsOpen(false)
+      setStatusOpen(false)
+      setPlayOpen(true)
+    })
   }
 
   const [inviteDemoSignal, setInviteDemoSignal] = useState(0)
@@ -598,10 +618,12 @@ function App() {
         onOpenGroups={openGroups}
         onOpenCommunities={openCommunities}
         onOpenStatus={openStatus}
+        onOpenPlay={openPlay}
         onGoHome={openNudger}
         nudgeCount={nudgers.length}
         activeSection={
-          statusOpen ? 'status'
+          playOpen ? 'play'
+            : statusOpen ? 'status'
             : accountOpen ? 'account'
             : panelOpen ? 'new'
             : groupsOpen ? groupsSection
@@ -609,6 +631,8 @@ function App() {
             : 'chats'
         }
       />}
+      {playOpen && profile ? <ThothPlay me={profile} onBack={goHome} /> : (
+      <>
       <ChatList
         me={profile}
         selected={selected}
@@ -678,6 +702,8 @@ function App() {
           sidebarCollapsed={sidebarCollapsed}
           onToggleSidebar={() => setSidebarCollapsed((v) => !v)}
         />
+      )}
+      </>
       )}
       {authOpen && <AuthModal onClose={() => setAuthOpen(false)} />}
       <CallOverlay ref={callOverlayRef} me={profile} />

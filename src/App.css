@@ -1469,3 +1469,56 @@ body{
   [data-theme="frutiger"] .welcome-card{margin:16px;padding:28px 22px}
 }
 
+/* Thoth Play - tela separada (nao e chat), grupos ("servidores") com canais de
+   texto e voz. Fica no lugar da lista de conversas + painel principal quando aberta. */
+.play-home{flex:1;min-width:0;min-height:0;display:flex;flex-direction:column;overflow-y:auto;background:var(--bg-deep)}
+.play-home-header{display:flex;align-items:center;gap:12px;padding:18px 24px;flex-shrink:0}
+.play-home-header h1{display:flex;align-items:center;gap:8px;font-size:20px;margin:0}
+.play-home-actions{display:flex;gap:10px;padding:0 24px 16px}
+.play-home-actions .google-btn{width:auto;flex:none;display:inline-flex;align-items:center;gap:6px;padding:9px 16px}
+.play-group-section{padding:0 24px 20px}
+.play-group-section h2{font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin:0 0 10px}
+.play-group-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px}
+.play-group-card{
+  display:flex;flex-direction:column;align-items:center;gap:6px;padding:16px 10px;border-radius:14px;
+  border:1px solid var(--line-2);background:var(--bg-panel);cursor:pointer;color:var(--text);text-align:center;
+}
+.play-group-card:hover{background:var(--bg-selected)}
+.play-group-avatar{width:52px;height:52px;border-radius:14px;overflow:hidden;background:var(--avatar-bg);display:grid;place-items:center;font-weight:700}
+.play-group-name{font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
+.play-empty{color:var(--muted);font-size:13px;padding:8px 0}
+.play-empty.error{color:#e5484d}
+
+.play-group-view{flex:1;min-width:0;min-height:0;display:flex;overflow:hidden;background:var(--bg-deep)}
+.play-channel-sidebar{width:220px;flex-shrink:0;display:flex;flex-direction:column;background:var(--bg-panel);border-right:1px solid var(--line);overflow-y:auto}
+.play-channel-sidebar-top{display:flex;align-items:center;gap:8px;padding:14px 12px;border-bottom:1px solid var(--line-2)}
+.play-invite-btn{
+  display:flex;align-items:center;gap:6px;margin:10px 12px;padding:7px 10px;border-radius:8px;font-size:11.5px;
+  border:1px solid var(--line-2);background:var(--bg-surface-2);color:var(--text-secondary);cursor:pointer;text-align:left;
+}
+.play-channel-group-title{display:flex;align-items:center;justify-content:space-between;padding:10px 14px 4px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.play-channel-group-title button{border:0;background:none;color:var(--muted);cursor:pointer;display:flex}
+.play-channel-item{display:flex;align-items:center;gap:8px;padding:8px 14px;border:0;background:none;color:var(--text-secondary);cursor:pointer;font-size:14px;text-align:left}
+.play-channel-item:hover{background:var(--bg-selected);color:var(--text)}
+.play-channel-item.active{background:var(--bg-selected);color:var(--accent-text);font-weight:600}
+.play-channel-empty{flex:1;display:grid;place-items:center;color:var(--muted)}
+
+.play-text-channel,.play-voice-channel{flex:1;min-width:0;display:flex;flex-direction:column;overflow:hidden}
+.play-text-channel-header{display:flex;align-items:center;gap:8px;padding:16px 20px;border-bottom:1px solid var(--line);font-weight:700;flex-shrink:0}
+.play-messages{flex:1;overflow-y:auto;padding:16px 20px;display:flex;flex-direction:column;gap:14px}
+.play-message{display:flex;gap:10px}
+.play-message-body strong{font-size:13px;display:block;margin-bottom:2px}
+.play-message-body p{margin:0;font-size:14.5px;line-height:1.4}
+.play-composer{display:flex;gap:10px;padding:14px 20px;border-top:1px solid var(--line);flex-shrink:0}
+.play-composer input{flex:1;min-width:0;background:var(--input);border:1px solid var(--line);border-radius:12px;padding:10px 14px;color:var(--text)}
+.play-composer button{width:42px;height:42px;border:0;border-radius:12px;background:var(--green);color:var(--on-button,#fff);display:grid;place-items:center;cursor:pointer;flex-shrink:0}
+
+.play-voice-grid{flex:1;overflow-y:auto;padding:20px;display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px;align-content:start}
+.play-voice-tile{position:relative;aspect-ratio:16/10;border-radius:12px;overflow:hidden;background:var(--bg-panel);border:1px solid var(--line-2);display:grid;place-items:center}
+.play-voice-tile video{width:100%;height:100%;object-fit:cover}
+.play-voice-avatar{width:56px;height:56px;border-radius:50%;overflow:hidden;background:var(--avatar-bg);display:grid;place-items:center;font-weight:700}
+.play-voice-name{position:absolute;left:8px;bottom:8px;display:flex;align-items:center;gap:5px;font-size:12px;font-weight:600;color:#fff;background:rgb(0 0 0 / 45%);padding:3px 8px;border-radius:8px}
+.play-voice-controls{display:flex;justify-content:center;gap:12px;padding:16px;border-top:1px solid var(--line);flex-shrink:0}
+.play-voice-controls .icon-btn{width:46px;height:46px;border-radius:50%;background:var(--bg-panel);border:1px solid var(--line-2)}
+.play-voice-controls .icon-btn.active{background:var(--green);color:var(--on-button,#fff);border-color:transparent}
+
