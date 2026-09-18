@@ -1,4 +1,4 @@
-export const APP_VERSION = "1.2.293"
-export const UPDATE_COUNT = 293
+export const APP_VERSION = "1.2.294"
+export const UPDATE_COUNT = 294
 export const APK_DOWNLOAD_URL = "https://github.com/facincanitech/thothchat/releases/download/latest/thothchat.apk"
 export const DESKTOP_DOWNLOAD_URL = "https://github.com/facincanitech/thothchat/releases/download/latest/ThothChat-Messenger-Setup.exe"

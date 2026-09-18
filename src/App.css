@@ -1514,7 +1514,7 @@ body{
 .play-group-topbar-copy>span{font-size:12px;color:var(--muted)}
 
 .play-group-body{flex:1;min-height:0;display:flex;overflow:hidden}
-.play-channel-sidebar-wrap{position:relative;width:220px;flex-shrink:0}
+.play-channel-sidebar-wrap{position:relative;flex-shrink:0}
 .play-channel-sidebar{width:220px;height:100%;flex-shrink:0;display:flex;flex-direction:column;background:var(--bg-panel);border-right:1px solid var(--line);overflow-y:auto;padding-bottom:10px}
 .play-invite-btn{
   display:inline-flex;align-items:center;gap:5px;padding:4px 9px;border-radius:8px;font-size:11px;
@@ -1527,9 +1527,6 @@ body{
 .play-channel-item.active{background:var(--bg-selected);color:var(--accent-text);font-weight:600}
 .play-channel-voice-member{padding:3px 14px 3px 37px;font-size:12px;color:var(--muted)}
 .play-channel-empty{flex:1;display:grid;place-items:center;color:var(--muted);gap:10px}
-.play-voice-status-bar{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:8px 10px 0;padding:8px 10px;border-radius:10px;background:var(--bg-selected);font-size:12px;color:var(--text)}
-.play-voice-status-bar span{display:flex;align-items:center;gap:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.play-voice-disconnect{border:0;background:#e5484d;color:#fff;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;cursor:pointer;flex-shrink:0}
 
 .play-member-sidebar{width:220px;flex-shrink:0;display:flex;flex-direction:column;background:var(--bg-panel);border-left:1px solid var(--line);overflow-y:auto;padding-bottom:12px}
 .play-member-tabs{display:flex;gap:6px;padding:12px}

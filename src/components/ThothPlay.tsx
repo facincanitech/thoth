@@ -556,14 +556,6 @@ function GroupView({ me, group, channels, selectedChannel, messages, hasReplaySe
                   ))}
                 </div>
               ))}
-              {joinedVoiceChannel && (
-                <div className="play-voice-status-bar">
-                  <span><IconVideo size={13} /> {joinedVoiceChannel.name}</span>
-                  <button type="button" className="play-voice-disconnect" onClick={leaveVoice} title="Desconectar da chamada">
-                    <IconPhoneOff size={14} />
-                  </button>
-                </div>
-              )}
             </aside>
             <GroupInfoPanel
               group={group}
