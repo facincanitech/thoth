@@ -687,7 +687,7 @@ function App() {
   if (isTauriDesktop) {
     return (
       <div className="desktop-window-shell">
-        <DesktopTitleBar title="ThothChat Messenger" />
+        <DesktopTitleBar title="Thoth Messenger" />
         {appTree}
       </div>
     )

@@ -20,7 +20,6 @@ import { getPresenceColor } from '../lib/presence'
 import {
   IconArchive,
   IconArrowLeft,
-  IconBell,
   IconBellOff,
   IconChevronDown,
   IconEdit,
@@ -1719,7 +1718,7 @@ export function ChatList({
     return (
       <section className="msn-login-screen">
         <img src={thothLogo} alt="" className="msn-login-logo" />
-        <h1>ThothChat Messenger</h1>
+        <h1>Thoth Messenger</h1>
         <button type="button" className="msn-login-google" onClick={handleDesktopGoogleLogin}>
           Entrar com Google
         </button>
@@ -1808,15 +1807,21 @@ export function ChatList({
             <strong>{me ? displayName(me) : 'Você'}</strong>
             <span className="msn-presence">{me?.status || 'Disponível'}</span>
           </div>
-          <button
-            type="button"
-            className="msn-mail-button"
-            title={latestVersion !== APP_VERSION ? `Atualização disponível — v${latestVersion}` : 'Notificações'}
-            onClick={() => onAccountOpenChange(true)}
-          >
-            <IconBell size={18} />
-            {latestVersion !== APP_VERSION && <span className="msn-update-badge" />}
-          </button>
+          <div className="msn-mail-button">
+            <NotificationCenter
+              onOpenAppearance={() => {
+                pendingAccountViewRef.current = 'appearance'
+                onAccountOpenChange(true)
+              }}
+              onOpenStatus={onOpenStatus}
+              onOpenCommunityTip={onOpenGroupsTip}
+              onOpenChatInviteDemo={() => {
+                const target = conversations.find((c) => !c.isArchived) || conversations[0]
+                if (target) onRequestInviteDemo(target)
+              }}
+              hasFirstChat={conversations.length > 0}
+            />
+          </div>
         </div>
         <div className="msn-search-row">
           <input type="search" placeholder="Pesquisar contatos ou conversas" value={query} onChange={(e) => setQuery(e.target.value)} />

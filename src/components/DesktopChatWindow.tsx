@@ -52,7 +52,7 @@ export function DesktopChatWindow({ conversationId }: Props) {
 
   return (
     <div className="desktop-window-shell desktop-chat-shell">
-      <DesktopTitleBar title={conversation?.name ? `${conversation.name} — Conversa` : 'ThothChat Messenger'} />
+      <DesktopTitleBar title={conversation?.name ? `${conversation.name} — Conversa` : 'Thoth Messenger'} />
       <div className="app chat-open desktop-chat-app">
         {profile && conversation ? (
           <MainPanel

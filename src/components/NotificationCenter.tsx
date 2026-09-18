@@ -3,7 +3,9 @@ import { Capacitor } from '@capacitor/core'
 import { IconBell } from './icons'
 import { checkForUpdate } from '../lib/updateCheck'
 import { downloadAndInstallUpdate } from '../lib/appUpdate'
-import { APP_VERSION, APK_DOWNLOAD_URL } from '../version'
+import { downloadAndInstallDesktopUpdate } from '../lib/desktopUpdate'
+import { isTauriDesktop } from '../lib/platform'
+import { APP_VERSION, APK_DOWNLOAD_URL, DESKTOP_DOWNLOAD_URL } from '../version'
 
 type Tip = {
   key: string
@@ -46,7 +48,7 @@ export function NotificationCenter({ onOpenAppearance, onOpenStatus, onOpenCommu
   }, [])
 
   function recheckUpdate() {
-    if (!Capacitor.isNativePlatform()) return
+    if (!Capacitor.isNativePlatform() && !isTauriDesktop) return
     checkForUpdate(APP_VERSION).then((info) => {
       setUpdateVersion(info.available ? info.version || null : null)
     })
@@ -66,7 +68,11 @@ export function NotificationCenter({ onOpenAppearance, onOpenStatus, onOpenCommu
     setUpdateError(null)
     setUpdating(true)
     try {
-      await downloadAndInstallUpdate(APK_DOWNLOAD_URL)
+      if (isTauriDesktop) {
+        await downloadAndInstallDesktopUpdate(DESKTOP_DOWNLOAD_URL)
+      } else {
+        await downloadAndInstallUpdate(APK_DOWNLOAD_URL)
+      }
     } catch (err) {
       console.error('update failed', err)
       setUpdateError('Não consegui baixar a atualização. Tenta de novo.')
