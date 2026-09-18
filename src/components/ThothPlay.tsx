@@ -27,6 +27,7 @@ export function ThothPlay({ me, onBack }: Props) {
   const [messages, setMessages] = useState<ChannelMessage[]>([])
   const [draft, setDraft] = useState('')
   const [showCreate, setShowCreate] = useState(false)
+  const [createError, setCreateError] = useState<string | null>(null)
   const [showJoin, setShowJoin] = useState(false)
   const [joinCode, setJoinCode] = useState('')
   const [joinPassword, setJoinPassword] = useState('')
@@ -115,17 +116,23 @@ export function ThothPlay({ me, onBack }: Props) {
     if (!draft.trim() || !selectedChannel) return
     const content = draft.trim()
     setDraft('')
-    await supabase.from('play_messages').insert({ channel_id: selectedChannel.id, author_id: me.id, content })
+    const { error } = await supabase.from('play_messages').insert({ channel_id: selectedChannel.id, author_id: me.id, content })
+    if (error) console.error('send play message failed', error)
   }
 
   async function handleCreateGroup(name: string, description: string, isClosed: boolean, password: string) {
+    setCreateError(null)
     const { data, error } = await supabase.rpc('create_play_group', {
       p_name: name,
       p_description: description || null,
       p_is_closed: isClosed,
       p_password: isClosed ? password : null,
     })
-    if (error) return
+    if (error) {
+      console.error('create_play_group failed', error)
+      setCreateError(error.message)
+      return
+    }
     setShowCreate(false)
     await loadGroups()
     if (data) openGroup(data as PlayGroup)
@@ -208,7 +215,7 @@ export function ThothPlay({ me, onBack }: Props) {
         </>
       )}
 
-      {showCreate && <CreateGroupModal onClose={() => setShowCreate(false)} onCreate={handleCreateGroup} />}
+      {showCreate && <CreateGroupModal onClose={() => setShowCreate(false)} onCreate={handleCreateGroup} error={createError} />}
       {showJoin && (
         <div className="modal-backdrop" onClick={() => setShowJoin(false)}>
           <div className="modal-card" onClick={(e) => e.stopPropagation()}>
@@ -225,7 +232,7 @@ export function ThothPlay({ me, onBack }: Props) {
   )
 }
 
-function CreateGroupModal({ onClose, onCreate }: { onClose: () => void; onCreate: (name: string, description: string, isClosed: boolean, password: string) => void }) {
+function CreateGroupModal({ onClose, onCreate, error }: { onClose: () => void; onCreate: (name: string, description: string, isClosed: boolean, password: string) => void; error: string | null }) {
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [isClosed, setIsClosed] = useState(false)
@@ -244,6 +251,7 @@ function CreateGroupModal({ onClose, onCreate }: { onClose: () => void; onCreate
         {isClosed && (
           <input placeholder="Senha do grupo" type="password" value={password} onChange={(e) => setPassword(e.target.value)} style={{ marginTop: 8 }} />
         )}
+        {error && <p className="auth-error">{error}</p>}
         <button
           type="button"
           className="google-btn"
@@ -283,9 +291,10 @@ function GroupView({ me, group, channels, selectedChannel, messages, draft, onDr
 
   async function createChannel() {
     if (!newChannelName.trim()) return
-    await supabase.from('play_channels').insert({
+    const { error } = await supabase.from('play_channels').insert({
       group_id: group.id, name: newChannelName.trim(), kind: newChannelKind, position: channels.length,
     })
+    if (error) { console.error('create channel failed', error); return }
     setNewChannelName('')
     setShowNewChannel(false)
     onChannelsChange()
