@@ -18,17 +18,3 @@ export function DesktopTitleBar({ title }: TitleBarProps) {
     </header>
   )
 }
-
-type MenuBarProps = {
-  items: string[]
-}
-
-export function DesktopMenuBar({ items }: MenuBarProps) {
-  return (
-    <nav className="menubar">
-      {items.map((item) => (
-        <button key={item} type="button">{item}</button>
-      ))}
-    </nav>
-  )
-}

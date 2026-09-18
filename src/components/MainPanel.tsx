@@ -7,6 +7,7 @@ import { getCustomWinks, saveCustomWink, deleteCustomWink, fileToDataUrl, type C
 import { getCustomStickers, saveCustomSticker, deleteCustomSticker, uploadStickerImage, resizeStickerImage, type CustomSticker } from '../lib/stickers'
 import { searchGifs, type GifResult } from '../lib/gifSearch'
 import { getPresenceColor } from '../lib/presence'
+import { isTauriDesktop } from '../lib/platform'
 import { getErrorMessage } from '../lib/errors'
 import { displayName } from '../lib/displayName'
 import { SettingsRow } from './SettingsRow'
@@ -2065,6 +2066,9 @@ export function MainPanel({ me, conversation, onBack, onConversationUpdate, bloc
               displayTitle
             )}
             {isOrganicGroup && <span className="grupal-badge">Grupo Orgânico</span>}
+            {isTauriDesktop && otherMember?.status && (
+              <span className="header-status-phrase">{otherMember.status}</span>
+            )}
             {nudgeFrom && (
               <span className="nudge-indicator" title="chamou sua atenção">
                 <IconBell size={14} />

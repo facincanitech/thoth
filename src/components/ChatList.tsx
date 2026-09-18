@@ -409,6 +409,89 @@ export function ChatList({
     }
   }, [chatOrder])
 
+  const DESKTOP_SECTION_KEYS = ['favoritos', 'conversas', 'grupos', 'comunidades']
+  const [desktopSectionOrder, setDesktopSectionOrder] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('ferus-desktop-section-order')
+      if (saved) {
+        const parsed = JSON.parse(saved)
+        if (Array.isArray(parsed)) return parsed
+      }
+    } catch {
+      // ignore
+    }
+    return []
+  })
+  const [desktopOpenSections, setDesktopOpenSections] = useState<Record<string, boolean>>(() => {
+    try {
+      const saved = localStorage.getItem('ferus-desktop-open-sections')
+      if (saved) return JSON.parse(saved)
+    } catch {
+      // ignore
+    }
+    return {}
+  })
+  const [dragSectionId, setDragSectionId] = useState<string | null>(null)
+  const draggedSectionIdRef = useRef<string | null>(null)
+  const desktopContactListRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('ferus-desktop-section-order', JSON.stringify(desktopSectionOrder))
+    } catch {
+      // ignore
+    }
+  }, [desktopSectionOrder])
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('ferus-desktop-open-sections', JSON.stringify(desktopOpenSections))
+    } catch {
+      // ignore
+    }
+  }, [desktopOpenSections])
+
+  function startSectionDrag(key: string, container: HTMLDivElement) {
+    draggedSectionIdRef.current = key
+    setDragSectionId(key)
+
+    function onMove(e: PointerEvent) {
+      const dragged = draggedSectionIdRef.current
+      if (!dragged) return
+      const y = e.clientY
+      const rows = Array.from(container.querySelectorAll<HTMLElement>('[data-section-id]'))
+      let target: string | null = null
+      for (const el of rows) {
+        const rect = el.getBoundingClientRect()
+        if (y >= rect.top && y <= rect.bottom) {
+          target = el.dataset.sectionId || null
+          break
+        }
+      }
+      if (target && target !== dragged) {
+        setDesktopSectionOrder((prev) => {
+          const base = prev.length ? prev : DESKTOP_SECTION_KEYS
+          const next = [...base]
+          if (!next.includes(dragged)) next.push(dragged)
+          if (!next.includes(target!)) next.push(target!)
+          const from = next.indexOf(dragged)
+          const to = next.indexOf(target!)
+          next.splice(from, 1)
+          next.splice(to, 0, dragged)
+          return next
+        })
+      }
+    }
+    function onUp() {
+      draggedSectionIdRef.current = null
+      setDragSectionId(null)
+      window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('pointerup', onUp)
+    }
+    window.addEventListener('pointermove', onMove)
+    window.addEventListener('pointerup', onUp)
+  }
+
   function startChatDrag(id: string, container: HTMLDivElement, currentOrder: string[]) {
     draggedChatIdRef.current = id
     setDragChatId(id)
@@ -1610,11 +1693,68 @@ export function ChatList({
   }
 
   if (isTauriDesktop) {
-    const favoriteConvs = conversations.filter((c) => c.isFavorite && !c.isArchived)
-    const regularConvs = conversations.filter((c) => !c.isFavorite && !c.isArchived && c.type === 'dm')
-    const groupConvs = conversations.filter((c) => c.type === 'group' && !c.isArchived)
+    const sortByChatOrder = <T extends { id: string }>(items: T[]): T[] => {
+      if (!chatOrder.length) return items
+      return [...items].sort((a, b) => {
+        const ia = chatOrder.indexOf(a.id)
+        const ib = chatOrder.indexOf(b.id)
+        if (ia !== -1 && ib !== -1) return ia - ib
+        if (ia !== -1) return -1
+        if (ib !== -1) return 1
+        return 0
+      })
+    }
+    const favoriteConvs = sortByChatOrder(conversations.filter((c) => c.isFavorite && !c.isArchived))
+    const regularConvs = sortByChatOrder(conversations.filter((c) => !c.isFavorite && !c.isArchived && c.type === 'dm'))
+    const groupConvs = sortByChatOrder(conversations.filter((c) => c.type === 'group' && !c.isArchived))
+    const sortedCommunities = sortByChatOrder(myCommunities)
     const q = query.toLowerCase()
     const matches = (label: string) => label.toLowerCase().includes(q)
+    const allDraggableIds = [...favoriteConvs, ...regularConvs, ...groupConvs, ...sortedCommunities].map((c) => c.id)
+
+    const contactRow = (id: string, label: string, avatarUrl: string | null | undefined, unreadCount: number, onClick: () => void) => (
+      <button key={id} type="button" data-chat-id={id} className={`msn-contact${dragChatId === id ? ' dragging' : ''}`} onClick={onClick}>
+        <span
+          className="msn-contact-grip"
+          onClick={(e) => e.stopPropagation()}
+          onPointerDown={(e) => {
+            e.preventDefault()
+            e.stopPropagation()
+            if (desktopContactListRef.current) startChatDrag(id, desktopContactListRef.current, allDraggableIds)
+          }}
+        >
+          <IconGrip size={12} />
+        </span>
+        <AvatarBox src={avatarUrl} id={id} fallbackLetter={label[0]?.toUpperCase()} className="msn-contact-avatar" />
+        <div className="msn-contact-info">
+          <strong>{label}</strong>
+        </div>
+        {unreadCount > 0 && <b className="msn-unread">{unreadCount}</b>}
+      </button>
+    )
+
+    const sectionTitle: Record<string, string> = { favoritos: 'Favoritos', conversas: 'Conversas', grupos: 'Grupos', comunidades: 'Comunidades' }
+    const sectionCount: Record<string, number> = {
+      favoritos: favoriteConvs.length,
+      conversas: regularConvs.length,
+      grupos: groupConvs.length,
+      comunidades: sortedCommunities.length,
+    }
+    const orderedSectionKeys = (() => {
+      const saved = desktopSectionOrder.filter((k) => DESKTOP_SECTION_KEYS.includes(k))
+      const rest = DESKTOP_SECTION_KEYS.filter((k) => !saved.includes(k))
+      return [...saved, ...rest]
+    })().filter((k) => k === 'conversas' || sectionCount[k] > 0)
+
+    const sectionContent = (key: string) => {
+      if (key === 'favoritos') return favoriteConvs.filter((c) => matches(c.label)).map((c) => contactRow(c.id, c.label, c.avatarUrl, c.unreadCount, () => onSelect(c)))
+      if (key === 'conversas') {
+        if (regularConvs.length === 0) return <p className="msn-empty">nenhuma conversa ainda</p>
+        return regularConvs.filter((c) => matches(c.label)).map((c) => contactRow(c.id, c.label, c.avatarUrl, c.unreadCount, () => onSelect(c)))
+      }
+      if (key === 'grupos') return groupConvs.filter((c) => matches(c.label)).map((c) => contactRow(c.id, c.label, c.avatarUrl, c.unreadCount, () => onSelect(c)))
+      return sortedCommunities.filter((c) => matches(c.name || '')).map((c) => contactRow(c.id, c.name || '', c.image_url, 0, () => onSelectCommunity(c)))
+    }
 
     return (
       <section className="msn-contacts-window">
@@ -1639,56 +1779,36 @@ export function ChatList({
             <button type="button" onClick={() => { setFriendsView('list'); onPanelViewChange('friends'); onPanelOpenChange(true) }}>Ver agora</button>
           </div>
         )}
-        <section className="msn-contact-list">
-          {favoriteConvs.length > 0 && (
-            <details open>
-              <summary className="msn-contact-group-title">Favoritos <small>{favoriteConvs.length}</small></summary>
-              {favoriteConvs.filter((c) => matches(c.label)).map((c) => (
-                <button key={c.id} type="button" className="msn-contact" onClick={() => onSelect(c)}>
-                  <AvatarBox src={c.avatarUrl} id={c.id} fallbackLetter={c.label[0]?.toUpperCase()} className="msn-contact-avatar" />
-                  <div className="msn-contact-info">
-                    <strong>{c.label}</strong>
-                  </div>
-                  {c.unreadCount > 0 && <b className="msn-unread">{c.unreadCount}</b>}
-                </button>
-              ))}
-            </details>
-          )}
-          <details open>
-            <summary className="msn-contact-group-title">Conversas <small>{regularConvs.length}</small></summary>
-            {regularConvs.length === 0 && <p className="msn-empty">nenhuma conversa ainda</p>}
-            {regularConvs.filter((c) => matches(c.label)).map((c) => (
-              <button key={c.id} type="button" className="msn-contact" onClick={() => onSelect(c)}>
-                <AvatarBox src={c.avatarUrl} id={c.id} fallbackLetter={c.label[0]?.toUpperCase()} className="msn-contact-avatar" />
-                <div className="msn-contact-info">
-                  <strong>{c.label}</strong>
-                </div>
-                {c.unreadCount > 0 && <b className="msn-unread">{c.unreadCount}</b>}
-              </button>
-            ))}
-          </details>
-          {(groupConvs.length > 0 || myCommunities.length > 0) && (
-            <details open>
-              <summary className="msn-contact-group-title">Grupos e comunidades <small>{groupConvs.length + myCommunities.length}</small></summary>
-              {groupConvs.filter((c) => matches(c.label)).map((c) => (
-                <button key={c.id} type="button" className="msn-contact" onClick={() => onSelect(c)}>
-                  <AvatarBox src={c.avatarUrl} id={c.id} fallbackLetter={c.label[0]?.toUpperCase()} className="msn-contact-avatar" />
-                  <div className="msn-contact-info">
-                    <strong>{c.label}</strong>
-                  </div>
-                  {c.unreadCount > 0 && <b className="msn-unread">{c.unreadCount}</b>}
-                </button>
-              ))}
-              {myCommunities.filter((c) => matches(c.name || '')).map((c) => (
-                <button key={c.id} type="button" className="msn-contact" onClick={() => onSelectCommunity(c)}>
-                  <AvatarBox src={c.image_url} id={c.id} fallbackLetter={(c.name || 'C')[0]?.toUpperCase()} className="msn-contact-avatar" />
-                  <div className="msn-contact-info">
-                    <strong>{c.name}</strong>
-                  </div>
-                </button>
-              ))}
-            </details>
-          )}
+        <section className="msn-contact-list" ref={desktopContactListRef}>
+          {orderedSectionKeys.map((key) => {
+            const open = desktopOpenSections[key] !== false
+            return (
+              <details key={key} open={open} data-section-id={key} className={dragSectionId === key ? 'dragging' : ''}>
+                <summary
+                  className="msn-contact-group-title"
+                  onClick={(e) => {
+                    e.preventDefault()
+                    setDesktopOpenSections((prev) => ({ ...prev, [key]: !open }))
+                  }}
+                >
+                  <span
+                    className="msn-section-grip"
+                    onClick={(e) => e.stopPropagation()}
+                    onPointerDown={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      if (desktopContactListRef.current) startSectionDrag(key, desktopContactListRef.current)
+                    }}
+                  >
+                    <IconGrip size={12} />
+                  </span>
+                  <span className={`msn-section-chevron${open ? ' open' : ''}`}><IconChevronDown size={13} /></span>
+                  {sectionTitle[key]} <small>{sectionCount[key]}</small>
+                </summary>
+                {sectionContent(key)}
+              </details>
+            )
+          })}
         </section>
         <footer className="msn-footer">
           <button type="button" onClick={() => { onPanelViewChange('contact'); onPanelOpenChange(true) }}>Adicionar contato</button>

@@ -3,7 +3,7 @@ import type { Session } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
 import { MainPanel } from './MainPanel'
 import { CallOverlay, type CallOverlayHandle } from './CallOverlay'
-import { DesktopTitleBar, DesktopMenuBar } from './DesktopChrome'
+import { DesktopTitleBar } from './DesktopChrome'
 import { currentWindow } from '../lib/desktopWindows'
 import type { Conversation, Profile } from '../types'
 
@@ -53,7 +53,6 @@ export function DesktopChatWindow({ conversationId }: Props) {
   return (
     <div className="desktop-window-shell desktop-chat-shell">
       <DesktopTitleBar title={conversation?.name ? `${conversation.name} — Conversa` : 'ThothChat Messenger'} />
-      <DesktopMenuBar items={['Arquivo', 'Editar', 'Ações', 'Ajuda']} />
       <div className="app chat-open desktop-chat-app">
         {profile && conversation ? (
           <MainPanel

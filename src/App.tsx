@@ -20,7 +20,7 @@ import { readCache, writeCache } from './lib/cache'
 import { pickTextColor } from './lib/appTheme'
 import { isTauriDesktop } from './lib/platform'
 import { openChatWindow } from './lib/desktopWindows'
-import { DesktopTitleBar, DesktopMenuBar } from './components/DesktopChrome'
+import { DesktopTitleBar } from './components/DesktopChrome'
 import './App.css'
 
 type Theme = 'dark' | 'light' | 'contrast' | 'frutiger'
@@ -659,7 +659,6 @@ function App() {
     return (
       <div className="desktop-window-shell">
         <DesktopTitleBar title="ThothChat Messenger" />
-        <DesktopMenuBar items={['Arquivo', 'Contatos', 'Ferramentas', 'Ajuda']} />
         {appTree}
       </div>
     )
