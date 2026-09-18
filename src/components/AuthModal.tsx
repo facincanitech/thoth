@@ -14,11 +14,13 @@ export function AuthModal({ onClose }: Props) {
     setError(null)
     if (isTauriDesktop) {
       // Google bloqueia login OAuth dentro de uma webview embutida - abre no
-      // navegador padrao do sistema, o retorno vem via deep link (ferus://callback)
-      // capturado no App.tsx.
+      // navegador padrao do sistema. O retorno passa por uma pagina https (ja
+      // liberada no Supabase, mesma origem do login web) que so entao tenta abrir
+      // o app via deep link ferus://callback - navegar direto pra um protocolo
+      // customizado a partir do navegador deixava a aba "pensando" pra sempre.
       const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
         provider: 'google',
-        options: { redirectTo: 'ferus://callback', queryParams: { prompt: 'select_account' }, skipBrowserRedirect: true },
+        options: { redirectTo: 'https://facincanitech.github.io/thothchat/?desktop=1', queryParams: { prompt: 'select_account' }, skipBrowserRedirect: true },
       })
       if (oauthError) { setError(oauthError.message); return }
       if (data?.url) {
