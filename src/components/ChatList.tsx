@@ -1810,10 +1810,6 @@ export function ChatList({
             )
           })}
         </section>
-        <footer className="msn-footer">
-          <button type="button" onClick={() => { onPanelViewChange('contact'); onPanelOpenChange(true) }}>Adicionar contato</button>
-          <span>ThothChat</span>
-        </footer>
       </section>
     )
   }
