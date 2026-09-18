@@ -57,7 +57,7 @@
 
 /* Tela de login (janela principal, antes de autenticar) */
 .msn-login-screen{
-  height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;
+  flex:1;min-width:0;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;
   padding:24px;background:radial-gradient(circle at 50% 0,#eefdff 0 15%,transparent 55%),linear-gradient(180deg,#5fb8df,#bfeafb 60%,#75c8c3);
   text-align:center;
 }

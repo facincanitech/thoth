@@ -561,7 +561,7 @@ function App() {
 
   const appTree = (
     <div className={`app${selected || selectedCommunity ? ' chat-open' : ''}${anyPanelOpen ? ' panel-open' : ''}${sidebarCollapsed && isGroupContext ? ' sidebar-collapsed' : ''}`}>
-      <Rail
+      {(!isTauriDesktop || profile) && <Rail
         me={profile}
         onRequireAuth={() => requireAuth(() => {})}
         onNewConversation={openNewConversation}
@@ -579,7 +579,7 @@ function App() {
             : selectedCommunity ? 'communities'
             : 'chats'
         }
-      />
+      />}
       <ChatList
         me={profile}
         selected={selected}

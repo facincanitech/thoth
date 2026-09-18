@@ -8,10 +8,15 @@ import { useEffect } from 'react'
 // usada pelo login web normal), que mostra uma mensagem de sucesso na hora e so
 // depois tenta abrir o app via ferus://callback.
 export function DesktopLoginCallback() {
+  const target = 'ferus://callback' + window.location.hash
+
   useEffect(() => {
-    const target = 'ferus://callback' + window.location.hash
+    // Alguns navegadores so abrem um protocolo customizado quando a navegacao vem
+    // de um gesto real do usuario (clique), no window.location.href automatico do
+    // useEffect eles ignoram silenciosamente - por isso o botao abaixo tambem existe
+    // como caminho garantido, isso aqui e so uma tentativa a mais.
     window.location.href = target
-  }, [])
+  }, [target])
 
   return (
     <div style={{
@@ -19,7 +24,16 @@ export function DesktopLoginCallback() {
       justifyContent: 'center', gap: 12, fontFamily: 'system-ui, sans-serif', textAlign: 'center', padding: 24,
     }}>
       <h1 style={{ fontSize: 20 }}>Login realizado!</h1>
-      <p>Pode fechar esta aba e voltar pro ThothChat Messenger.</p>
+      <p>Se o ThothChat Messenger não abrir sozinho, clique no botão abaixo.</p>
+      <a
+        href={target}
+        style={{
+          padding: '10px 22px', borderRadius: 6, fontWeight: 600, color: '#fff', textDecoration: 'none',
+          background: '#087caf',
+        }}
+      >
+        Abrir o ThothChat Messenger
+      </a>
     </div>
   )
 }
