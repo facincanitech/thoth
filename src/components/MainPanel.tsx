@@ -399,6 +399,7 @@ export function MainPanel({ me, conversation, onBack, onConversationUpdate, bloc
   const [inlineMedia, setInlineMedia] = useState<Record<string, EphemeralOpenResult & { id: string }>>({})
   const [openTranscripts, setOpenTranscripts] = useState<Set<string>>(new Set())
   const [showAttachMenu, setShowAttachMenu] = useState(false)
+  const [nudgeFlash, setNudgeFlash] = useState(false)
   const [showContactPicker, setShowContactPicker] = useState(false)
   const [shareableContacts, setShareableContacts] = useState<{ id: string; username: string; display_name: string | null; avatar_url: string | null; email: string }[]>([])
   const [pendingFilePreviewUrl, setPendingFilePreviewUrl] = useState<string | null>(null)
@@ -2699,7 +2700,18 @@ export function MainPanel({ me, conversation, onBack, onConversationUpdate, bloc
           >
             <IconMic size={20} />
           </button>
-          <button type="button" className="compose-btn" title="Chamar atenção" onClick={sendNudge}><IconNudge size={20} /></button>
+          <button
+            type="button"
+            className={`compose-btn${nudgeFlash ? ' active' : ''}`}
+            title="Chamar atenção"
+            onClick={() => {
+              sendNudge()
+              setNudgeFlash(true)
+              setTimeout(() => setNudgeFlash(false), 350)
+            }}
+          >
+            <IconNudge size={20} />
+          </button>
           <button ref={winkBtnRef} type="button" className={`compose-btn${showWinks ? ' active' : ''}`} title="Mandar um wink" onClick={() => setShowWinks((v) => !v)}><IconHeart size={20} /></button>
           <input ref={docInputRef} type="file" hidden onChange={handleAttachFilePicked} />
           <input ref={mediaInputRef} type="file" accept="image/*,video/*" hidden onChange={handleAttachFilePicked} />
