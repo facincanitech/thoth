@@ -6,12 +6,35 @@ import { displayName } from '../lib/displayName'
 import { AvatarBox } from './AvatarBox'
 import { getPresenceColor } from '../lib/presence'
 import { ReplayPlayer, type ReplayEvent } from './ReplayPlayer'
+import { StyledName, NAME_FONTS, NAME_EFFECTS } from './StyledName'
 import { uploadImage } from '../lib/uploadImage'
 import {
   IconArrowLeft, IconCopy, IconGamepad, IconHash, IconHeadphones, IconLock, IconLockOpen,
   IconMic, IconMicOff, IconMonitorShare, IconPhoneOff, IconPlus, IconSend, IconSettingsGear, IconVideo, IconVideoOff,
 } from './icons'
-import type { PlayChannel, PlayGroup, PlayMessage, Profile } from '../types'
+import type { PlayChannel, PlayGroup, PlayMessage, PlayProfile, Profile } from '../types'
+
+// A identidade dentro do Thoth Play e separada da conta principal - editar nome/
+// foto/status aqui dentro nao mexe no perfil usado no chat/mensageiro. So cai no
+// perfil principal quando ainda nao personalizou nada especifico do Play.
+function mergePlayProfile(base: Profile, override: PlayProfile | null | undefined): Profile {
+  if (!override) return base
+  return {
+    ...base,
+    display_name: override.display_name || base.display_name,
+    avatar_url: override.avatar_url || base.avatar_url,
+    status: override.status || base.status,
+    name_style_font: override.name_style_font || base.name_style_font,
+    name_style_effect: override.name_style_effect || base.name_style_effect,
+    name_style_color: override.name_style_color || base.name_style_color,
+  }
+}
+
+async function fetchPlayProfiles(ids: string[]): Promise<Record<string, PlayProfile>> {
+  if (!ids.length) return {}
+  const { data } = await supabase.from('play_profiles').select('*').in('user_id', ids)
+  return Object.fromEntries(((data || []) as PlayProfile[]).map((p) => [p.user_id, p]))
+}
 
 const REPLAY_WINDOW_MS = 20000
 
@@ -110,7 +133,8 @@ export function ThothPlay({ me, onBack }: Props) {
     let authors: Record<string, Profile> = {}
     if (authorIds.length) {
       const { data: profiles } = await supabase.from('profiles').select('*').in('id', authorIds)
-      authors = Object.fromEntries((profiles || []).map((p) => [p.id, p as Profile]))
+      const playProfiles = await fetchPlayProfiles(authorIds)
+      authors = Object.fromEntries((profiles || []).map((p) => [p.id, mergePlayProfile(p as Profile, playProfiles[p.id])]))
     }
     setMessages(rows.map((r) => ({ ...r, author: authors[r.author_id] })))
   }
@@ -144,11 +168,9 @@ export function ThothPlay({ me, onBack }: Props) {
         { event: 'INSERT', schema: 'public', table: 'play_messages', filter: `channel_id=eq.${selectedChannel.id}` },
         async (payload) => {
           const row = payload.new as PlayMessage
-          let author = row.author_id === me.id ? me : undefined
-          if (!author) {
-            const { data } = await supabase.from('profiles').select('*').eq('id', row.author_id).maybeSingle()
-            author = (data as Profile) || undefined
-          }
+          const { data } = await supabase.from('profiles').select('*').eq('id', row.author_id).maybeSingle()
+          const playProfiles = await fetchPlayProfiles([row.author_id])
+          const author = data ? mergePlayProfile(data as Profile, playProfiles[row.author_id]) : undefined
           setMessages((prev) => (prev.some((m) => m.id === row.id) ? prev : [...prev, { ...row, author }]))
           setLiveTyping((prev) => {
             const next = { ...prev }
@@ -399,8 +421,11 @@ function GroupView({ me, group, channels, selectedChannel, messages, liveTyping,
       const ids = (rows || []).map((r) => r.user_id as string)
       if (!ids.length) { setMembers([]); return }
       const { data: profiles } = await supabase.from('profiles').select('*').in('id', ids)
+      const playProfiles = await fetchPlayProfiles(ids)
       if (cancelled) return
-      const profileMap = Object.fromEntries((profiles || []).map((p) => [p.id, p as Profile]))
+      const profileMap = Object.fromEntries(
+        (profiles || []).map((p) => [p.id, mergePlayProfile(p as Profile, playProfiles[p.id])]),
+      )
       setMembers(
         (rows || [])
           .map((r) => ({ profile: profileMap[r.user_id as string], role: r.role as string }))
@@ -408,13 +433,21 @@ function GroupView({ me, group, channels, selectedChannel, messages, liveTyping,
       )
     }
     loadMembers()
-    return () => { cancelled = true }
+    const channel = supabase
+      .channel(`play-profiles-refresh:${group.id}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'play_profiles' }, () => loadMembers())
+      .subscribe()
+    return () => {
+      cancelled = true
+      supabase.removeChannel(channel)
+    }
   }, [group.id])
 
   const onlineMembers = members.filter((m) => getPresenceColor(m.profile.last_seen_at, m.profile.is_idle) !== 'offline')
   const offlineMembers = members.filter((m) => getPresenceColor(m.profile.last_seen_at, m.profile.is_idle) === 'offline')
   const inVoiceIds = new Set(voiceParticipants.map((p) => p.id))
   const myRole = members.find((m) => m.profile.id === me.id)?.role || null
+  const myPlayProfile = members.find((m) => m.profile.id === me.id)?.profile || me
 
   async function createChannel() {
     if (!newChannelName.trim()) return
@@ -465,7 +498,7 @@ function GroupView({ me, group, channels, selectedChannel, messages, liveTyping,
         <button type="button" className="play-icon-rail-label play-icon-rail-label-btn" onClick={() => setShowGroupInfo(true)}>Sobre o grupo</button>
         <div className="play-icon-rail-spacer" />
         <button type="button" className="play-icon-rail-group play-icon-rail-profile" title="Perfil" onClick={() => setShowProfile(true)}>
-          <AvatarBox src={me.avatar_url} id={me.id} fallbackLetter={displayName(me)[0]?.toUpperCase()} className="play-group-avatar" />
+          <AvatarBox src={myPlayProfile.avatar_url} id={me.id} fallbackLetter={displayName(myPlayProfile)[0]?.toUpperCase()} className="play-group-avatar" />
         </button>
         <span className="play-icon-rail-label">Perfil</span>
       </aside>
@@ -488,39 +521,48 @@ function GroupView({ me, group, channels, selectedChannel, messages, liveTyping,
         </header>
 
         <div className="play-group-body">
-          <aside className="play-channel-sidebar">
-            <div className="play-channel-group-title">
-              <span>Canais de texto</span>
-              <button type="button" onClick={() => { setNewChannelKind('text'); setShowNewChannel(true) }}><IconPlus size={14} /></button>
-            </div>
-            {textChannels.map((c) => (
-              <button key={c.id} type="button" className={`play-channel-item${selectedChannel?.id === c.id ? ' active' : ''}`} onClick={() => handleSelectChannel(c)}>
-                <IconHash size={15} /> {c.name}
-              </button>
-            ))}
-            <div className="play-channel-group-title">
-              <span>Canais de voz</span>
-              <button type="button" onClick={() => { setNewChannelKind('voice'); setShowNewChannel(true) }}><IconPlus size={14} /></button>
-            </div>
-            {voiceChannels.map((c) => (
-              <div key={c.id}>
-                <button type="button" className={`play-channel-item${selectedChannel?.id === c.id ? ' active' : ''}`} onClick={() => handleSelectChannel(c)}>
-                  <IconVideo size={15} /> {c.name}
-                </button>
-                {joinedVoiceChannel?.id === c.id && voiceParticipants.map((p) => (
-                  <div key={p.id} className="play-channel-voice-member">{p.name}</div>
-                ))}
+          <div className="play-channel-sidebar-wrap">
+            <aside className="play-channel-sidebar">
+              <div className="play-channel-group-title">
+                <span>Canais de texto</span>
+                <button type="button" onClick={() => { setNewChannelKind('text'); setShowNewChannel(true) }}><IconPlus size={14} /></button>
               </div>
-            ))}
-            {joinedVoiceChannel && (
-              <div className="play-voice-status-bar">
-                <span><IconVideo size={13} /> {joinedVoiceChannel.name}</span>
-                <button type="button" className="play-voice-disconnect" onClick={leaveVoice} title="Desconectar da chamada">
-                  <IconPhoneOff size={14} />
+              {textChannels.map((c) => (
+                <button key={c.id} type="button" className={`play-channel-item${selectedChannel?.id === c.id ? ' active' : ''}`} onClick={() => handleSelectChannel(c)}>
+                  <IconHash size={15} /> {c.name}
                 </button>
+              ))}
+              <div className="play-channel-group-title">
+                <span>Canais de voz</span>
+                <button type="button" onClick={() => { setNewChannelKind('voice'); setShowNewChannel(true) }}><IconPlus size={14} /></button>
               </div>
-            )}
-          </aside>
+              {voiceChannels.map((c) => (
+                <div key={c.id}>
+                  <button type="button" className={`play-channel-item${selectedChannel?.id === c.id ? ' active' : ''}`} onClick={() => handleSelectChannel(c)}>
+                    <IconVideo size={15} /> {c.name}
+                  </button>
+                  {joinedVoiceChannel?.id === c.id && voiceParticipants.map((p) => (
+                    <div key={p.id} className="play-channel-voice-member">{p.name}</div>
+                  ))}
+                </div>
+              ))}
+              {joinedVoiceChannel && (
+                <div className="play-voice-status-bar">
+                  <span><IconVideo size={13} /> {joinedVoiceChannel.name}</span>
+                  <button type="button" className="play-voice-disconnect" onClick={leaveVoice} title="Desconectar da chamada">
+                    <IconPhoneOff size={14} />
+                  </button>
+                </div>
+              )}
+            </aside>
+            <GroupInfoPanel
+              group={group}
+              myRole={myRole}
+              open={showGroupInfo}
+              onClose={() => setShowGroupInfo(false)}
+              onUpdate={onGroupUpdate}
+            />
+          </div>
 
           {!selectedChannel && <div className="play-channel-empty"><p>Escolha um canal</p></div>}
 
@@ -536,7 +578,11 @@ function GroupView({ me, group, channels, selectedChannel, messages, liveTyping,
                   <div key={m.id} className="play-message">
                     <div className="play-message-body">
                       <div className="play-message-row">
-                        <strong>{m.author ? displayName(m.author) : '...'}</strong>
+                        <strong>
+                          {m.author ? (
+                            <StyledName name={displayName(m.author)} font={m.author.name_style_font} effect={m.author.name_style_effect} color={m.author.name_style_color} />
+                          ) : '...'}
+                        </strong>
                         <span className="play-message-time">{new Date(m.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
                         <button type="button" className="play-replay-btn" onClick={() => openReplay(m)}>replay</button>
                       </div>
@@ -594,7 +640,7 @@ function GroupView({ me, group, channels, selectedChannel, messages, liveTyping,
                 {onlineMembers.map((m) => (
                   <div key={m.profile.id} className="play-member-row">
                     <AvatarBox src={m.profile.avatar_url} id={m.profile.id} fallbackLetter={displayName(m.profile)[0]?.toUpperCase()} className="avatar-sm" />
-                    <span>{displayName(m.profile)}</span>
+                    <span><StyledName name={displayName(m.profile)} font={m.profile.name_style_font} effect={m.profile.name_style_effect} color={m.profile.name_style_color} /></span>
                     {inVoiceIds.has(m.profile.id) && <IconHeadphones size={14} />}
                   </div>
                 ))}
@@ -635,13 +681,6 @@ function GroupView({ me, group, channels, selectedChannel, messages, liveTyping,
         </div>
       )}
 
-      <GroupInfoPanel
-        group={group}
-        myRole={myRole}
-        open={showGroupInfo}
-        onClose={() => setShowGroupInfo(false)}
-        onUpdate={onGroupUpdate}
-      />
       <ProfilePanel me={me} open={showProfile} onClose={() => setShowProfile(false)} />
     </main>
   )
@@ -725,20 +764,46 @@ function GroupInfoPanel({ group, myRole, open, onClose, onUpdate }: {
 }
 
 function ProfilePanel({ me, open, onClose }: { me: Profile; open: boolean; onClose: () => void }) {
+  const [loaded, setLoaded] = useState(false)
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(me.avatar_url ?? null)
   const [displayNameDraft, setDisplayNameDraft] = useState(me.display_name || me.username)
   const [statusDraft, setStatusDraft] = useState(me.status || '')
+  const [font, setFont] = useState<string | null>(null)
+  const [effect, setEffect] = useState<'solid' | 'gradient' | 'neon' | 'prism' | null>(null)
+  const [color, setColor] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    setDisplayNameDraft(me.display_name || me.username)
-    setStatusDraft(me.status || '')
+    if (!open) return
+    setLoaded(false)
+    supabase.from('play_profiles').select('*').eq('user_id', me.id).maybeSingle().then(({ data }) => {
+      const p = data as PlayProfile | null
+      setAvatarUrl(p?.avatar_url || me.avatar_url || null)
+      setDisplayNameDraft(p?.display_name || me.display_name || me.username)
+      setStatusDraft(p?.status || me.status || '')
+      setFont(p?.name_style_font || null)
+      setEffect(p?.name_style_effect || null)
+      setColor(p?.name_style_color || null)
+      setLoaded(true)
+    })
   }, [me.id, open])
+
+  async function upsert(patch: Partial<PlayProfile>) {
+    await supabase.from('play_profiles').upsert({ user_id: me.id, ...patch }, { onConflict: 'user_id' })
+  }
 
   async function save() {
     setSaving(true)
-    await supabase.from('profiles').update({ display_name: displayNameDraft.trim() || null, status: statusDraft.trim() || null }).eq('id', me.id)
+    await upsert({
+      display_name: displayNameDraft.trim() || null,
+      status: statusDraft.trim() || null,
+      avatar_url: avatarUrl,
+      name_style_font: font,
+      name_style_effect: effect,
+      name_style_color: color,
+    })
     setSaving(false)
   }
 
@@ -747,8 +812,9 @@ function ProfilePanel({ me, open, onClose }: { me: Profile; open: boolean; onClo
     if (!file) return
     setUploading(true)
     try {
-      const url = await uploadImage(file, me.id, 'avatar')
-      await supabase.from('profiles').update({ avatar_url: url }).eq('id', me.id)
+      const url = await uploadImage(file, me.id, 'play-avatar')
+      setAvatarUrl(url)
+      await upsert({ avatar_url: url })
     } finally {
       setUploading(false)
     }
@@ -761,9 +827,9 @@ function ProfilePanel({ me, open, onClose }: { me: Profile; open: boolean; onClo
         <strong>Perfil</strong>
       </div>
       <div className="play-group-info-body">
-        <p style={{ color: 'var(--muted)', fontSize: 12 }}>Esse perfil é só do Thoth Play por enquanto - vamos integrar com a conta completa do app depois.</p>
+        <p style={{ color: 'var(--muted)', fontSize: 12 }}>Esse perfil é só do Thoth Play - editar aqui não muda seu perfil no resto do ThothChat.</p>
         <button type="button" className="play-group-info-avatar" onClick={() => fileRef.current?.click()} style={{ border: 0, cursor: 'pointer' }}>
-          <AvatarBox src={me.avatar_url} id={me.id} fallbackLetter={displayName(me)[0]?.toUpperCase()} className="play-group-avatar" />
+          <AvatarBox src={avatarUrl} id={me.id} fallbackLetter={(displayNameDraft || '?')[0]?.toUpperCase()} className="play-group-avatar" />
         </button>
         <input ref={fileRef} type="file" accept="image/*" hidden onChange={handleAvatarPick} />
         {uploading && <p className="play-empty">enviando foto...</p>}
@@ -771,7 +837,45 @@ function ProfilePanel({ me, open, onClose }: { me: Profile; open: boolean; onClo
         <input value={displayNameDraft} onChange={(e) => setDisplayNameDraft(e.target.value)} />
         <label style={{ marginTop: 10 }}>Status</label>
         <input value={statusDraft} onChange={(e) => setStatusDraft(e.target.value)} placeholder="De boa" />
-        <button type="button" className="google-btn" style={{ marginTop: 10 }} disabled={saving} onClick={save}>
+
+        {loaded && (
+          <>
+            <div className="name-style-preview">
+              <StyledName name={displayNameDraft || 'Você'} font={font} effect={effect} color={color} />
+            </div>
+            <label style={{ marginTop: 10 }}>Fonte</label>
+            <div className="name-style-picker">
+              {NAME_FONTS.map((f) => (
+                <button
+                  key={f.id}
+                  type="button"
+                  className={`name-font-option${(font || 'default') === f.id ? ' active' : ''}`}
+                  style={f.id !== 'default' ? { fontFamily: f.family } : undefined}
+                  onClick={() => setFont(f.id === 'default' ? null : f.id)}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+            <label style={{ marginTop: 10 }}>Efeito</label>
+            <div className="name-style-picker">
+              {NAME_EFFECTS.map((e) => (
+                <button
+                  key={e.id}
+                  type="button"
+                  className={`name-effect-option${(effect || 'solid') === e.id ? ' active' : ''}`}
+                  onClick={() => setEffect(e.id)}
+                >
+                  {e.label}
+                </button>
+              ))}
+            </div>
+            <label style={{ marginTop: 10 }}>Cor</label>
+            <input type="color" value={color && color.startsWith('#') ? color : '#3b6ef6'} onChange={(ev) => setColor(ev.target.value)} style={{ width: 60, height: 34, padding: 2, marginTop: 2 }} />
+          </>
+        )}
+
+        <button type="button" className="google-btn" style={{ marginTop: 14 }} disabled={saving} onClick={save}>
           {saving ? 'Salvando...' : 'Salvar'}
         </button>
       </div>

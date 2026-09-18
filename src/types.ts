@@ -66,6 +66,17 @@ export type PlayGroup = {
   created_at: string
 }
 
+export type PlayProfile = {
+  user_id: string
+  display_name: string | null
+  avatar_url: string | null
+  status: string | null
+  name_style_font: string | null
+  name_style_effect: 'solid' | 'gradient' | 'neon' | 'prism' | null
+  name_style_color: string | null
+  updated_at: string
+}
+
 export type PlayGroupMember = {
   group_id: string
   user_id: string
