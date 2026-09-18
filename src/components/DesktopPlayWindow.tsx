@@ -26,6 +26,19 @@ export function DesktopPlayWindow() {
       .then(({ data }) => setProfile(data as Profile))
   }, [session])
 
+  useEffect(() => {
+    // Fechar (X) so esconde e manda pra bandeja, igual a janela principal - o
+    // Thoth Play continua rodando (canal de voz, etc.), nao mata o processo.
+    // Reabre pelo menu "Thoth Play" da bandeja.
+    let unlisten: (() => void) | undefined
+    const win = currentWindow()
+    win.onCloseRequested(async (event) => {
+      event.preventDefault()
+      await win.hide()
+    }).then((fn) => { unlisten = fn })
+    return () => unlisten?.()
+  }, [])
+
   return (
     <div className="desktop-window-shell play-window-shell">
       <DesktopTitleBar title="Thoth Play — ThothChat" />

@@ -53,6 +53,7 @@ export function ThothPlay({ me, onBack }: Props) {
   const [channels, setChannels] = useState<PlayChannel[]>([])
   const [selectedChannel, setSelectedChannel] = useState<PlayChannel | null>(null)
   const [messages, setMessages] = useState<ChannelMessage[]>([])
+  const [hasReplaySet, setHasReplaySet] = useState<Set<string>>(new Set())
   const [draft, setDraft] = useState('')
   const [liveTyping, setLiveTyping] = useState<Record<string, string>>({})
   const messagesChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null)
@@ -137,6 +138,12 @@ export function ThothPlay({ me, onBack }: Props) {
       authors = Object.fromEntries((profiles || []).map((p) => [p.id, mergePlayProfile(p as Profile, playProfiles[p.id])]))
     }
     setMessages(rows.map((r) => ({ ...r, author: authors[r.author_id] })))
+    if (rows.length) {
+      const { data: replays } = await supabase.from('play_message_replays').select('message_id').in('message_id', rows.map((r) => r.id))
+      setHasReplaySet(new Set((replays || []).map((r) => r.message_id as string)))
+    } else {
+      setHasReplaySet(new Set())
+    }
   }
 
   function openChannel(channel: PlayChannel) {
@@ -214,6 +221,7 @@ export function ThothPlay({ me, onBack }: Props) {
     if (error) { console.error('send play message failed', error); return }
     if (msg && eventsToStore.length > 1) {
       await supabase.from('play_message_replays').insert({ message_id: msg.id, events: eventsToStore })
+      setHasReplaySet((prev) => new Set(prev).add(msg.id))
     }
   }
 
@@ -257,6 +265,7 @@ export function ThothPlay({ me, onBack }: Props) {
         channels={channels}
         selectedChannel={selectedChannel}
         messages={messages}
+        hasReplaySet={hasReplaySet}
         liveTyping={liveTyping}
         draft={draft}
         onDraftChange={handleDraftChange}
@@ -372,6 +381,7 @@ type GroupViewProps = {
   channels: PlayChannel[]
   selectedChannel: PlayChannel | null
   messages: ChannelMessage[]
+  hasReplaySet: Set<string>
   liveTyping: Record<string, string>
   draft: string
   onDraftChange: (v: string) => void
@@ -385,7 +395,7 @@ type GroupViewProps = {
 type GroupMember = { profile: Profile; role: string }
 type VoiceParticipantInfo = { id: string; name: string }
 
-function GroupView({ me, group, channels, selectedChannel, messages, liveTyping, draft, onDraftChange, onSend, onSelectChannel, onBack, onChannelsChange, onGroupUpdate }: GroupViewProps) {
+function GroupView({ me, group, channels, selectedChannel, messages, hasReplaySet, liveTyping, draft, onDraftChange, onSend, onSelectChannel, onBack, onChannelsChange, onGroupUpdate }: GroupViewProps) {
   const [showNewChannel, setShowNewChannel] = useState(false)
   const [joinedVoiceChannel, setJoinedVoiceChannel] = useState<PlayChannel | null>(null)
   const [openReplayId, setOpenReplayId] = useState<string | null>(null)
@@ -584,10 +594,12 @@ function GroupView({ me, group, channels, selectedChannel, messages, liveTyping,
                           ) : '...'}
                         </strong>
                         <span className="play-message-time">{new Date(m.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
-                        <button type="button" className="play-replay-btn" onClick={() => openReplay(m)}>replay</button>
+                        <button type="button" className="play-replay-btn" onClick={() => openReplay(m)}>
+                          replay{hasReplaySet.has(m.id) && <span className="play-replay-flag">!</span>}
+                        </button>
                       </div>
-                      {openReplayId === m.id ? (
-                        replayEvents === null ? <p className="play-empty">carregando...</p> : replayEvents.length > 1 ? <ReplayPlayer events={replayEvents} /> : <p>{m.content}</p>
+                      {openReplayId === m.id && replayEvents && replayEvents.length > 1 ? (
+                        <ReplayPlayer events={replayEvents} />
                       ) : (
                         <p>{m.content}</p>
                       )}

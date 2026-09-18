@@ -41,12 +41,13 @@ pub fn run() {
         let status_item = MenuItem::with_id(app, "status", "Status", true, None::<&str>)?;
         let groups_item = MenuItem::with_id(app, "groups", "Grupos", true, None::<&str>)?;
         let communities_item = MenuItem::with_id(app, "communities", "Comunidades", true, None::<&str>)?;
+        let play_item = MenuItem::with_id(app, "play", "Thoth Play", true, None::<&str>)?;
         let quit_item = MenuItem::with_id(app, "quit", "Sair", true, None::<&str>)?;
         let sep1 = PredefinedMenuItem::separator(app)?;
         let sep2 = PredefinedMenuItem::separator(app)?;
         let menu = Menu::with_items(
           app,
-          &[&show_item, &sep1, &new_item, &status_item, &groups_item, &communities_item, &sep2, &quit_item],
+          &[&show_item, &sep1, &new_item, &status_item, &groups_item, &communities_item, &play_item, &sep2, &quit_item],
         )?;
 
         // Os itens de atalho (Novo/Status/Grupos/Comunidades) fazem o mesmo que os
@@ -77,6 +78,9 @@ pub fn run() {
             "status" => show_and_navigate(app, "status"),
             "groups" => show_and_navigate(app, "groups"),
             "communities" => show_and_navigate(app, "communities"),
+            // Thoth Play abre numa janela propria, entao so avisa o front (que
+            // ja sabe abrir/focar essa janela) sem forcar a principal aparecer
+            "play" => { let _ = app.emit("tray-nav", "play"); }
             _ => {}
           })
           .on_tray_icon_event(|tray, event| {

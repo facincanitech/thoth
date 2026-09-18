@@ -1550,7 +1550,8 @@ body{
 .play-message-row{display:flex;align-items:baseline;gap:8px}
 .play-message-row strong{font-size:13px}
 .play-message-time{font-size:11px;color:var(--muted)}
-.play-replay-btn{margin-left:auto;border:0;background:none;color:var(--accent-text);font-size:11px;cursor:pointer;padding:0}
+.play-replay-btn{margin-left:auto;display:inline-flex;align-items:center;gap:3px;border:0;background:none;color:var(--accent-text);font-size:11px;cursor:pointer;padding:0}
+.play-replay-flag{display:inline-flex;align-items:center;justify-content:center;width:13px;height:13px;border-radius:50%;background:#e5484d;color:#fff;font-size:10px;font-weight:700}
 .play-message-body p{margin:2px 0 0;font-size:14.5px;line-height:1.4}
 .play-message-live .play-message-body p{font-style:italic;color:var(--text-secondary)}
 .play-composer{display:flex;gap:10px;padding:14px 20px;border-top:1px solid var(--line);flex-shrink:0}

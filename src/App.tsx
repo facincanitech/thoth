@@ -110,6 +110,8 @@ function App() {
         openGroups()
       } else if (target === 'communities') {
         openCommunities()
+      } else if (target === 'play') {
+        openPlay()
       }
     }
     let unlistenTray: (() => void) | undefined
