@@ -23,4 +23,22 @@ export async function openChatWindow(conversationId: string, title: string) {
   })
 }
 
+export async function openPlayWindow() {
+  const label = 'thoth-play'
+  const existing = await WebviewWindow.getByLabel(label)
+  if (existing) {
+    await existing.setFocus()
+    return
+  }
+  new WebviewWindow(label, {
+    url: 'index.html?tauriPlay=1',
+    title: 'Thoth Play — ThothChat',
+    width: 980,
+    height: 680,
+    minWidth: 760,
+    minHeight: 480,
+    decorations: false,
+  })
+}
+
 export const currentWindow = () => getCurrentWindow()

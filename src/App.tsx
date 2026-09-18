@@ -20,7 +20,7 @@ import { promptDisableBatteryOptimization, promptFullScreenIntentPermission } fr
 import { readCache, writeCache } from './lib/cache'
 import { pickTextColor } from './lib/appTheme'
 import { isTauriDesktop } from './lib/platform'
-import { openChatWindow } from './lib/desktopWindows'
+import { openChatWindow, openPlayWindow } from './lib/desktopWindows'
 import { DesktopTitleBar } from './components/DesktopChrome'
 import './App.css'
 
@@ -583,6 +583,10 @@ function App() {
 
   function openPlay() {
     requireAuth(() => {
+      if (isTauriDesktop) {
+        openPlayWindow()
+        return
+      }
       setSelected(null)
       setSelectedCommunity(null)
       setPanelOpen(false)

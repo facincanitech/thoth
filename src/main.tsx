@@ -3,9 +3,12 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
 import { DesktopChatWindow } from './components/DesktopChatWindow.tsx'
+import { DesktopPlayWindow } from './components/DesktopPlayWindow.tsx'
 import { isTauriDesktop } from './lib/platform.ts'
 
-const tauriChatId = isTauriDesktop ? new URLSearchParams(window.location.search).get('tauriChat') : null
+const searchParams = isTauriDesktop ? new URLSearchParams(window.location.search) : null
+const tauriChatId = searchParams?.get('tauriChat') ?? null
+const isTauriPlay = searchParams?.get('tauriPlay') === '1'
 
 async function boot() {
   // ThothChat Messenger (versao desktop) tem visual proprio e fixo, sem sistema
@@ -17,7 +20,7 @@ async function boot() {
 
   createRoot(document.getElementById('root')!).render(
     <StrictMode>
-      {tauriChatId ? <DesktopChatWindow conversationId={tauriChatId} /> : <App />}
+      {isTauriPlay ? <DesktopPlayWindow /> : tauriChatId ? <DesktopChatWindow conversationId={tauriChatId} /> : <App />}
     </StrictMode>,
   )
 }

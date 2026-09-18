@@ -221,3 +221,51 @@
 /* Presenca via moldura do avatar - a bolinha verde/vermelha some, o esquema de
    cor por presenca fica todo na regra unificada da moldura de vidro la em cima. */
 .presence-dot{display:none}
+
+/* Thoth Play - janela separada, visual proprio (neon azul/ciano), nada a ver com
+   o skin MSN do resto do desktop. Reaproveita as classes .play-* do App.css
+   (compartilhadas com mobile/web) so redefinindo as CSS vars que elas usam,
+   dentro do escopo .play-window-shell - cada janela do Tauri e um documento
+   separado, entao isso nao vaza pro resto do app. Titlebar sempre escura aqui
+   (nao segue claro/escuro do Windows, e uma identidade visual propria do Play). */
+.play-window-shell{
+  --bg-deep:#eef8fd;--bg-panel:#f4fbff;--bg-surface-2:#e3f3fb;--bg-selected:#d7edf9;
+  --line:#a9d8ec;--line-2:#bfe3f2;--text:#0d3a5c;--text-base:#0d3a5c;--text-secondary:#3d6f8f;
+  --muted:#6a95ad;--accent-text:#0d84c9;--input:#fff;--avatar-bg:#dceefa;--green:#0d84c9;--on-button:#fff;
+}
+.play-window-shell .titlebar{background:linear-gradient(#12181f,#0a0e14)!important;border-bottom:1px solid #000;text-shadow:none;box-shadow:none}
+.play-window-shell .titlebar-logo{filter:drop-shadow(0 0 4px #33c6ff)}
+.play-window-shell .window-controls button{border-left-color:#ffffff1f}
+.play-window-shell .window-controls button:hover{background:#ffffff1a}
+.play-window-shell .play-desktop-app{background:var(--bg-deep)}
+.play-window-shell .play-icon-rail{
+  background:linear-gradient(160deg,#22c3ef 0%,#1391c9 55%,#0a4f78 100%);
+  border-right:1px solid #063a58;position:relative;overflow:hidden;
+}
+.play-window-shell .play-icon-rail:before{
+  content:"";position:absolute;top:-20%;left:30%;width:44%;height:150%;
+  background:linear-gradient(100deg,transparent 40%,rgb(255 255 255 / 30%) 48%,transparent 58%);
+  transform:rotate(8deg);pointer-events:none;
+}
+.play-window-shell .play-icon-rail-back{color:#eafbff}
+.play-window-shell .play-icon-rail-back:hover{background:rgb(255 255 255 / 18%)}
+.play-window-shell .play-icon-rail-group{border-radius:14px;box-shadow:0 0 0 2px #dff6ff,0 3px 10px rgb(0 40 60 / 45%);position:relative;z-index:1}
+.play-window-shell .play-icon-rail-label{color:#eafbff;text-shadow:0 1px 2px rgb(0 30 45 / 60%);position:relative;z-index:1}
+.play-window-shell .play-group-topbar,.play-window-shell .play-channel-sidebar,.play-window-shell .play-member-sidebar,.play-window-shell .play-text-channel-header,.play-window-shell .play-composer,.play-window-shell .play-voice-controls{
+  box-shadow:inset 0 0 0 1px #ffffffb0;
+}
+.play-window-shell .play-channel-item.active{box-shadow:inset 0 0 0 1px #8fd6f2}
+.play-window-shell .play-member-tabs button.active{background:linear-gradient(#2fc4ee,#0d84c9);border-color:#0d84c9}
+
+@media(prefers-color-scheme:dark){
+  .play-window-shell{
+    --bg-deep:#080d14;--bg-panel:#0c141d;--bg-surface-2:#0f1a25;--bg-selected:#132638;
+    --line:#173248;--line-2:#1c3d57;--text:#d8f1ff;--text-base:#d8f1ff;--text-secondary:#8fb9d1;
+    --muted:#5c85a0;--accent-text:#3fd0ff;--input:#0c141d;--avatar-bg:#132436;--green:#1ea9e0;--on-button:#03131c;
+  }
+  .play-window-shell .play-group-topbar,.play-window-shell .play-channel-sidebar,.play-window-shell .play-member-sidebar,.play-window-shell .play-text-channel-header,.play-window-shell .play-composer,.play-window-shell .play-voice-controls{
+    box-shadow:inset 0 0 0 1px #143349;
+  }
+  .play-window-shell .play-group-card,.play-window-shell .play-voice-tile{box-shadow:inset 0 0 0 1px #143349}
+  .play-window-shell .play-channel-item.active{box-shadow:inset 0 0 0 1px #2a5b7d;color:#5fdcff}
+}

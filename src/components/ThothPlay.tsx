@@ -4,9 +4,10 @@ import { supabase } from '../lib/supabase'
 import { fetchLiveKitToken } from '../lib/livekit'
 import { displayName } from '../lib/displayName'
 import { AvatarBox } from './AvatarBox'
+import { getPresenceColor } from '../lib/presence'
 import {
-  IconArrowLeft, IconCopy, IconGamepad, IconHash, IconLock, IconLockOpen,
-  IconMic, IconMicOff, IconMonitorShare, IconPlus, IconSend, IconVideo, IconVideoOff,
+  IconArrowLeft, IconCopy, IconGamepad, IconHash, IconHeadphones, IconLock, IconLockOpen,
+  IconMic, IconMicOff, IconMonitorShare, IconPlus, IconSend, IconSettingsGear, IconVideo, IconVideoOff,
 } from './icons'
 import type { PlayChannel, PlayGroup, PlayMessage, Profile } from '../types'
 
@@ -281,13 +282,46 @@ type GroupViewProps = {
   onChannelsChange: () => void
 }
 
+type GroupMember = { profile: Profile; role: string }
+type VoiceParticipantInfo = { id: string; name: string }
+
 function GroupView({ me, group, channels, selectedChannel, messages, draft, onDraftChange, onSend, onSelectChannel, onBack, onChannelsChange }: GroupViewProps) {
   const [showNewChannel, setShowNewChannel] = useState(false)
   const [newChannelName, setNewChannelName] = useState('')
   const [newChannelKind, setNewChannelKind] = useState<'text' | 'voice'>('text')
   const [copied, setCopied] = useState(false)
+  const [members, setMembers] = useState<GroupMember[]>([])
+  const [memberTab, setMemberTab] = useState<'group' | 'voice'>('group')
+  const [voiceParticipants, setVoiceParticipants] = useState<VoiceParticipantInfo[]>([])
   const textChannels = channels.filter((c) => c.kind === 'text')
   const voiceChannels = channels.filter((c) => c.kind === 'voice')
+
+  useEffect(() => {
+    setVoiceParticipants([])
+  }, [selectedChannel?.id])
+
+  useEffect(() => {
+    let cancelled = false
+    async function loadMembers() {
+      const { data: rows } = await supabase.from('play_group_members').select('user_id, role').eq('group_id', group.id)
+      const ids = (rows || []).map((r) => r.user_id as string)
+      if (!ids.length) { setMembers([]); return }
+      const { data: profiles } = await supabase.from('profiles').select('*').in('id', ids)
+      if (cancelled) return
+      const profileMap = Object.fromEntries((profiles || []).map((p) => [p.id, p as Profile]))
+      setMembers(
+        (rows || [])
+          .map((r) => ({ profile: profileMap[r.user_id as string], role: r.role as string }))
+          .filter((m): m is GroupMember => !!m.profile),
+      )
+    }
+    loadMembers()
+    return () => { cancelled = true }
+  }, [group.id])
+
+  const onlineMembers = members.filter((m) => getPresenceColor(m.profile.last_seen_at, m.profile.is_idle) !== 'offline')
+  const offlineMembers = members.filter((m) => getPresenceColor(m.profile.last_seen_at, m.profile.is_idle) === 'offline')
+  const inVoiceIds = new Set(voiceParticipants.map((p) => p.id))
 
   async function createChannel() {
     if (!newChannelName.trim()) return
@@ -308,64 +342,134 @@ function GroupView({ me, group, channels, selectedChannel, messages, draft, onDr
 
   return (
     <main className="play-group-view">
-      <aside className="play-channel-sidebar">
-        <div className="play-channel-sidebar-top">
-          <button type="button" className="icon-btn" onClick={onBack} title="Voltar aos grupos"><IconArrowLeft size={18} /></button>
-          <strong>{group.name}</strong>
-        </div>
-        <button type="button" className="play-invite-btn" onClick={copyInvite}>
-          <IconCopy size={14} /> {copied ? 'copiado!' : `código: ${group.invite_code}`}
+      <aside className="play-icon-rail">
+        <button type="button" className="play-icon-rail-back" onClick={onBack} title="Voltar aos grupos"><IconArrowLeft size={18} /></button>
+        <button type="button" className="play-icon-rail-group" title={group.name}>
+          <AvatarBox src={group.image_url} id={group.id} fallbackLetter={group.name[0]?.toUpperCase()} className="play-group-avatar" />
         </button>
-        <div className="play-channel-group-title">
-          <span>Texto</span>
-          <button type="button" onClick={() => { setNewChannelKind('text'); setShowNewChannel(true) }}><IconPlus size={14} /></button>
-        </div>
-        {textChannels.map((c) => (
-          <button key={c.id} type="button" className={`play-channel-item${selectedChannel?.id === c.id ? ' active' : ''}`} onClick={() => onSelectChannel(c)}>
-            <IconHash size={15} /> {c.name}
-          </button>
-        ))}
-        <div className="play-channel-group-title">
-          <span>Voz</span>
-          <button type="button" onClick={() => { setNewChannelKind('voice'); setShowNewChannel(true) }}><IconPlus size={14} /></button>
-        </div>
-        {voiceChannels.map((c) => (
-          <button key={c.id} type="button" className={`play-channel-item${selectedChannel?.id === c.id ? ' active' : ''}`} onClick={() => onSelectChannel(c)}>
-            <IconVideo size={15} /> {c.name}
-          </button>
-        ))}
+        <span className="play-icon-rail-label">Sobre o grupo</span>
       </aside>
 
-      {!selectedChannel && <div className="play-channel-empty"><p>Escolha um canal</p></div>}
+      <div className="play-group-main">
+        <header className="play-group-topbar">
+          <AvatarBox src={group.image_url} id={group.id} fallbackLetter={group.name[0]?.toUpperCase()} className="play-group-avatar" />
+          <div className="play-group-topbar-copy">
+            <div className="play-group-topbar-title">
+              <strong>{group.name}</strong>
+              <button type="button" className="play-invite-btn" onClick={copyInvite} title="Copiar código de convite">
+                <IconCopy size={12} /> {copied ? 'copiado!' : group.invite_code}
+              </button>
+              <IconSettingsGear size={16} />
+            </div>
+            {group.description && <span>{group.description}</span>}
+          </div>
+        </header>
 
-      {selectedChannel?.kind === 'text' && (
-        <div className="play-text-channel">
-          <header className="play-text-channel-header"><IconHash size={17} /> {selectedChannel.name}</header>
-          <div className="play-messages">
-            {messages.length === 0 && <p className="play-empty">nenhuma mensagem ainda</p>}
-            {messages.map((m) => (
-              <div key={m.id} className="play-message">
-                <AvatarBox src={m.author?.avatar_url} id={m.author_id} fallbackLetter={(m.author ? displayName(m.author) : '?')[0]?.toUpperCase()} className="avatar-sm" />
-                <div className="play-message-body">
-                  <strong>{m.author ? displayName(m.author) : '...'}</strong>
-                  <p>{m.content}</p>
-                </div>
+        <div className="play-group-body">
+          <aside className="play-channel-sidebar">
+            <div className="play-channel-group-title">
+              <span>Canais de texto</span>
+              <button type="button" onClick={() => { setNewChannelKind('text'); setShowNewChannel(true) }}><IconPlus size={14} /></button>
+            </div>
+            {textChannels.map((c) => (
+              <button key={c.id} type="button" className={`play-channel-item${selectedChannel?.id === c.id ? ' active' : ''}`} onClick={() => onSelectChannel(c)}>
+                <IconHash size={15} /> {c.name}
+              </button>
+            ))}
+            <div className="play-channel-group-title">
+              <span>Canais de voz</span>
+              <button type="button" onClick={() => { setNewChannelKind('voice'); setShowNewChannel(true) }}><IconPlus size={14} /></button>
+            </div>
+            {voiceChannels.map((c) => (
+              <div key={c.id}>
+                <button type="button" className={`play-channel-item${selectedChannel?.id === c.id ? ' active' : ''}`} onClick={() => onSelectChannel(c)}>
+                  <IconVideo size={15} /> {c.name}
+                </button>
+                {selectedChannel?.id === c.id && voiceParticipants.map((p) => (
+                  <div key={p.id} className="play-channel-voice-member">{p.name}</div>
+                ))}
               </div>
             ))}
-          </div>
-          <div className="play-composer">
-            <input
-              placeholder={`Conversar em #${selectedChannel.name}`}
-              value={draft}
-              onChange={(e) => onDraftChange(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter') onSend() }}
-            />
-            <button type="button" onClick={onSend}><IconSend size={18} /></button>
-          </div>
-        </div>
-      )}
+          </aside>
 
-      {selectedChannel?.kind === 'voice' && <VoiceChannel key={selectedChannel.id} me={me} channel={selectedChannel} />}
+          {!selectedChannel && <div className="play-channel-empty"><p>Escolha um canal</p></div>}
+
+          {selectedChannel?.kind === 'text' && (
+            <div className="play-text-channel">
+              <header className="play-text-channel-header">
+                <div><IconHash size={17} /> <strong>{selectedChannel.name}</strong></div>
+                <span>Conversa geral do {group.name}</span>
+              </header>
+              <div className="play-messages">
+                {messages.length === 0 && <p className="play-empty">nenhuma mensagem ainda</p>}
+                {messages.map((m) => (
+                  <div key={m.id} className="play-message">
+                    <AvatarBox src={m.author?.avatar_url} id={m.author_id} fallbackLetter={(m.author ? displayName(m.author) : '?')[0]?.toUpperCase()} className="avatar-sm" />
+                    <div className="play-message-body">
+                      <strong>{m.author ? displayName(m.author) : '...'}</strong>
+                      <p>{m.content}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="play-composer">
+                <input
+                  placeholder={`Conversar no #${selectedChannel.name}`}
+                  value={draft}
+                  onChange={(e) => onDraftChange(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') onSend() }}
+                />
+                <button type="button" onClick={onSend}><IconSend size={18} /></button>
+              </div>
+            </div>
+          )}
+
+          {selectedChannel?.kind === 'voice' && (
+            <VoiceChannel key={selectedChannel.id} me={me} channel={selectedChannel} onParticipantsChange={setVoiceParticipants} />
+          )}
+
+          <aside className="play-member-sidebar">
+            <div className="play-member-tabs">
+              <button type="button" className={memberTab === 'group' ? 'active' : ''} onClick={() => setMemberTab('group')}>No grupo</button>
+              <button type="button" className={memberTab === 'voice' ? 'active' : ''} onClick={() => setMemberTab('voice')}>Na voz</button>
+            </div>
+            {memberTab === 'group' ? (
+              <>
+                {onlineMembers.length > 0 && (
+                  <div className="play-member-group-title">ONLINE — {onlineMembers.length}</div>
+                )}
+                {onlineMembers.map((m) => (
+                  <div key={m.profile.id} className="play-member-row">
+                    <AvatarBox src={m.profile.avatar_url} id={m.profile.id} fallbackLetter={displayName(m.profile)[0]?.toUpperCase()} className="avatar-sm" />
+                    <span>{displayName(m.profile)}</span>
+                    {inVoiceIds.has(m.profile.id) && <IconHeadphones size={14} />}
+                  </div>
+                ))}
+                {offlineMembers.length > 0 && (
+                  <div className="play-member-group-title">OFFLINE — {offlineMembers.length}</div>
+                )}
+                {offlineMembers.map((m) => (
+                  <div key={m.profile.id} className="play-member-row offline">
+                    <AvatarBox src={m.profile.avatar_url} id={m.profile.id} fallbackLetter={displayName(m.profile)[0]?.toUpperCase()} className="avatar-sm" />
+                    <span>{displayName(m.profile)}</span>
+                  </div>
+                ))}
+              </>
+            ) : (
+              <>
+                {voiceParticipants.length === 0 && <p className="play-empty">ninguém na voz agora</p>}
+                {voiceParticipants.map((p) => (
+                  <div key={p.id} className="play-member-row">
+                    <AvatarBox src={p.id === me.id ? me.avatar_url : null} id={p.id} fallbackLetter={p.name[0]?.toUpperCase()} className="avatar-sm" />
+                    <span>{p.name}</span>
+                    <IconHeadphones size={14} />
+                  </div>
+                ))}
+              </>
+            )}
+          </aside>
+        </div>
+      </div>
 
       {showNewChannel && (
         <div className="modal-backdrop" onClick={() => setShowNewChannel(false)}>
@@ -389,7 +493,7 @@ type ParticipantTile = {
   videoTrack?: Track
 }
 
-function VoiceChannel({ me, channel }: { me: Profile; channel: PlayChannel }) {
+function VoiceChannel({ me, channel, onParticipantsChange }: { me: Profile; channel: PlayChannel; onParticipantsChange: (p: VoiceParticipantInfo[]) => void }) {
   const roomRef = useRef<Room | null>(null)
   const [connected, setConnected] = useState(false)
   const [connecting, setConnecting] = useState(true)
@@ -402,21 +506,21 @@ function VoiceChannel({ me, channel }: { me: Profile; channel: PlayChannel }) {
 
   function syncParticipants(room: Room) {
     const all: (LocalParticipant | RemoteParticipant)[] = [room.localParticipant, ...Array.from(room.remoteParticipants.values())]
-    setParticipants(
-      all.map((p) => {
-        const pubs = p.trackPublications.values() as IterableIterator<TrackPublication>
-        const videoPub = Array.from(pubs).find(
-          (pub) => (pub.source === Track.Source.Camera || pub.source === Track.Source.ScreenShare) && !!pub.track,
-        )
-        return {
-          id: p.identity,
-          name: p.name || p.identity,
-          isLocal: p === room.localParticipant,
-          micOn: p.isMicrophoneEnabled,
-          videoTrack: videoPub?.track,
-        }
-      }),
-    )
+    const tiles = all.map((p) => {
+      const pubs = p.trackPublications.values() as IterableIterator<TrackPublication>
+      const videoPub = Array.from(pubs).find(
+        (pub) => (pub.source === Track.Source.Camera || pub.source === Track.Source.ScreenShare) && !!pub.track,
+      )
+      return {
+        id: p.identity,
+        name: p.name || p.identity,
+        isLocal: p === room.localParticipant,
+        micOn: p.isMicrophoneEnabled,
+        videoTrack: videoPub?.track,
+      }
+    })
+    setParticipants(tiles)
+    onParticipantsChange(tiles.map((t) => ({ id: t.id, name: t.name })))
   }
 
   useEffect(() => {

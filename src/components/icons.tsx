@@ -469,6 +469,25 @@ export function IconGamepad({ size = 20 }: IconProps) {
   )
 }
 
+export function IconHeadphones({ size = 20 }: IconProps) {
+  return (
+    <svg {...base} width={size} height={size}>
+      <path d="M4 13v-1a8 8 0 0 1 16 0v1" />
+      <rect x="2" y="13" width="5" height="7" rx="2" />
+      <rect x="17" y="13" width="5" height="7" rx="2" />
+    </svg>
+  )
+}
+
+export function IconSettingsGear({ size = 20 }: IconProps) {
+  return (
+    <svg {...base} width={size} height={size}>
+      <circle cx="12" cy="12" r="3" />
+      <path d="M12 3v2.2M12 18.8V21M21 12h-2.2M5.2 12H3M18.4 5.6l-1.55 1.55M7.15 16.85l-1.55 1.55M18.4 18.4l-1.55-1.55M7.15 7.15 5.6 5.6" />
+    </svg>
+  )
+}
+
 export function IconMonitorShare({ size = 20 }: IconProps) {
   return (
     <svg {...base} width={size} height={size}>
