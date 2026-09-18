@@ -11,9 +11,10 @@ import { NotificationCenter } from './NotificationCenter'
 import { StatusView } from './StatusView'
 import { StyledName, NAME_FONTS, NAME_EFFECTS } from './StyledName'
 import { readCache, writeCache } from '../lib/cache'
-import { APP_VERSION, APK_DOWNLOAD_URL } from '../version'
+import { APP_VERSION, APK_DOWNLOAD_URL, DESKTOP_DOWNLOAD_URL } from '../version'
 import { checkForUpdate } from '../lib/updateCheck'
 import { downloadAndInstallUpdate } from '../lib/appUpdate'
+import { downloadAndInstallDesktopUpdate } from '../lib/desktopUpdate'
 import { isTauriDesktop } from '../lib/platform'
 import { getPresenceColor } from '../lib/presence'
 import {
@@ -573,10 +574,23 @@ export function ChatList({
     })
   }, [accountView])
 
+  useEffect(() => {
+    // No desktop checa direto ao logar (sem precisar abrir a tela de conta),
+    // pra dar pra mostrar um aviso no sininho da notificacao.
+    if (!isTauriDesktop || !me) return
+    checkForUpdate(APP_VERSION).then((info) => {
+      setLatestVersion(info.available && info.version ? info.version : APP_VERSION)
+    })
+  }, [me?.id])
+
   async function handleAppUpdateClick() {
     setAppUpdating(true)
     try {
-      await downloadAndInstallUpdate(APK_DOWNLOAD_URL)
+      if (isTauriDesktop) {
+        await downloadAndInstallDesktopUpdate(DESKTOP_DOWNLOAD_URL)
+      } else {
+        await downloadAndInstallUpdate(APK_DOWNLOAD_URL)
+      }
     } catch (err) {
       console.error('update failed', err)
     } finally {
@@ -1794,8 +1808,14 @@ export function ChatList({
             <strong>{me ? displayName(me) : 'Você'}</strong>
             <span className="msn-presence">{me?.status || 'Disponível'}</span>
           </div>
-          <button type="button" className="msn-mail-button" title="Notificações" onClick={() => onAccountOpenChange(true)}>
+          <button
+            type="button"
+            className="msn-mail-button"
+            title={latestVersion !== APP_VERSION ? `Atualização disponível — v${latestVersion}` : 'Notificações'}
+            onClick={() => onAccountOpenChange(true)}
+          >
             <IconBell size={18} />
+            {latestVersion !== APP_VERSION && <span className="msn-update-badge" />}
           </button>
         </div>
         <div className="msn-search-row">
@@ -2705,7 +2725,7 @@ export function ChatList({
               style={{ display: 'block', width: '100%', textAlign: 'center' }}
               onClick={handleAppUpdateClick}
             >
-              {appUpdating ? 'Baixando...' : `Baixar o app (Android) — v${latestVersion}`}
+              {appUpdating ? 'Baixando...' : `Baixar o app (${isTauriDesktop ? 'Windows' : 'Android'}) — v${latestVersion}`}
             </button>
             <span className="invite-code">
               {latestVersion !== APP_VERSION ? `sua versão instalada: v${APP_VERSION}` : 'você já está na versão mais nova'}
