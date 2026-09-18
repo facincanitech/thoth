@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ThothChat Messenger</title>
+<style>
+  html,body{margin:0;height:100%;font-family:system-ui,sans-serif;background:#0a96ce;color:#fff}
+  body{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;text-align:center;padding:24px}
+  h1{font-size:20px;margin:0}
+  a{padding:10px 22px;border-radius:6px;font-weight:600;color:#fff;text-decoration:none;background:#087caf;border:1px solid #06537d}
+</style>
+</head>
+<body>
+  <h1>Login realizado!</h1>
+  <p>Se o ThothChat Messenger não abrir sozinho, clique no botão abaixo.</p>
+  <a id="open-link" href="#">Abrir o ThothChat Messenger</a>
+  <script>
+    // Pagina estatica (nao faz parte do bundle React) que recebe o retorno do login
+    // Google do ThothChat Messenger (desktop). O redirectTo do OAuth aponta direto
+    // pra cá em vez de pra ferus://callback porque navegar pra um protocolo custom
+    // a partir do navegador do sistema (sem essa pagina https no meio) deixava a
+    // aba "pensando" pra sempre em varios navegadores.
+    var target = 'ferus://callback' + window.location.hash
+    document.getElementById('open-link').href = target
+    // navegacao automatica via script (sem gesto real do usuario) e ignorada por
+    // alguns navegadores pra protocolo customizado - o botao acima e o caminho
+    // garantido, isso aqui e so uma tentativa a mais.
+    window.location.href = target
+  </script>
+</body>
+</html>

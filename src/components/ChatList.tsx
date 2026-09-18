@@ -1675,7 +1675,7 @@ export function ChatList({
     async function handleDesktopGoogleLogin() {
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
-        options: { redirectTo: 'https://facincanitech.github.io/thothchat/?desktop=1', queryParams: { prompt: 'select_account' }, skipBrowserRedirect: true },
+        options: { redirectTo: 'https://facincanitech.github.io/thothchat/desktop-login.html', queryParams: { prompt: 'select_account' }, skipBrowserRedirect: true },
       })
       if (error || !data?.url) return
       const { open } = await import('@tauri-apps/plugin-shell')

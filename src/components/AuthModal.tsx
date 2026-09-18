@@ -20,7 +20,7 @@ export function AuthModal({ onClose }: Props) {
       // customizado a partir do navegador deixava a aba "pensando" pra sempre.
       const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
         provider: 'google',
-        options: { redirectTo: 'https://facincanitech.github.io/thothchat/?desktop=1', queryParams: { prompt: 'select_account' }, skipBrowserRedirect: true },
+        options: { redirectTo: 'https://facincanitech.github.io/thothchat/desktop-login.html', queryParams: { prompt: 'select_account' }, skipBrowserRedirect: true },
       })
       if (oauthError) { setError(oauthError.message); return }
       if (data?.url) {
