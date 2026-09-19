@@ -263,6 +263,22 @@
   width:92px;min-height:36px;padding:3px 5px;border:0;color:#fff;font-size:12px;font-weight:700;line-height:1.2;
   text-shadow:0 1px rgb(0 66 98 / 65%);background:transparent;
 }
+/* volta pro back button (unica forma de sair do grupo) e o perfil (rodape da
+   rail) - a regra acima escondia os dois sem querer junto com o spacer. */
+.play-window-shell .play-icon-rail-back{
+  display:grid!important;place-items:center;width:34px;height:34px;margin-bottom:4px;
+  border:1px solid rgb(255 255 255 / 30%);border-radius:9px;color:#fff;background:rgb(255 255 255 / 12%);
+}
+.play-window-shell .play-icon-rail-back:hover{background:rgb(255 255 255 / 24%)}
+.play-window-shell .play-icon-rail-spacer{display:block!important}
+.play-window-shell .play-icon-rail-profile{
+  display:flex!important;width:56px;height:56px;margin:0;border:1px solid #30a9d5;border-radius:12px;padding:4px;
+  background:linear-gradient(#f8feff,#bdeafb);box-shadow:inset 0 0 0 2px #fff,0 3px 8px rgb(0 64 96 / 35%);
+}
+.play-window-shell .play-icon-rail-profile .play-group-avatar{width:100%;height:100%;border-radius:8px}
+.play-window-shell .play-icon-rail-profile+.play-icon-rail-label{
+  display:block!important;color:#fff;font-size:10.5px;font-weight:700;text-shadow:0 1px rgb(0 66 98 / 65%);
+}
 
 .play-window-shell .play-group-main{background:var(--bg-deep)}
 .play-window-shell .play-group-topbar{

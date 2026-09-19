@@ -33,7 +33,7 @@ pub fn run() {
         use tauri::{
           menu::{Menu, MenuItem, PredefinedMenuItem},
           tray::TrayIconBuilder,
-          Emitter, Manager, WindowEvent,
+          Emitter, Manager,
         };
 
         let show_item = MenuItem::with_id(app, "show", "Abrir", true, None::<&str>)?;
@@ -98,23 +98,27 @@ pub fn run() {
             }
           })
           .build(app)?;
-
-        // Fechar a janela principal so esconde (manda pra bandeja) em vez de
-        // encerrar o app - o estado (sessao, conversas abertas) continua vivo.
-        // Janelas de chat continuam fechando normal.
-        if let Some(window) = app.get_webview_window("main") {
-          let window_clone = window.clone();
-          window.on_window_event(move |event| {
-            if let WindowEvent::CloseRequested { api, .. } = event {
-              api.prevent_close();
-              let _ = window_clone.hide();
-            }
-          });
-        }
       }
 
       Ok(())
     })
-    .run(tauri::generate_context!())
-    .expect("error while running tauri application");
+    .build(tauri::generate_context!())
+    .expect("error while building tauri application")
+    .run(|app_handle, event| {
+      // Fechar a janela principal ou a do Thoth Play so esconde (manda pra
+      // bandeja) em vez de encerrar o app - o estado (sessao, conversas
+      // abertas, canal de voz conectado) continua vivo. Precisa ser aqui (no
+      // RunEvent global) e nao soh no setup() porque a janela do Play e criada
+      // dinamicamente depois, nao existe ainda quando o setup roda. Janelas de
+      // chat continuam fechando normal (nao entram nessa lista).
+      #[cfg(desktop)]
+      if let tauri::RunEvent::WindowEvent { label, event: tauri::WindowEvent::CloseRequested { api, .. }, .. } = event {
+        if label == "main" || label == "thoth-play" {
+          api.prevent_close();
+          if let Some(window) = tauri::Manager::get_webview_window(app_handle, &label) {
+            let _ = window.hide();
+          }
+        }
+      }
+    });
 }

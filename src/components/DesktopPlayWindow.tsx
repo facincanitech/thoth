@@ -26,18 +26,11 @@ export function DesktopPlayWindow() {
       .then(({ data }) => setProfile(data as Profile))
   }, [session])
 
-  useEffect(() => {
-    // Fechar (X) so esconde e manda pra bandeja, igual a janela principal - o
-    // Thoth Play continua rodando (canal de voz, etc.), nao mata o processo.
-    // Reabre pelo menu "Thoth Play" da bandeja.
-    let unlisten: (() => void) | undefined
-    const win = currentWindow()
-    win.onCloseRequested(async (event) => {
-      event.preventDefault()
-      await win.hide()
-    }).then((fn) => { unlisten = fn })
-    return () => unlisten?.()
-  }, [])
+  // Fechar (X) so esconde e manda pra bandeja, igual a janela principal - o
+  // Thoth Play continua rodando (canal de voz, etc.), nao mata o processo.
+  // Reabre pelo menu "Thoth Play" da bandeja. O intercept e feito no lado Rust
+  // (RunEvent global, cobre essa janela dinamica tambem), aqui e so o .close()
+  // normal - o Rust decide se de fato fecha ou so esconde.
 
   return (
     <div className="desktop-window-shell play-window-shell">

@@ -27,6 +27,7 @@ export async function openPlayWindow() {
   const label = 'thoth-play'
   const existing = await WebviewWindow.getByLabel(label)
   if (existing) {
+    await existing.show()
     await existing.setFocus()
     return
   }
