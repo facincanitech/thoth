@@ -1549,6 +1549,8 @@ body{
 .play-group-body{flex:1;min-height:0;display:flex;overflow:hidden}
 .play-channel-sidebar-wrap{position:relative;flex-shrink:0}
 .play-channel-sidebar{width:220px;height:100%;flex-shrink:0;display:flex;flex-direction:column;background:var(--bg-panel);border-right:1px solid var(--line);overflow-y:auto;padding-bottom:10px}
+.play-sidebar-resize-handle{position:absolute;top:0;right:-3px;width:6px;height:100%;cursor:col-resize;z-index:5}
+.play-sidebar-resize-handle:hover{background:var(--accent-text);opacity:.4}
 .play-channel-group-title{display:flex;align-items:center;gap:5px;padding:10px 14px 4px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
 .play-channel-group-title span:not(.play-category-grip){flex:1}
 .play-channel-group-title button{border:0;background:none;color:var(--muted);cursor:pointer;display:flex;flex-shrink:0}

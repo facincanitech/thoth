@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ChangeEvent } from 'react'
+import { useEffect, useRef, useState, type ChangeEvent, type MouseEvent as ReactMouseEvent } from 'react'
 import { Room, RoomEvent, Track, type RemoteParticipant, type LocalParticipant, type TrackPublication } from 'livekit-client'
 import { supabase } from '../lib/supabase'
 import { fetchLiveKitToken } from '../lib/livekit'
@@ -273,7 +273,7 @@ export function ThothPlay({ me, onBack }: Props) {
     setJoinError(null)
     const { data, error } = await supabase.rpc('join_play_group', { p_invite_code: joinCode.trim(), p_password: joinPassword || null })
     if (error) {
-      setJoinError(error.message.includes('senha') ? 'Senha incorreta.' : 'Grupo não encontrado.')
+      setJoinError(error.message.includes('senha') ? 'Senha incorreta.' : 'Servidor não encontrado.')
       return
     }
     setShowJoin(false)
@@ -328,7 +328,7 @@ export function ThothPlay({ me, onBack }: Props) {
             <h1><IconGamepad size={22} /> Thoth Play</h1>
           </header>
           <div className="play-home-actions">
-            <button type="button" className="google-btn" onClick={() => setShowCreate(true)}><IconPlus size={16} /> Criar grupo</button>
+            <button type="button" className="google-btn" onClick={() => setShowCreate(true)}><IconPlus size={16} /> Criar servidor</button>
             <button type="button" className="google-btn" onClick={() => setShowJoin(true)}>Entrar com código</button>
           </div>
 
@@ -338,7 +338,7 @@ export function ThothPlay({ me, onBack }: Props) {
             <>
               {myGroups.length > 0 && (
                 <section className="play-group-section">
-                  <h2>Meus grupos</h2>
+                  <h2>Meus servidores</h2>
                   <div className="play-group-grid">
                     {myGroups.map((g) => (
                       <button key={g.id} type="button" className="play-group-card" onClick={() => openGroup(g)}>
@@ -351,8 +351,8 @@ export function ThothPlay({ me, onBack }: Props) {
                 </section>
               )}
               <section className="play-group-section">
-                <h2>Grupos abertos</h2>
-                {browseGroups.length === 0 && <p className="play-empty">nenhum grupo aberto no momento</p>}
+                <h2>Servidores abertos</h2>
+                {browseGroups.length === 0 && <p className="play-empty">nenhum servidor aberto no momento</p>}
                 <div className="play-group-grid">
                   {browseGroups.map((g) => (
                     <button key={g.id} type="button" className="play-group-card" onClick={() => openGroup(g)}>
@@ -370,9 +370,9 @@ export function ThothPlay({ me, onBack }: Props) {
           {showJoin && (
             <div className="modal-backdrop" onClick={() => setShowJoin(false)}>
               <div className="modal-card" onClick={(e) => e.stopPropagation()}>
-                <h2>Entrar num grupo</h2>
+                <h2>Entrar num servidor</h2>
                 <input placeholder="Código do convite" value={joinCode} onChange={(e) => setJoinCode(e.target.value)} />
-                <input placeholder="Senha (se o grupo for fechado)" type="password" value={joinPassword} onChange={(e) => setJoinPassword(e.target.value)} style={{ marginTop: 8 }} />
+                <input placeholder="Senha (se o servidor for fechado)" type="password" value={joinPassword} onChange={(e) => setJoinPassword(e.target.value)} style={{ marginTop: 8 }} />
                 {joinError && <p className="auth-error">{joinError}</p>}
                 <button type="button" className="google-btn" style={{ marginTop: 10 }} onClick={handleJoinGroup}>Entrar</button>
                 <button type="button" className="modal-close" onClick={() => setShowJoin(false)}>fechar</button>
@@ -398,7 +398,7 @@ function PlayIconRail({ myGroups, selectedGroupId, onSelectGroup, onGoHome, me, 
 }) {
   return (
     <aside className="play-icon-rail">
-      <button type="button" className="play-icon-rail-home" title="Meus grupos" onClick={onGoHome}>
+      <button type="button" className="play-icon-rail-home" title="Meus servidores" onClick={onGoHome}>
         <IconGamepad size={20} />
       </button>
       <div className="play-icon-rail-groups">
@@ -413,7 +413,7 @@ function PlayIconRail({ myGroups, selectedGroupId, onSelectGroup, onGoHome, me, 
             <AvatarBox src={g.image_url} id={g.id} fallbackLetter={g.name[0]?.toUpperCase()} className="play-group-avatar" />
           </button>
         ))}
-        <button type="button" className="play-icon-rail-group play-icon-rail-add" title="Entrar ou criar grupo" onClick={onGoHome}>
+        <button type="button" className="play-icon-rail-group play-icon-rail-add" title="Entrar ou criar servidor" onClick={onGoHome}>
           <IconPlus size={18} />
         </button>
       </div>
@@ -434,15 +434,15 @@ function CreateGroupModal({ onClose, onCreate, error }: { onClose: () => void; o
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal-card" onClick={(e) => e.stopPropagation()}>
-        <h2>Criar grupo Play</h2>
-        <input placeholder="Nome do grupo" value={name} onChange={(e) => setName(e.target.value)} />
+        <h2>Criar servidor</h2>
+        <input placeholder="Nome do servidor" value={name} onChange={(e) => setName(e.target.value)} />
         <input placeholder="Descrição (opcional)" value={description} onChange={(e) => setDescription(e.target.value)} style={{ marginTop: 8 }} />
         <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10 }}>
           <input type="checkbox" checked={isClosed} onChange={(e) => setIsClosed(e.target.checked)} />
-          Grupo fechado (com senha)
+          Servidor fechado (com senha)
         </label>
         {isClosed && (
-          <input placeholder="Senha do grupo" type="password" value={password} onChange={(e) => setPassword(e.target.value)} style={{ marginTop: 8 }} />
+          <input placeholder="Senha do servidor" type="password" value={password} onChange={(e) => setPassword(e.target.value)} style={{ marginTop: 8 }} />
         )}
         {error && <p className="auth-error">{error}</p>}
         <button
@@ -492,6 +492,12 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
   const [showGroupInfo, setShowGroupInfo] = useState(false)
   const [showGroupMenu, setShowGroupMenu] = useState(false)
   const [showInvite, setShowInvite] = useState(false)
+  const [sidebarWidth, setSidebarWidth] = useState<number | null>(() => {
+    const saved = Number(localStorage.getItem('play-channel-sidebar-width'))
+    return saved >= 180 && saved <= 420 ? saved : null
+  })
+  const resizingRef = useRef(false)
+  const sidebarWrapRef = useRef<HTMLDivElement>(null)
   const [newChannelName, setNewChannelName] = useState('')
   const [newChannelKind, setNewChannelKind] = useState<'text' | 'voice'>('text')
   const [newChannelCategoryId, setNewChannelCategoryId] = useState<string | null>(null)
@@ -659,20 +665,40 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
   const typingNames = Object.entries(liveTyping)
     .map(([userId, text]) => ({ name: members.find((m) => m.profile.id === userId)?.profile ? displayName(members.find((m) => m.profile.id === userId)!.profile) : 'alguém', text }))
 
+  function startSidebarResize(e: ReactMouseEvent) {
+    e.preventDefault()
+    resizingRef.current = true
+    const startX = e.clientX
+    const startWidth = sidebarWidth ?? sidebarWrapRef.current?.getBoundingClientRect().width ?? 220
+    function onMove(ev: MouseEvent) {
+      if (!resizingRef.current) return
+      const next = Math.min(420, Math.max(180, startWidth + (ev.clientX - startX)))
+      setSidebarWidth(next)
+    }
+    function onUp() {
+      resizingRef.current = false
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mouseup', onUp)
+      setSidebarWidth((w) => { localStorage.setItem('play-channel-sidebar-width', String(w)); return w })
+    }
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
+  }
+
   return (
     <main className="play-group-view">
       <div className="play-group-main">
         <header className="play-group-topbar">
-          <button type="button" className="play-group-topbar-avatar-btn" onClick={() => setShowGroupInfo(true)} title="Sobre o grupo">
+          <button type="button" className="play-group-topbar-avatar-btn" onClick={() => setShowGroupInfo(true)} title="Sobre o servidor">
             <AvatarBox src={group.image_url} id={group.id} fallbackLetter={group.name[0]?.toUpperCase()} className="play-group-avatar" />
           </button>
           <div className="play-group-topbar-copy">
             <div className="play-group-topbar-title">
-              <button type="button" className="play-group-topbar-name-btn" onClick={() => setShowGroupInfo(true)} title="Sobre o grupo">
+              <button type="button" className="play-group-topbar-name-btn" onClick={() => setShowGroupInfo(true)} title="Sobre o servidor">
                 <strong>{group.name}</strong>
               </button>
               <div className="play-group-menu-wrap">
-                <button type="button" className="play-group-menu-trigger" onClick={() => setShowGroupMenu((v) => !v)} title="Menu do grupo">
+                <button type="button" className="play-group-menu-trigger" onClick={() => setShowGroupMenu((v) => !v)} title="Menu do servidor">
                   <IconChevronDown size={14} />
                 </button>
                 {showGroupMenu && (
@@ -696,7 +722,7 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
                   </>
                 )}
               </div>
-              <button type="button" className="play-quick-invite-btn" onClick={() => setShowInvite(true)} title="Convidar para o grupo">
+              <button type="button" className="play-quick-invite-btn" onClick={() => setShowInvite(true)} title="Convidar para o servidor">
                 <IconUser size={13} /> {members.length} <IconPlus size={11} />
               </button>
             </div>
@@ -708,7 +734,7 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
           <div className="modal-backdrop" onClick={() => setShowInvite(false)}>
             <div className="modal-card" onClick={(e) => e.stopPropagation()}>
               <h2>Convidar para {group.name}</h2>
-              <p className="play-invite-hint">Compartilhe o código com quem você quer chamar pro grupo.</p>
+              <p className="play-invite-hint">Compartilhe o código com quem você quer chamar pro servidor.</p>
               <div className="play-invite-code-row">
                 <input readOnly value={group.invite_code} onFocus={(e) => e.target.select()} />
                 <button type="button" className="google-btn" style={{ width: 'auto' }} onClick={copyInvite}>
@@ -721,9 +747,10 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
         )}
 
         <div className="play-group-body">
-          <div className="play-channel-sidebar-wrap">
+          <div className="play-channel-sidebar-wrap" ref={sidebarWrapRef} style={sidebarWidth ? { width: sidebarWidth } : undefined}>
             <aside
               className="play-channel-sidebar"
+              style={sidebarWidth ? { width: sidebarWidth } : undefined}
               onContextMenu={(e) => {
                 if (!canManage || (e.target as HTMLElement).closest('.play-channel-group-title')) return
                 e.preventDefault()
@@ -845,6 +872,7 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
                 </>
               )}
             </aside>
+            <div className="play-sidebar-resize-handle" onMouseDown={startSidebarResize} />
             <GroupInfoPanel
               group={group}
               myRole={myRole}
@@ -926,7 +954,7 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
 
           <aside className="play-member-sidebar">
             <div className="play-member-tabs">
-              <button type="button" className={memberTab === 'group' ? 'active' : ''} onClick={() => setMemberTab('group')}>No grupo</button>
+              <button type="button" className={memberTab === 'group' ? 'active' : ''} onClick={() => setMemberTab('group')}>No servidor</button>
               <button type="button" className={memberTab === 'voice' ? 'active' : ''} onClick={() => setMemberTab('voice')}>Na voz</button>
             </div>
             {memberTab === 'group' ? (
@@ -1207,7 +1235,7 @@ function GroupInfoPanel({ group, myRole, members, me, channels, categories, open
   }
 
   async function kickMember(userId: string) {
-    if (!confirm('Remover esta pessoa do grupo?')) return
+    if (!confirm('Remover esta pessoa do servidor?')) return
     await supabase.from('play_group_members').delete().eq('group_id', group.id).eq('user_id', userId)
   }
 
@@ -1228,7 +1256,7 @@ function GroupInfoPanel({ group, myRole, members, me, channels, categories, open
     <div className={`new-conv-panel${open ? ' open' : ''}`}>
       <div className="new-conv-header">
         <button type="button" className="icon-btn" onClick={onClose}><IconArrowLeft size={20} /></button>
-        <strong>Sobre o grupo</strong>
+        <strong>Sobre o servidor</strong>
       </div>
 
       {canManage && (
@@ -1304,18 +1332,18 @@ function GroupInfoPanel({ group, myRole, members, me, channels, categories, open
             </>
           )}
           <div className="play-group-info-badge">
-            {group.is_closed ? <><IconLock size={13} /> Grupo fechado</> : <><IconLockOpen size={13} /> Grupo aberto</>}
+            {group.is_closed ? <><IconLock size={13} /> Servidor fechado</> : <><IconLockOpen size={13} /> Servidor aberto</>}
           </div>
 
           {isOwner && (
             confirmDelete ? (
               <div style={{ marginTop: 20 }}>
-                <p style={{ color: 'var(--danger, #e5484d)' }}>Excluir o grupo apaga todos os canais e mensagens. Não dá pra desfazer.</p>
+                <p style={{ color: 'var(--danger, #e5484d)' }}>Excluir o servidor apaga todos os canais e mensagens. Não dá pra desfazer.</p>
                 <button type="button" className="settings-danger-btn" onClick={deleteGroup}>Confirmar exclusão</button>
                 <button type="button" className="modal-close" onClick={() => setConfirmDelete(false)}>cancelar</button>
               </div>
             ) : (
-              <button type="button" className="settings-danger-btn" style={{ marginTop: 20 }} onClick={() => setConfirmDelete(true)}>Excluir grupo</button>
+              <button type="button" className="settings-danger-btn" style={{ marginTop: 20 }} onClick={() => setConfirmDelete(true)}>Excluir servidor</button>
             )
           )}
         </div>
