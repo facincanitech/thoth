@@ -260,51 +260,47 @@
 .play-window-shell .window-controls button:hover{background:#ffffff1a}
 .play-window-shell .play-desktop-app,.play-window-shell .play-group-view{background:var(--bg-deep)}
 
-/* Rail: no Play aberto fica somente o atalho Sobre o grupo. */
+/* Rail: lista permanente dos "meus grupos" (estilo Discord), com atalho pra
+   home/criar no fim da lista e perfil no rodape. Largura -25% (112px -> 84px). */
 .play-window-shell .play-icon-rail{
-  width:112px;padding:24px 10px 12px;gap:8px;background:
+  width:84px;padding:18px 8px 10px;gap:8px;background:
     linear-gradient(90deg,rgb(255 255 255 / 22%),transparent 10%,transparent 88%,rgb(0 68 102 / 18%)),
     linear-gradient(180deg,var(--play-rail-top),var(--play-rail-bottom));
   border-right:1px solid #0773a0;box-shadow:inset 1px 0 rgb(255 255 255 / 70%),inset -1px 0 rgb(255 255 255 / 38%);
 }
-.play-window-shell .play-icon-rail-back,.play-window-shell .play-icon-rail-spacer,.play-window-shell .play-icon-rail-profile,.play-window-shell .play-icon-rail-profile+.play-icon-rail-label{display:none}
+.play-window-shell .play-icon-rail-home{
+  display:grid;place-items:center;width:40px;height:40px;margin-bottom:4px;flex-shrink:0;
+  border:1px solid rgb(255 255 255 / 30%);border-radius:10px;color:#fff;background:rgb(255 255 255 / 12%);
+}
+.play-window-shell .play-icon-rail-home:hover{background:rgb(255 255 255 / 24%)}
+.play-window-shell .play-icon-rail-groups{gap:8px}
 .play-window-shell .play-icon-rail-group{
-  width:72px;height:72px;margin:0;border:1px solid #30a9d5;border-radius:12px;padding:5px;
+  width:54px;height:54px;margin:0;border:1px solid #30a9d5;border-radius:12px;padding:4px;flex-shrink:0;
   background:linear-gradient(#f8feff,#bdeafb);box-shadow:inset 0 0 0 2px #fff,0 3px 8px rgb(0 64 96 / 35%);
 }
+.play-window-shell .play-icon-rail-group.active{outline:2px solid #18baf4;outline-offset:2px}
 .play-window-shell .play-icon-rail-group .play-group-avatar{width:100%;height:100%;border-radius:8px}
-.play-window-shell .play-icon-rail-label-btn{
-  width:92px;min-height:36px;padding:3px 5px;border:0;color:#fff;font-size:12px;font-weight:700;line-height:1.2;
-  text-shadow:0 1px rgb(0 66 98 / 65%);background:transparent;
+.play-window-shell .play-icon-rail-add{
+  display:grid;place-items:center;color:#fff;background:rgb(255 255 255 / 10%);
+  border:1px dashed rgb(255 255 255 / 45%);box-shadow:none;
 }
-/* volta pro back button (unica forma de sair do grupo) e o perfil (rodape da
-   rail) - a regra acima escondia os dois sem querer junto com o spacer. */
-.play-window-shell .play-icon-rail-back{
-  display:grid!important;place-items:center;width:34px;height:34px;margin-bottom:4px;
-  border:1px solid rgb(255 255 255 / 30%);border-radius:9px;color:#fff;background:rgb(255 255 255 / 12%);
-}
-.play-window-shell .play-icon-rail-back:hover{background:rgb(255 255 255 / 24%)}
-.play-window-shell .play-icon-rail-spacer{display:block!important}
+.play-window-shell .play-icon-rail-spacer{display:block}
 .play-window-shell .play-icon-rail-profile{
-  display:flex!important;width:56px;height:56px;margin:0;border:1px solid #30a9d5;border-radius:12px;padding:4px;
+  width:40px;height:40px;margin:0;border:1px solid #30a9d5;border-radius:11px;padding:3px;flex-shrink:0;
   background:linear-gradient(#f8feff,#bdeafb);box-shadow:inset 0 0 0 2px #fff,0 3px 8px rgb(0 64 96 / 35%);
 }
 .play-window-shell .play-icon-rail-profile .play-group-avatar{width:100%;height:100%;border-radius:8px}
-.play-window-shell .play-icon-rail-profile+.play-icon-rail-label{
-  display:block!important;color:#fff;font-size:10.5px;font-weight:700;text-shadow:0 1px rgb(0 66 98 / 65%);
-}
 
 .play-window-shell .play-group-main{background:var(--bg-deep)}
 .play-window-shell .play-group-topbar{
-  min-height:112px;padding:15px 24px;gap:15px;background:radial-gradient(circle at 86% -40%,#fff 0 9%,transparent 45%),linear-gradient(var(--play-glass-top),var(--play-glass-bottom));
+  min-height:84px;padding:11px 24px;gap:12px;background:radial-gradient(circle at 86% -40%,#fff 0 9%,transparent 45%),linear-gradient(var(--play-glass-top),var(--play-glass-bottom));
   border-bottom:1px solid var(--line);box-shadow:inset 0 1px rgb(255 255 255 / 82%);
 }
-.play-window-shell .play-group-topbar .play-group-avatar{width:72px;height:72px;padding:5px;border:1px solid #3aaed5;border-radius:11px;background:linear-gradient(#f9feff,#aee3f5);box-shadow:inset 0 0 0 2px #fff,0 2px 7px rgb(0 74 107 / 24%)}
+.play-window-shell .play-group-topbar .play-group-avatar{width:54px;height:54px;padding:4px;border:1px solid #3aaed5;border-radius:11px;background:linear-gradient(#f9feff,#aee3f5);box-shadow:inset 0 0 0 2px #fff,0 2px 7px rgb(0 74 107 / 24%)}
 .play-window-shell .play-group-topbar-title{gap:8px}
-.play-window-shell .play-group-topbar-title strong{font-size:20px;color:var(--play-heading);text-shadow:0 1px rgb(255 255 255 / 80%)}
-.play-window-shell .play-group-topbar-copy>span{margin-top:4px;font-size:12px;color:var(--text-secondary)}
+.play-window-shell .play-group-topbar-title strong{font-size:18px;color:var(--play-heading);text-shadow:0 1px rgb(255 255 255 / 80%)}
+.play-window-shell .play-group-topbar-copy>span{margin-top:3px;font-size:12px;color:var(--text-secondary)}
 .play-window-shell .play-invite-btn{display:none}
-.play-window-shell .play-group-topbar-title .play-icon-rail-label-btn{display:grid;width:34px;min-height:30px;padding:0;border:1px solid var(--line-2);border-radius:5px;color:var(--accent-text);place-items:center;background:linear-gradient(var(--play-glass-top),var(--play-glass-bottom));text-shadow:none;box-shadow:inset 0 1px rgb(255 255 255 / 80%)}
 
 .play-window-shell .play-group-body{background:var(--bg-deep);gap:0;padding:6px 6px 6px 0}
 .play-window-shell .play-channel-sidebar{
@@ -365,11 +361,11 @@
     --play-canvas:#081827;--play-heading:#66d7ff;--play-cyan:#18baf4;--shadow:0 12px 30px rgb(0 0 0 / 45%);
   }
   .play-window-shell .play-icon-rail{background:linear-gradient(90deg,rgb(49 201 255 / 15%),transparent 12%,transparent 88%,rgb(0 0 0 / 22%)),linear-gradient(180deg,var(--play-rail-top),var(--play-rail-bottom))}
-  .play-window-shell .play-icon-rail-group{background:linear-gradient(#174d70,#092a42);border-color:#18baf4;box-shadow:inset 0 0 0 2px #0c3650,0 0 9px rgb(19 183 241 / 32%)}
+  .play-window-shell .play-icon-rail-group,.play-window-shell .play-icon-rail-profile{background:linear-gradient(#174d70,#092a42);border-color:#18baf4;box-shadow:inset 0 0 0 2px #0c3650,0 0 9px rgb(19 183 241 / 32%)}
+  .play-window-shell .play-icon-rail-home{background:rgb(255 255 255 / 10%)}
   .play-window-shell .play-group-topbar{background:linear-gradient(180deg,#123d5c,#09243a)}
   .play-window-shell .play-group-topbar .play-group-avatar{background:linear-gradient(#174d70,#092a42);border-color:#16b7ef;box-shadow:inset 0 0 0 2px #0b3049,0 0 8px rgb(15 181 242 / 24%)}
   .play-window-shell .play-group-topbar-title strong{text-shadow:0 1px #000}
-  .play-window-shell .play-group-topbar-title .play-icon-rail-label-btn{background:linear-gradient(#17425f,#0a2539);box-shadow:inset 0 1px rgb(112 219 255 / 20%)}
   .play-window-shell .play-channel-sidebar,.play-window-shell .play-member-sidebar{background:linear-gradient(90deg,#0c2233,#071824);box-shadow:inset 0 1px rgb(52 197 249 / 12%)}
   .play-window-shell .play-channel-item:hover{background:#0d2b40;border-color:#175572}
   .play-window-shell .play-channel-item.active{background:linear-gradient(#0d4d72,#09344f);border-color:#18a9df;box-shadow:inset 0 1px rgb(95 218 255 / 23%),0 0 5px rgb(0 162 225 / 16%)}

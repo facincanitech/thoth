@@ -1495,14 +1495,20 @@ body{
 .play-empty{color:var(--muted);font-size:13px;padding:8px 0}
 .play-empty.error{color:#e5484d}
 
-.play-group-view{flex:1;min-width:0;min-height:0;display:flex;overflow:hidden;background:var(--bg-deep)}
-.play-icon-rail{width:84px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:6px;padding:16px 8px;background:var(--bg-panel);border-right:1px solid var(--line)}
-.play-icon-rail-back{width:36px;height:36px;border-radius:10px;border:0;background:none;color:var(--text-secondary);cursor:pointer;display:grid;place-items:center;align-self:flex-start}
-.play-icon-rail-group{width:56px;height:56px;border:0;background:none;cursor:pointer;border-radius:14px;overflow:hidden;margin-top:4px}
-.play-icon-rail-label{font-size:10.5px;color:var(--text-secondary);text-align:center;font-weight:600}
-.play-icon-rail-label-btn{border:0;background:none;cursor:pointer;font:inherit}
+.play-app-shell{flex:1;min-width:0;min-height:0;display:flex;overflow:hidden;background:var(--bg-deep)}
+.play-group-view{flex:1;min-width:0;min-height:0;display:flex;overflow:hidden}
+
+/* Rail fica fora do grupo/home - lista permanente dos "meus grupos" (estilo
+   Discord), disponivel tanto na tela inicial quanto dentro de um grupo aberto.
+   Largura reduzida em 25% (84px -> 63px). */
+.play-icon-rail{width:63px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:8px;padding:14px 6px;background:var(--bg-panel);border-right:1px solid var(--line);overflow-y:auto}
+.play-icon-rail-home{width:42px;height:42px;border:0;border-radius:14px;background:var(--bg-selected);color:var(--text);cursor:pointer;display:grid;place-items:center;flex-shrink:0}
+.play-icon-rail-groups{display:flex;flex-direction:column;align-items:center;gap:8px;width:100%;overflow-y:auto}
+.play-icon-rail-group{width:42px;height:42px;border:0;background:none;cursor:pointer;border-radius:14px;overflow:hidden;flex-shrink:0;transition:border-radius .15s}
+.play-icon-rail-group.active{border-radius:10px;outline:2px solid var(--accent-text)}
+.play-icon-rail-add{background:var(--bg-selected);display:grid;place-items:center;color:var(--text-secondary)}
 .play-icon-rail-spacer{flex:1}
-.play-icon-rail-profile{width:44px;height:44px;margin-top:0}
+.play-icon-rail-profile{width:36px;height:36px;flex-shrink:0}
 
 .play-group-main{flex:1;min-width:0;display:flex;flex-direction:column;overflow:hidden}
 .play-group-topbar{display:flex;align-items:center;gap:12px;padding:14px 20px;border-bottom:1px solid var(--line);flex-shrink:0}
@@ -1511,7 +1517,6 @@ body{
 .play-group-topbar-copy{display:flex;flex-direction:column;min-width:0}
 .play-group-topbar-title{display:flex;align-items:center;gap:10px}
 .play-group-topbar-title strong{font-size:16px}
-.play-group-topbar-title .play-icon-rail-label-btn{display:flex;color:var(--text-secondary)}
 .play-group-topbar-copy>span{font-size:12px;color:var(--muted)}
 
 .play-group-body{flex:1;min-height:0;display:flex;overflow:hidden}

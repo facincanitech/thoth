@@ -46,6 +46,8 @@ type Props = {
 type ChannelMessage = PlayMessage & { author?: Profile }
 
 export function ThothPlay({ me, onBack }: Props) {
+  const [myPlayProfile, setMyPlayProfile] = useState<Profile>(me)
+  const [showProfile, setShowProfile] = useState(false)
   const [myGroups, setMyGroups] = useState<PlayGroup[]>([])
   const [browseGroups, setBrowseGroups] = useState<PlayGroup[]>([])
   const [loading, setLoading] = useState(true)
@@ -87,6 +89,15 @@ export function ThothPlay({ me, onBack }: Props) {
 
   useEffect(() => {
     loadGroups()
+  }, [me.id])
+
+  async function loadMyPlayProfile() {
+    const { data } = await supabase.from('play_profiles').select('*').eq('user_id', me.id).maybeSingle()
+    setMyPlayProfile(mergePlayProfile(me, data as PlayProfile | null))
+  }
+
+  useEffect(() => {
+    loadMyPlayProfile()
   }, [me.id])
 
   async function fetchChannels(groupId: string) {
@@ -257,86 +268,141 @@ export function ThothPlay({ me, onBack }: Props) {
     if (data) openGroup(data as PlayGroup)
   }
 
-  if (selectedGroup) {
-    return (
-      <GroupView
-        me={me}
-        group={selectedGroup}
-        channels={channels}
-        selectedChannel={selectedChannel}
-        messages={messages}
-        hasReplaySet={hasReplaySet}
-        liveTyping={liveTyping}
-        draft={draft}
-        onDraftChange={handleDraftChange}
-        onSend={sendMessage}
-        onSelectChannel={openChannel}
-        onBack={() => { setSelectedGroup(null); setSelectedChannel(null) }}
-        onChannelsChange={() => fetchChannels(selectedGroup.id)}
-        onGroupUpdate={(patch) => setSelectedGroup((g) => (g ? { ...g, ...patch } : g))}
-      />
-    )
+  function goHome() {
+    setSelectedGroup(null)
+    setSelectedChannel(null)
   }
 
   return (
-    <main className="play-home">
-      <header className="play-home-header">
-        <button type="button" className="icon-btn" onClick={onBack} title="Voltar"><IconArrowLeft size={20} /></button>
-        <h1><IconGamepad size={22} /> Thoth Play</h1>
-      </header>
-      <div className="play-home-actions">
-        <button type="button" className="google-btn" onClick={() => setShowCreate(true)}><IconPlus size={16} /> Criar grupo</button>
-        <button type="button" className="google-btn" onClick={() => setShowJoin(true)}>Entrar com código</button>
-      </div>
+    <div className="play-app-shell">
+      <PlayIconRail
+        myGroups={myGroups}
+        selectedGroupId={selectedGroup?.id ?? null}
+        onSelectGroup={openGroup}
+        onGoHome={goHome}
+        me={me}
+        myPlayProfile={myPlayProfile}
+        onOpenProfile={() => setShowProfile(true)}
+      />
 
-      {loading ? (
-        <p className="play-empty">carregando...</p>
+      {selectedGroup ? (
+        <GroupView
+          me={me}
+          myPlayProfile={myPlayProfile}
+          group={selectedGroup}
+          channels={channels}
+          selectedChannel={selectedChannel}
+          messages={messages}
+          hasReplaySet={hasReplaySet}
+          liveTyping={liveTyping}
+          draft={draft}
+          onDraftChange={handleDraftChange}
+          onSend={sendMessage}
+          onSelectChannel={openChannel}
+          onChannelsChange={() => fetchChannels(selectedGroup.id)}
+          onGroupUpdate={(patch) => setSelectedGroup((g) => (g ? { ...g, ...patch } : g))}
+        />
       ) : (
-        <>
-          {myGroups.length > 0 && (
-            <section className="play-group-section">
-              <h2>Meus grupos</h2>
-              <div className="play-group-grid">
-                {myGroups.map((g) => (
-                  <button key={g.id} type="button" className="play-group-card" onClick={() => openGroup(g)}>
-                    <AvatarBox src={g.image_url} id={g.id} fallbackLetter={g.name[0]?.toUpperCase()} className="play-group-avatar" />
-                    <span className="play-group-name">{g.name}</span>
-                    {g.is_closed ? <IconLock size={13} /> : <IconLockOpen size={13} />}
-                  </button>
-                ))}
-              </div>
-            </section>
+        <main className="play-home">
+          <header className="play-home-header">
+            <button type="button" className="icon-btn" onClick={onBack} title="Voltar"><IconArrowLeft size={20} /></button>
+            <h1><IconGamepad size={22} /> Thoth Play</h1>
+          </header>
+          <div className="play-home-actions">
+            <button type="button" className="google-btn" onClick={() => setShowCreate(true)}><IconPlus size={16} /> Criar grupo</button>
+            <button type="button" className="google-btn" onClick={() => setShowJoin(true)}>Entrar com código</button>
+          </div>
+
+          {loading ? (
+            <p className="play-empty">carregando...</p>
+          ) : (
+            <>
+              {myGroups.length > 0 && (
+                <section className="play-group-section">
+                  <h2>Meus grupos</h2>
+                  <div className="play-group-grid">
+                    {myGroups.map((g) => (
+                      <button key={g.id} type="button" className="play-group-card" onClick={() => openGroup(g)}>
+                        <AvatarBox src={g.image_url} id={g.id} fallbackLetter={g.name[0]?.toUpperCase()} className="play-group-avatar" />
+                        <span className="play-group-name">{g.name}</span>
+                        {g.is_closed ? <IconLock size={13} /> : <IconLockOpen size={13} />}
+                      </button>
+                    ))}
+                  </div>
+                </section>
+              )}
+              <section className="play-group-section">
+                <h2>Grupos abertos</h2>
+                {browseGroups.length === 0 && <p className="play-empty">nenhum grupo aberto no momento</p>}
+                <div className="play-group-grid">
+                  {browseGroups.map((g) => (
+                    <button key={g.id} type="button" className="play-group-card" onClick={() => openGroup(g)}>
+                      <AvatarBox src={g.image_url} id={g.id} fallbackLetter={g.name[0]?.toUpperCase()} className="play-group-avatar" />
+                      <span className="play-group-name">{g.name}</span>
+                      <IconLockOpen size={13} />
+                    </button>
+                  ))}
+                </div>
+              </section>
+            </>
           )}
-          <section className="play-group-section">
-            <h2>Grupos abertos</h2>
-            {browseGroups.length === 0 && <p className="play-empty">nenhum grupo aberto no momento</p>}
-            <div className="play-group-grid">
-              {browseGroups.map((g) => (
-                <button key={g.id} type="button" className="play-group-card" onClick={() => openGroup(g)}>
-                  <AvatarBox src={g.image_url} id={g.id} fallbackLetter={g.name[0]?.toUpperCase()} className="play-group-avatar" />
-                  <span className="play-group-name">{g.name}</span>
-                  <IconLockOpen size={13} />
-                </button>
-              ))}
+
+          {showCreate && <CreateGroupModal onClose={() => setShowCreate(false)} onCreate={handleCreateGroup} error={createError} />}
+          {showJoin && (
+            <div className="modal-backdrop" onClick={() => setShowJoin(false)}>
+              <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+                <h2>Entrar num grupo</h2>
+                <input placeholder="Código do convite" value={joinCode} onChange={(e) => setJoinCode(e.target.value)} />
+                <input placeholder="Senha (se o grupo for fechado)" type="password" value={joinPassword} onChange={(e) => setJoinPassword(e.target.value)} style={{ marginTop: 8 }} />
+                {joinError && <p className="auth-error">{joinError}</p>}
+                <button type="button" className="google-btn" style={{ marginTop: 10 }} onClick={handleJoinGroup}>Entrar</button>
+                <button type="button" className="modal-close" onClick={() => setShowJoin(false)}>fechar</button>
+              </div>
             </div>
-          </section>
-        </>
+          )}
+        </main>
       )}
 
-      {showCreate && <CreateGroupModal onClose={() => setShowCreate(false)} onCreate={handleCreateGroup} error={createError} />}
-      {showJoin && (
-        <div className="modal-backdrop" onClick={() => setShowJoin(false)}>
-          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
-            <h2>Entrar num grupo</h2>
-            <input placeholder="Código do convite" value={joinCode} onChange={(e) => setJoinCode(e.target.value)} />
-            <input placeholder="Senha (se o grupo for fechado)" type="password" value={joinPassword} onChange={(e) => setJoinPassword(e.target.value)} style={{ marginTop: 8 }} />
-            {joinError && <p className="auth-error">{joinError}</p>}
-            <button type="button" className="google-btn" style={{ marginTop: 10 }} onClick={handleJoinGroup}>Entrar</button>
-            <button type="button" className="modal-close" onClick={() => setShowJoin(false)}>fechar</button>
-          </div>
-        </div>
-      )}
-    </main>
+      <ProfilePanel me={me} open={showProfile} onClose={() => setShowProfile(false)} onSaved={loadMyPlayProfile} />
+    </div>
+  )
+}
+
+function PlayIconRail({ myGroups, selectedGroupId, onSelectGroup, onGoHome, me, myPlayProfile, onOpenProfile }: {
+  myGroups: PlayGroup[]
+  selectedGroupId: string | null
+  onSelectGroup: (g: PlayGroup) => void
+  onGoHome: () => void
+  me: Profile
+  myPlayProfile: Profile
+  onOpenProfile: () => void
+}) {
+  return (
+    <aside className="play-icon-rail">
+      <button type="button" className="play-icon-rail-home" title="Meus grupos" onClick={onGoHome}>
+        <IconGamepad size={20} />
+      </button>
+      <div className="play-icon-rail-groups">
+        {myGroups.map((g) => (
+          <button
+            key={g.id}
+            type="button"
+            className={`play-icon-rail-group${selectedGroupId === g.id ? ' active' : ''}`}
+            title={g.name}
+            onClick={() => onSelectGroup(g)}
+          >
+            <AvatarBox src={g.image_url} id={g.id} fallbackLetter={g.name[0]?.toUpperCase()} className="play-group-avatar" />
+          </button>
+        ))}
+        <button type="button" className="play-icon-rail-group play-icon-rail-add" title="Entrar ou criar grupo" onClick={onGoHome}>
+          <IconPlus size={18} />
+        </button>
+      </div>
+      <div className="play-icon-rail-spacer" />
+      <button type="button" className="play-icon-rail-group play-icon-rail-profile" title="Perfil" onClick={onOpenProfile}>
+        <AvatarBox src={myPlayProfile.avatar_url} id={me.id} fallbackLetter={displayName(myPlayProfile)[0]?.toUpperCase()} className="play-group-avatar" />
+      </button>
+    </aside>
   )
 }
 
@@ -377,6 +443,7 @@ function CreateGroupModal({ onClose, onCreate, error }: { onClose: () => void; o
 
 type GroupViewProps = {
   me: Profile
+  myPlayProfile: Profile
   group: PlayGroup
   channels: PlayChannel[]
   selectedChannel: PlayChannel | null
@@ -387,7 +454,6 @@ type GroupViewProps = {
   onDraftChange: (v: string) => void
   onSend: () => void
   onSelectChannel: (c: PlayChannel) => void
-  onBack: () => void
   onChannelsChange: () => void
   onGroupUpdate: (patch: Partial<PlayGroup>) => void
 }
@@ -395,12 +461,11 @@ type GroupViewProps = {
 type GroupMember = { profile: Profile; role: string }
 type VoiceParticipantInfo = { id: string; name: string }
 
-function GroupView({ me, group, channels, selectedChannel, messages, hasReplaySet, liveTyping, draft, onDraftChange, onSend, onSelectChannel, onBack, onChannelsChange, onGroupUpdate }: GroupViewProps) {
+function GroupView({ me, myPlayProfile, group, channels, selectedChannel, messages, hasReplaySet, liveTyping, draft, onDraftChange, onSend, onSelectChannel, onChannelsChange, onGroupUpdate }: GroupViewProps) {
   const [showNewChannel, setShowNewChannel] = useState(false)
   const [joinedVoiceChannel, setJoinedVoiceChannel] = useState<PlayChannel | null>(null)
   const [openReplayId, setOpenReplayId] = useState<string | null>(null)
   const [replayEvents, setReplayEvents] = useState<ReplayEvent[] | null>(null)
-  const [showProfile, setShowProfile] = useState(false)
   const [showGroupInfo, setShowGroupInfo] = useState(false)
   const [newChannelName, setNewChannelName] = useState('')
   const [newChannelKind, setNewChannelKind] = useState<'text' | 'voice'>('text')
@@ -457,7 +522,6 @@ function GroupView({ me, group, channels, selectedChannel, messages, hasReplaySe
   const offlineMembers = members.filter((m) => getPresenceColor(m.profile.last_seen_at, m.profile.is_idle) === 'offline')
   const inVoiceIds = new Set(voiceParticipants.map((p) => p.id))
   const myRole = members.find((m) => m.profile.id === me.id)?.role || null
-  const myPlayProfile = members.find((m) => m.profile.id === me.id)?.profile || me
   const membersById = Object.fromEntries(members.map((m) => [m.profile.id, m.profile]))
 
   async function createChannel() {
@@ -501,19 +565,6 @@ function GroupView({ me, group, channels, selectedChannel, messages, hasReplaySe
 
   return (
     <main className="play-group-view">
-      <aside className="play-icon-rail">
-        <button type="button" className="play-icon-rail-back" onClick={onBack} title="Voltar aos grupos"><IconArrowLeft size={18} /></button>
-        <button type="button" className="play-icon-rail-group" title={group.name} onClick={() => setShowGroupInfo(true)}>
-          <AvatarBox src={group.image_url} id={group.id} fallbackLetter={group.name[0]?.toUpperCase()} className="play-group-avatar" />
-        </button>
-        <button type="button" className="play-icon-rail-label play-icon-rail-label-btn" onClick={() => setShowGroupInfo(true)}>Sobre o grupo</button>
-        <div className="play-icon-rail-spacer" />
-        <button type="button" className="play-icon-rail-group play-icon-rail-profile" title="Perfil" onClick={() => setShowProfile(true)}>
-          <AvatarBox src={myPlayProfile.avatar_url} id={me.id} fallbackLetter={displayName(myPlayProfile)[0]?.toUpperCase()} className="play-group-avatar" />
-        </button>
-        <span className="play-icon-rail-label">Perfil</span>
-      </aside>
-
       <div className="play-group-main">
         <header className="play-group-topbar">
           <button type="button" className="play-group-topbar-avatar-btn" onClick={() => setShowGroupInfo(true)} title="Sobre o grupo">
@@ -695,8 +746,6 @@ function GroupView({ me, group, channels, selectedChannel, messages, hasReplaySe
           </div>
         </div>
       )}
-
-      <ProfilePanel me={me} open={showProfile} onClose={() => setShowProfile(false)} />
     </main>
   )
 }
@@ -778,7 +827,7 @@ function GroupInfoPanel({ group, myRole, open, onClose, onUpdate }: {
   )
 }
 
-function ProfilePanel({ me, open, onClose }: { me: Profile; open: boolean; onClose: () => void }) {
+function ProfilePanel({ me, open, onClose, onSaved }: { me: Profile; open: boolean; onClose: () => void; onSaved: () => void }) {
   const [loaded, setLoaded] = useState(false)
   const [avatarUrl, setAvatarUrl] = useState<string | null>(me.avatar_url ?? null)
   const [displayNameDraft, setDisplayNameDraft] = useState(me.display_name || me.username)
@@ -820,6 +869,7 @@ function ProfilePanel({ me, open, onClose }: { me: Profile; open: boolean; onClo
       name_style_color: color,
     })
     setSaving(false)
+    onSaved()
   }
 
   async function handleAvatarPick(e: ChangeEvent<HTMLInputElement>) {
@@ -830,6 +880,7 @@ function ProfilePanel({ me, open, onClose }: { me: Profile; open: boolean; onClo
       const url = await uploadImage(file, me.id, 'play-avatar')
       setAvatarUrl(url)
       await upsert({ avatar_url: url })
+      onSaved()
     } finally {
       setUploading(false)
     }
