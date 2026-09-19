@@ -9,8 +9,9 @@ import { ReplayPlayer, type ReplayEvent } from './ReplayPlayer'
 import { StyledName, NAME_FONTS, NAME_EFFECTS } from './StyledName'
 import { uploadImage } from '../lib/uploadImage'
 import {
-  IconArrowLeft, IconCopy, IconGamepad, IconHash, IconHeadphones, IconLock, IconLockOpen,
-  IconMic, IconMicOff, IconMonitorShare, IconPhoneOff, IconPlus, IconSend, IconVideo, IconVideoOff,
+  IconArrowLeft, IconChevronDown, IconCopy, IconGamepad, IconHash, IconHeadphones, IconLock, IconLockOpen,
+  IconLogout, IconMic, IconMicOff, IconMonitorShare, IconPhoneOff, IconPlus, IconSend, IconSettingsGear,
+  IconUser, IconVideo, IconVideoOff,
 } from './icons'
 import type { PlayChannel, PlayGroup, PlayMessage, PlayProfile, Profile } from '../types'
 
@@ -301,6 +302,8 @@ export function ThothPlay({ me, onBack }: Props) {
           onSelectChannel={openChannel}
           onChannelsChange={() => fetchChannels(selectedGroup.id)}
           onGroupUpdate={(patch) => setSelectedGroup((g) => (g ? { ...g, ...patch } : g))}
+          onLeftGroup={() => { goHome(); loadGroups() }}
+          onExitToMessenger={onBack}
         />
       ) : (
         <main className="play-home">
@@ -456,17 +459,21 @@ type GroupViewProps = {
   onSelectChannel: (c: PlayChannel) => void
   onChannelsChange: () => void
   onGroupUpdate: (patch: Partial<PlayGroup>) => void
+  onLeftGroup: () => void
+  onExitToMessenger: () => void
 }
 
 type GroupMember = { profile: Profile; role: string }
 type VoiceParticipantInfo = { id: string; name: string }
 
-function GroupView({ me, myPlayProfile, group, channels, selectedChannel, messages, hasReplaySet, liveTyping, draft, onDraftChange, onSend, onSelectChannel, onChannelsChange, onGroupUpdate }: GroupViewProps) {
+function GroupView({ me, myPlayProfile, group, channels, selectedChannel, messages, hasReplaySet, liveTyping, draft, onDraftChange, onSend, onSelectChannel, onChannelsChange, onGroupUpdate, onLeftGroup, onExitToMessenger }: GroupViewProps) {
   const [showNewChannel, setShowNewChannel] = useState(false)
   const [joinedVoiceChannel, setJoinedVoiceChannel] = useState<PlayChannel | null>(null)
   const [openReplayId, setOpenReplayId] = useState<string | null>(null)
   const [replayEvents, setReplayEvents] = useState<ReplayEvent[] | null>(null)
   const [showGroupInfo, setShowGroupInfo] = useState(false)
+  const [showGroupMenu, setShowGroupMenu] = useState(false)
+  const [showInvite, setShowInvite] = useState(false)
   const [newChannelName, setNewChannelName] = useState('')
   const [newChannelKind, setNewChannelKind] = useState<'text' | 'voice'>('text')
   const [copied, setCopied] = useState(false)
@@ -560,6 +567,12 @@ function GroupView({ me, myPlayProfile, group, channels, selectedChannel, messag
     setTimeout(() => setCopied(false), 1500)
   }
 
+  async function leaveGroup() {
+    if (!confirm(`Sair de "${group.name}"?`)) return
+    await supabase.from('play_group_members').delete().eq('group_id', group.id).eq('user_id', me.id)
+    onLeftGroup()
+  }
+
   const typingNames = Object.entries(liveTyping)
     .map(([userId, text]) => ({ name: members.find((m) => m.profile.id === userId)?.profile ? displayName(members.find((m) => m.profile.id === userId)!.profile) : 'alguém', text }))
 
@@ -575,13 +588,54 @@ function GroupView({ me, myPlayProfile, group, channels, selectedChannel, messag
               <button type="button" className="play-group-topbar-name-btn" onClick={() => setShowGroupInfo(true)} title="Sobre o grupo">
                 <strong>{group.name}</strong>
               </button>
-              <button type="button" className="play-invite-btn" onClick={copyInvite} title="Copiar código de convite">
-                <IconCopy size={12} /> {copied ? 'copiado!' : group.invite_code}
+              <div className="play-group-menu-wrap">
+                <button type="button" className="play-group-menu-trigger" onClick={() => setShowGroupMenu((v) => !v)} title="Menu do grupo">
+                  <IconChevronDown size={14} />
+                </button>
+                {showGroupMenu && (
+                  <>
+                    <div className="play-group-menu-backdrop" onClick={() => setShowGroupMenu(false)} />
+                    <div className="play-group-menu">
+                      <button type="button" onClick={() => { setShowGroupMenu(false); setShowGroupInfo(true) }}>
+                        <IconSettingsGear size={15} /> Config. do servidor
+                      </button>
+                      <button type="button" onClick={() => { setShowGroupMenu(false); setShowInvite(true) }}>
+                        <IconCopy size={15} /> Convidar
+                      </button>
+                      <button type="button" className="danger" onClick={() => { setShowGroupMenu(false); leaveGroup() }}>
+                        <IconLogout size={15} /> Sair
+                      </button>
+                      <div className="play-group-menu-sep" />
+                      <button type="button" onClick={() => { setShowGroupMenu(false); onExitToMessenger() }}>
+                        <IconArrowLeft size={15} /> Messenger
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+              <button type="button" className="play-quick-invite-btn" onClick={() => setShowInvite(true)} title="Convidar para o grupo">
+                <IconUser size={13} /> {members.length} <IconPlus size={11} />
               </button>
             </div>
             {group.description && <span>{group.description}</span>}
           </div>
         </header>
+
+        {showInvite && (
+          <div className="modal-backdrop" onClick={() => setShowInvite(false)}>
+            <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+              <h2>Convidar para {group.name}</h2>
+              <p className="play-invite-hint">Compartilhe o código com quem você quer chamar pro grupo.</p>
+              <div className="play-invite-code-row">
+                <input readOnly value={group.invite_code} onFocus={(e) => e.target.select()} />
+                <button type="button" className="google-btn" style={{ width: 'auto' }} onClick={copyInvite}>
+                  <IconCopy size={14} /> {copied ? 'copiado!' : 'Copiar'}
+                </button>
+              </div>
+              <button type="button" className="modal-close" onClick={() => setShowInvite(false)}>fechar</button>
+            </div>
+          </div>
+        )}
 
         <div className="play-group-body">
           <div className="play-channel-sidebar-wrap">

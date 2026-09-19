@@ -300,7 +300,12 @@
 .play-window-shell .play-group-topbar-title{gap:8px}
 .play-window-shell .play-group-topbar-title strong{font-size:18px;color:var(--play-heading);text-shadow:0 1px rgb(255 255 255 / 80%)}
 .play-window-shell .play-group-topbar-copy>span{margin-top:3px;font-size:12px;color:var(--text-secondary)}
-.play-window-shell .play-invite-btn{display:none}
+.play-window-shell .play-quick-invite-btn{
+  border-color:var(--line-2);background:linear-gradient(var(--play-glass-top),var(--play-glass-bottom));
+  color:var(--accent-text);box-shadow:inset 0 1px rgb(255 255 255 / 80%);text-shadow:none;
+}
+.play-window-shell .play-group-menu-trigger{color:var(--accent-text)}
+.play-window-shell .play-group-menu{background:var(--bg-panel);border-color:var(--line-2)}
 
 .play-window-shell .play-group-body{background:var(--bg-deep);gap:0;padding:6px 6px 6px 0}
 .play-window-shell .play-channel-sidebar{
