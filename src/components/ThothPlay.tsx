@@ -15,6 +15,12 @@ import {
 } from './icons'
 import type { Bot, PlayCategory, PlayChannel, PlayGroup, PlayMessage, PlayProfile, PlayRole, Profile } from '../types'
 
+const ROLE_EMOJIS = [
+  '👑', '🛡️', '⭐', '🔥', '💎', '🎮', '🎤', '🎧', '🎨', '🔧',
+  '📢', '🚀', '⚡', '🏆', '🎯', '🤖', '👾', '🎲', '🍀', '💜',
+  '❤️', '💙', '💚', '🧡', '🖤', '🤍', '😎', '👀', '🐉', '🦊',
+]
+
 // A identidade dentro do Thoth Play e separada da conta principal - editar nome/
 // foto/status aqui dentro nao mexe no perfil usado no chat/mensageiro. So cai no
 // perfil principal quando ainda nao personalizou nada especifico do Play.
@@ -512,6 +518,7 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
   const [newChannelName, setNewChannelName] = useState('')
   const [newChannelKind, setNewChannelKind] = useState<'text' | 'voice'>('text')
   const [newChannelCategoryId, setNewChannelCategoryId] = useState<string | null>(null)
+  const [newChannelPrivate, setNewChannelPrivate] = useState(false)
   const [showNewCategory, setShowNewCategory] = useState(false)
   const [newCategoryName, setNewCategoryName] = useState('')
   const [catMenu, setCatMenu] = useState<{ categoryId: string; x: number; y: number } | null>(null)
@@ -523,6 +530,9 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
   const [members, setMembers] = useState<GroupMember[]>([])
   const [memberTab, setMemberTab] = useState<'group' | 'voice'>('group')
   const [voiceParticipants, setVoiceParticipants] = useState<VoiceParticipantInfo[]>([])
+  const [groupRoles, setGroupRoles] = useState<PlayRole[]>([])
+  const [roleQuickMenu, setRoleQuickMenu] = useState<{ userId: string; name: string; x: number; y: number } | null>(null)
+  const [roleQuickMenuIds, setRoleQuickMenuIds] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     setVoiceParticipants([])
@@ -576,9 +586,36 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
   const channelsByCategory = (categoryId: string) => channels.filter((c) => c.category_id === categoryId).sort((a, b) => a.position - b.position)
   const uncategorized = channels.filter((c) => !c.category_id || !categories.some((cat) => cat.id === c.category_id)).sort((a, b) => a.position - b.position)
 
+  async function openRoleQuickMenu(userId: string, name: string, x: number, y: number) {
+    if (!canManage || userId === me.id) return
+    setRoleQuickMenu({ userId, name, x, y })
+    let roleList = groupRoles
+    if (!roleList.length) {
+      const { data } = await supabase.from('play_roles').select('*').eq('group_id', group.id).order('position', { ascending: true })
+      roleList = (data || []) as PlayRole[]
+      setGroupRoles(roleList)
+    }
+    if (!roleList.length) { setRoleQuickMenuIds(new Set()); return }
+    const { data: rm } = await supabase.from('play_role_members').select('role_id').eq('user_id', userId).in('role_id', roleList.map((r) => r.id))
+    setRoleQuickMenuIds(new Set((rm || []).map((r) => r.role_id as string)))
+  }
+
+  async function toggleQuickMenuRole(roleId: string, has: boolean) {
+    if (!roleQuickMenu) return
+    if (has) {
+      await supabase.from('play_role_members').delete().eq('role_id', roleId).eq('user_id', roleQuickMenu.userId)
+      setRoleQuickMenuIds((prev) => { const next = new Set(prev); next.delete(roleId); return next })
+    } else {
+      await supabase.from('play_role_members').insert({ role_id: roleId, user_id: roleQuickMenu.userId })
+      setRoleQuickMenuIds((prev) => new Set(prev).add(roleId))
+    }
+  }
+
   function openNewChannelModal(categoryId: string | null, kind: 'text' | 'voice' = 'text') {
     setNewChannelCategoryId(categoryId)
     setNewChannelKind(kind)
+    setNewChannelName('')
+    setNewChannelPrivate(false)
     setShowNewChannel(true)
   }
 
@@ -763,7 +800,7 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
               className="play-channel-sidebar"
               style={sidebarWidth ? { width: sidebarWidth } : undefined}
               onContextMenu={(e) => {
-                if (!canManage || (e.target as HTMLElement).closest('.play-channel-group-title')) return
+                if (!canManage || (e.target as HTMLElement).closest('.play-channel-group-title, .play-channel-item, .play-channel-voice-member')) return
                 e.preventDefault()
                 setShowNewCategory(true)
               }}
@@ -912,7 +949,11 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
                     <AvatarBox src={m.author?.avatar_url} id={m.author_id} fallbackLetter={(m.author ? displayName(m.author) : '?')[0]?.toUpperCase()} className="avatar-sm" />
                     <div className="play-message-body">
                       <div className="play-message-row">
-                        <strong>
+                        <strong
+                          className={canManage && m.author && m.author_id !== me.id ? 'play-name-clickable' : undefined}
+                          onContextMenu={(e) => { if (m.author) { e.preventDefault(); openRoleQuickMenu(m.author_id, displayName(m.author), e.clientX, e.clientY) } }}
+                          onClick={(e) => { if (m.author) openRoleQuickMenu(m.author_id, displayName(m.author), e.clientX, e.clientY) }}
+                        >
                           {m.author ? (
                             <StyledName name={displayName(m.author)} font={m.author.name_style_font} effect={m.author.name_style_effect} color={m.author.name_style_color} />
                           ) : '...'}
@@ -976,7 +1017,13 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
                 {onlineMembers.map((m) => (
                   <div key={m.profile.id} className="play-member-row">
                     <AvatarBox src={m.profile.avatar_url} id={m.profile.id} fallbackLetter={displayName(m.profile)[0]?.toUpperCase()} className="avatar-sm" />
-                    <span><StyledName name={displayName(m.profile)} font={m.profile.name_style_font} effect={m.profile.name_style_effect} color={m.profile.name_style_color} /></span>
+                    <span
+                      className={canManage && m.profile.id !== me.id ? 'play-name-clickable' : undefined}
+                      onContextMenu={(e) => { e.preventDefault(); openRoleQuickMenu(m.profile.id, displayName(m.profile), e.clientX, e.clientY) }}
+                      onClick={(e) => openRoleQuickMenu(m.profile.id, displayName(m.profile), e.clientX, e.clientY)}
+                    >
+                      <StyledName name={displayName(m.profile)} font={m.profile.name_style_font} effect={m.profile.name_style_effect} color={m.profile.name_style_color} />
+                    </span>
                     {inVoiceIds.has(m.profile.id) && <IconHeadphones size={14} />}
                   </div>
                 ))}
@@ -986,7 +1033,13 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
                 {offlineMembers.map((m) => (
                   <div key={m.profile.id} className="play-member-row offline">
                     <AvatarBox src={m.profile.avatar_url} id={m.profile.id} fallbackLetter={displayName(m.profile)[0]?.toUpperCase()} className="avatar-sm" />
-                    <span>{displayName(m.profile)}</span>
+                    <span
+                      className={canManage && m.profile.id !== me.id ? 'play-name-clickable' : undefined}
+                      onContextMenu={(e) => { e.preventDefault(); openRoleQuickMenu(m.profile.id, displayName(m.profile), e.clientX, e.clientY) }}
+                      onClick={(e) => openRoleQuickMenu(m.profile.id, displayName(m.profile), e.clientX, e.clientY)}
+                    >
+                      {displayName(m.profile)}
+                    </span>
                   </div>
                 ))}
               </>
@@ -995,8 +1048,14 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
                 {voiceParticipants.length === 0 && <p className="play-empty">ninguém na voz agora</p>}
                 {voiceParticipants.map((p) => (
                   <div key={p.id} className="play-member-row">
-                    <AvatarBox src={p.id === me.id ? me.avatar_url : null} id={p.id} fallbackLetter={p.name[0]?.toUpperCase()} className="avatar-sm" />
-                    <span>{p.name}</span>
+                    <AvatarBox src={p.id === me.id ? myPlayProfile.avatar_url : membersById[p.id]?.avatar_url || null} id={p.id} fallbackLetter={p.name[0]?.toUpperCase()} className="avatar-sm" />
+                    <span
+                      className={canManage && p.id !== me.id ? 'play-name-clickable' : undefined}
+                      onContextMenu={(e) => { e.preventDefault(); openRoleQuickMenu(p.id, p.name, e.clientX, e.clientY) }}
+                      onClick={(e) => openRoleQuickMenu(p.id, p.name, e.clientX, e.clientY)}
+                    >
+                      {p.name}
+                    </span>
                     <IconHeadphones size={14} />
                   </div>
                 ))}
@@ -1006,17 +1065,68 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
         </div>
       </div>
 
+      {roleQuickMenu && (
+        <>
+          <div className="play-group-menu-backdrop" onClick={() => setRoleQuickMenu(null)} />
+          <div className="play-group-menu" style={{ position: 'fixed', top: roleQuickMenu.y, left: roleQuickMenu.x, minWidth: 200 }}>
+            <div className="play-role-quick-menu-title">Cargos de {roleQuickMenu.name}</div>
+            {groupRoles.length === 0 && <p className="play-empty" style={{ padding: '0 10px 8px' }}>nenhum cargo criado ainda</p>}
+            {groupRoles.map((role) => {
+              const has = roleQuickMenuIds.has(role.id)
+              return (
+                <button key={role.id} type="button" onClick={() => toggleQuickMenuRole(role.id, has)}>
+                  <span className="play-role-quick-menu-check">{has ? '✓' : ''}</span>
+                  {role.emoji ? `${role.emoji} ` : ''}{role.name}
+                </button>
+              )
+            })}
+          </div>
+        </>
+      )}
+
       {showNewChannel && (
         <div className="modal-backdrop" onClick={() => setShowNewChannel(false)}>
-          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+          <div className="modal-card play-channel-modal" onClick={(e) => e.stopPropagation()}>
             <h2>Criar canal</h2>
-            <input placeholder="Nome do canal" value={newChannelName} onChange={(e) => setNewChannelName(e.target.value)} />
-            <div className="play-channel-kind-toggle">
-              <button type="button" className={newChannelKind === 'text' ? 'active' : ''} onClick={() => setNewChannelKind('text')}><IconHash size={14} /> Texto</button>
-              <button type="button" className={newChannelKind === 'voice' ? 'active' : ''} onClick={() => setNewChannelKind('voice')}><IconVideo size={14} /> Voz</button>
+            <span className="play-channel-modal-subtitle">
+              em {(categories.find((c) => c.id === newChannelCategoryId)?.name || 'sem categoria').toUpperCase()}
+            </span>
+
+            <label className="play-channel-modal-label">Tipo de canal</label>
+            <div className="play-channel-kind-options">
+              <label className={`play-channel-kind-option${newChannelKind === 'text' ? ' active' : ''}`}>
+                <input type="radio" name="channel-kind" checked={newChannelKind === 'text'} onChange={() => setNewChannelKind('text')} />
+                <IconHash size={18} />
+                <div><strong>Texto</strong><span>Envie mensagens, imagens e emojis</span></div>
+              </label>
+              <label className={`play-channel-kind-option${newChannelKind === 'voice' ? ' active' : ''}`}>
+                <input type="radio" name="channel-kind" checked={newChannelKind === 'voice'} onChange={() => setNewChannelKind('voice')} />
+                <IconVideo size={18} />
+                <div><strong>Voz</strong><span>Converse com áudio, vídeo e tela compartilhada</span></div>
+              </label>
             </div>
-            <button type="button" className="google-btn" style={{ marginTop: 10 }} onClick={createChannel}>Criar</button>
-            <button type="button" className="modal-close" onClick={() => setShowNewChannel(false)}>fechar</button>
+
+            <label className="play-channel-modal-label" style={{ marginTop: 14 }}>Nome do canal</label>
+            <div className="play-channel-modal-name-input">
+              {newChannelKind === 'text' ? <IconHash size={16} /> : <IconVideo size={16} />}
+              <input placeholder="novo-canal" value={newChannelName} onChange={(e) => setNewChannelName(e.target.value)} />
+            </div>
+
+            <div className="play-channel-modal-private">
+              <div>
+                <strong><IconLock size={12} /> Canal privado</strong>
+                <span>Somente membros e cargos selecionados poderão ver esse canal.</span>
+              </div>
+              <button type="button" className={`play-bot-switch${newChannelPrivate ? ' on' : ''}`} onClick={() => setNewChannelPrivate((v) => !v)}>
+                <span className="play-bot-switch-knob" />
+              </button>
+            </div>
+            {newChannelPrivate && <p className="play-empty">Defina quem pode ver esse canal na aba Cargos, no Config. do servidor, depois de criar.</p>}
+
+            <div className="play-channel-modal-actions">
+              <button type="button" className="modal-close" onClick={() => setShowNewChannel(false)}>Cancelar</button>
+              <button type="button" className="google-btn" style={{ width: 'auto' }} disabled={!newChannelName.trim()} onClick={createChannel}>Criar canal</button>
+            </div>
           </div>
         </div>
       )}
@@ -1073,6 +1183,9 @@ function GroupInfoPanel({ group, myRole, members, me, channels, categories, open
   const [expandedRoleId, setExpandedRoleId] = useState<string | null>(null)
   const [newRoleName, setNewRoleName] = useState('')
   const [newRoleEmoji, setNewRoleEmoji] = useState('')
+  const [showRoleEmojiPicker, setShowRoleEmojiPicker] = useState(false)
+  const [rosterRoleId, setRosterRoleId] = useState<string | null>(null)
+  const [rosterAdding, setRosterAdding] = useState(false)
   const [botCatalog, setBotCatalog] = useState<Bot[]>([])
   const [installedBotIds, setInstalledBotIds] = useState<Set<string>>(new Set())
 
@@ -1211,9 +1324,15 @@ function GroupInfoPanel({ group, myRole, members, me, channels, categories, open
     if (!file) return
     setUploading(true)
     try {
-      const url = await uploadImage(file, group.id, 'play-group')
-      await supabase.from('play_groups').update({ image_url: url }).eq('id', group.id)
+      // O bucket "avatars" so aceita upload em pastas com o proprio auth.uid()
+      // do usuario (RLS de storage) - usar group.id aqui era rejeitado
+      // silenciosamente, dava a impressao de que a troca de imagem nao fazia nada.
+      const url = await uploadImage(file, me.id, 'play-group')
+      const { error } = await supabase.from('play_groups').update({ image_url: url }).eq('id', group.id)
+      if (error) { console.error('update group image failed', error); return }
       onUpdate({ image_url: url })
+    } catch (err) {
+      console.error('group image upload failed', err)
     } finally {
       setUploading(false)
       if (fileRef.current) fileRef.current.value = ''
@@ -1398,8 +1517,20 @@ function GroupInfoPanel({ group, myRole, members, me, channels, categories, open
       {tab === 'cargos' && canManage && (
         <div className="play-group-info-body">
           {roles.length < 10 && (
-            <div className="play-invite-code-row" style={{ marginBottom: 12 }}>
-              <input placeholder="emoji" value={newRoleEmoji} onChange={(e) => setNewRoleEmoji(e.target.value)} style={{ width: 52, flex: 'none', textAlign: 'center' }} />
+            <div className="play-invite-code-row" style={{ marginBottom: 12, position: 'relative' }}>
+              <button type="button" className="play-role-emoji-btn" onClick={() => setShowRoleEmojiPicker((v) => !v)}>
+                {newRoleEmoji || '🙂'}
+              </button>
+              {showRoleEmojiPicker && (
+                <>
+                  <div className="play-group-menu-backdrop" onClick={() => setShowRoleEmojiPicker(false)} />
+                  <div className="emoji-picker" style={{ top: '110%', left: 0 }}>
+                    {ROLE_EMOJIS.map((em) => (
+                      <button key={em} type="button" onClick={() => { setNewRoleEmoji(em); setShowRoleEmojiPicker(false) }}>{em}</button>
+                    ))}
+                  </div>
+                </>
+              )}
               <input placeholder="Nome do cargo" value={newRoleName} onChange={(e) => setNewRoleName(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') createRole() }} />
               <button type="button" className="google-btn" style={{ width: 'auto' }} onClick={createRole}>Criar</button>
             </div>
@@ -1417,16 +1548,9 @@ function GroupInfoPanel({ group, myRole, members, me, channels, categories, open
                 </button>
                 {expanded && (
                   <div className="play-role-detail">
-                    <button type="button" className="settings-danger-btn" style={{ marginBottom: 12 }} onClick={() => deleteRole(role.id)}>Excluir cargo</button>
-
-                    <label>Membros com este cargo</label>
-                    {members.map((m) => (
-                      <label key={m.profile.id} className="play-role-check-row">
-                        <input type="checkbox" checked={memberIds.has(m.profile.id)} onChange={() => toggleRoleMember(role.id, m.profile.id, memberIds.has(m.profile.id))} />
-                        <AvatarBox src={m.profile.avatar_url} id={m.profile.id} fallbackLetter={displayName(m.profile)[0]?.toUpperCase()} className="avatar-sm" />
-                        {displayName(m.profile)}
-                      </label>
-                    ))}
+                    <button type="button" className="play-role-list-btn" onClick={() => { setRosterRoleId(role.id); setRosterAdding(false) }}>
+                      Listar membros ({memberIds.size})
+                    </button>
 
                     <label style={{ marginTop: 14 }}>Canais visíveis (nenhum marcado = visível pra todo mundo)</label>
                     {categories.map((cat) => (
@@ -1440,11 +1564,60 @@ function GroupInfoPanel({ group, myRole, members, me, channels, categories, open
                         ))}
                       </div>
                     ))}
+
+                    <button type="button" className="settings-danger-btn" style={{ marginTop: 18 }} onClick={() => deleteRole(role.id)}>Excluir cargo</button>
                   </div>
                 )}
               </div>
             )
           })}
+
+          {rosterRoleId && (() => {
+            const role = roles.find((r) => r.id === rosterRoleId)
+            if (!role) return null
+            const memberIds = new Set(roleMemberIds[role.id] || [])
+            const withRole = members.filter((m) => memberIds.has(m.profile.id))
+            const withoutRole = members.filter((m) => !memberIds.has(m.profile.id))
+            return (
+              <div className="modal-backdrop" onClick={() => setRosterRoleId(null)}>
+                <div className="modal-card play-channel-modal" onClick={(e) => e.stopPropagation()}>
+                  <div className="play-role-roster-header">
+                    <h2>{role.emoji ? `${role.emoji} ` : ''}{role.name}</h2>
+                    {!rosterAdding && (
+                      <button type="button" className="icon-btn" onClick={() => setRosterAdding(true)} title="Adicionar membro"><IconPlus size={18} /></button>
+                    )}
+                  </div>
+                  {rosterAdding ? (
+                    <>
+                      {withoutRole.length === 0 && <p className="play-empty">todo mundo já tem esse cargo</p>}
+                      {withoutRole.map((m) => (
+                        <div key={m.profile.id} className="play-manage-member-row">
+                          <AvatarBox src={m.profile.avatar_url} id={m.profile.id} fallbackLetter={displayName(m.profile)[0]?.toUpperCase()} className="avatar-sm" />
+                          <span>{displayName(m.profile)}</span>
+                          <button type="button" className="play-manage-member-unban" onClick={() => toggleRoleMember(role.id, m.profile.id, false)}>Adicionar</button>
+                        </div>
+                      ))}
+                      <button type="button" className="modal-close" onClick={() => setRosterAdding(false)}>voltar</button>
+                    </>
+                  ) : (
+                    <>
+                      {withRole.length === 0 && <p className="play-empty">ninguém tem esse cargo ainda</p>}
+                      {withRole.map((m) => (
+                        <div key={m.profile.id} className="play-manage-member-row">
+                          <AvatarBox src={m.profile.avatar_url} id={m.profile.id} fallbackLetter={displayName(m.profile)[0]?.toUpperCase()} className="avatar-sm" />
+                          <span>{displayName(m.profile)}</span>
+                          <div className="play-manage-member-actions">
+                            <button type="button" onClick={() => toggleRoleMember(role.id, m.profile.id, true)} title="Remover"><IconLogout size={14} /></button>
+                          </div>
+                        </div>
+                      ))}
+                      <button type="button" className="modal-close" onClick={() => setRosterRoleId(null)}>fechar</button>
+                    </>
+                  )}
+                </div>
+              </div>
+            )
+          })()}
         </div>
       )}
 
@@ -1503,6 +1676,14 @@ function ProfilePanel({ me, open, onClose, onSaved }: { me: Profile; open: boole
 
   async function upsert(patch: Partial<PlayProfile>) {
     await supabase.from('play_profiles').upsert({ user_id: me.id, ...patch }, { onConflict: 'user_id' })
+  }
+
+  // Tema aplica na hora (nao espera o "Salvar" geral) - senao clicar em
+  // Claro/Escuro parece nao fazer nada ate a pessoa lembrar de salvar.
+  async function applyTheme(next: 'light' | 'dark') {
+    setThemePref(next)
+    await upsert({ theme_preference: next })
+    onSaved()
   }
 
   async function save() {
@@ -1602,8 +1783,8 @@ function ProfilePanel({ me, open, onClose, onSaved }: { me: Profile; open: boole
 
             <label style={{ marginTop: 14 }}>Tema do Play</label>
             <div className="play-group-privacy-toggle">
-              <button type="button" className={themePref === 'light' ? 'active' : ''} onClick={() => setThemePref('light')}>Claro</button>
-              <button type="button" className={themePref === 'dark' ? 'active' : ''} onClick={() => setThemePref('dark')}>Escuro</button>
+              <button type="button" className={themePref === 'light' ? 'active' : ''} onClick={() => applyTheme('light')}>Claro</button>
+              <button type="button" className={themePref === 'dark' ? 'active' : ''} onClick={() => applyTheme('dark')}>Escuro</button>
             </div>
           </>
         )}
@@ -1653,12 +1834,10 @@ function AvatarCropModal({ file, onCancel, onConfirm }: { file: File; onCancel: 
     const drawH = img.naturalHeight * scale
     const drawX = OUT / 2 - drawW / 2 + pos.x * (OUT / SIZE)
     const drawY = OUT / 2 - drawH / 2 + pos.y * (OUT / SIZE)
-    ctx.save()
-    ctx.beginPath()
-    ctx.arc(OUT / 2, OUT / 2, OUT / 2, 0, Math.PI * 2)
-    ctx.clip()
+    // Sem clip circular aqui - os avatares do Play sao quadrado-arredondado
+    // (border-radius via CSS), nao circulo; recortar em circulo deixava as
+    // quatro pontas da imagem pretas quando exibida no formato quadrado.
     ctx.drawImage(img, drawX, drawY, drawW, drawH)
-    ctx.restore()
     canvas.toBlob((blob) => { if (blob) onConfirm(blob) }, 'image/jpeg', 0.9)
   }
 

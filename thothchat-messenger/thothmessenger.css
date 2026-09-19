@@ -335,6 +335,7 @@
 .play-window-shell .play-message-row strong{font-size:14px;color:var(--play-heading)}
 .play-window-shell .play-message-time{font-size:11px;color:var(--muted)}
 .play-window-shell .play-message-body p{margin-top:3px;font-size:14px;line-height:1.35;color:var(--text-base)}
+.play-window-shell .play-message .avatar-sm{width:36px;height:36px;padding:2px;border:2px solid #8dd2e8;border-radius:7px;background:linear-gradient(#f6fdff,#9edcf0);box-shadow:inset 0 0 0 1px #fff,0 1px 4px rgb(0 66 97 / 22%)}
 .play-window-shell .play-composer{padding:9px;border-top:1px solid var(--line);background:linear-gradient(var(--bg-panel),var(--play-glass-bottom))}
 .play-window-shell .play-composer input{height:45px;border:1px solid #66b9da;border-radius:4px;padding:0 13px;background:var(--input);color:var(--text-base);box-shadow:inset 0 1px 3px rgb(0 55 82 / 12%)}
 .play-window-shell .play-composer input:focus{outline:1px solid var(--play-cyan);outline-offset:0}
@@ -401,4 +402,5 @@
   .play-window-shell .play-member-tabs button{background:linear-gradient(#123953,#091f30);box-shadow:inset 0 1px rgb(85 208 250 / 16%)}
   .play-window-shell .play-member-tabs button.active{background:linear-gradient(#078fd0,#075a90);box-shadow:inset 0 1px rgb(118 226 255 / 35%),0 0 7px rgb(0 177 240 / 28%)}
   .play-window-shell .play-member-row .avatar-sm{border-color:#218fba;background:linear-gradient(#153f5a,#091f31);box-shadow:inset 0 0 0 1px #0e3047,0 1px 4px #0008}
+  .play-window-shell .play-message .avatar-sm{border-color:#218fba;background:linear-gradient(#153f5a,#091f31);box-shadow:inset 0 0 0 1px #0e3047,0 1px 4px #0008}
 }

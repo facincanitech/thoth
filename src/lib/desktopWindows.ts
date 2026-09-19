@@ -9,6 +9,8 @@ export async function openChatWindow(conversationId: string, title: string) {
   const label = chatWindowLabel(conversationId)
   const existing = await WebviewWindow.getByLabel(label)
   if (existing) {
+    await existing.unminimize()
+    await existing.show()
     await existing.setFocus()
     return
   }
@@ -27,6 +29,7 @@ export async function openPlayWindow() {
   const label = 'thoth-play'
   const existing = await WebviewWindow.getByLabel(label)
   if (existing) {
+    await existing.unminimize()
     await existing.show()
     await existing.setFocus()
     return
