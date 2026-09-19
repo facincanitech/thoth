@@ -10,7 +10,7 @@ import { StyledName, NAME_FONTS, NAME_EFFECTS } from './StyledName'
 import { uploadImage } from '../lib/uploadImage'
 import {
   IconArrowLeft, IconCopy, IconGamepad, IconHash, IconHeadphones, IconLock, IconLockOpen,
-  IconMic, IconMicOff, IconMonitorShare, IconPhoneOff, IconPlus, IconSend, IconSettingsGear, IconVideo, IconVideoOff,
+  IconMic, IconMicOff, IconMonitorShare, IconPhoneOff, IconPlus, IconSend, IconVideo, IconVideoOff,
 } from './icons'
 import type { PlayChannel, PlayGroup, PlayMessage, PlayProfile, Profile } from '../types'
 
@@ -458,6 +458,7 @@ function GroupView({ me, group, channels, selectedChannel, messages, hasReplaySe
   const inVoiceIds = new Set(voiceParticipants.map((p) => p.id))
   const myRole = members.find((m) => m.profile.id === me.id)?.role || null
   const myPlayProfile = members.find((m) => m.profile.id === me.id)?.profile || me
+  const membersById = Object.fromEntries(members.map((m) => [m.profile.id, m.profile]))
 
   async function createChannel() {
     if (!newChannelName.trim()) return
@@ -515,15 +516,16 @@ function GroupView({ me, group, channels, selectedChannel, messages, hasReplaySe
 
       <div className="play-group-main">
         <header className="play-group-topbar">
-          <AvatarBox src={group.image_url} id={group.id} fallbackLetter={group.name[0]?.toUpperCase()} className="play-group-avatar" />
+          <button type="button" className="play-group-topbar-avatar-btn" onClick={() => setShowGroupInfo(true)} title="Sobre o grupo">
+            <AvatarBox src={group.image_url} id={group.id} fallbackLetter={group.name[0]?.toUpperCase()} className="play-group-avatar" />
+          </button>
           <div className="play-group-topbar-copy">
             <div className="play-group-topbar-title">
-              <strong>{group.name}</strong>
+              <button type="button" className="play-group-topbar-name-btn" onClick={() => setShowGroupInfo(true)} title="Sobre o grupo">
+                <strong>{group.name}</strong>
+              </button>
               <button type="button" className="play-invite-btn" onClick={copyInvite} title="Copiar código de convite">
                 <IconCopy size={12} /> {copied ? 'copiado!' : group.invite_code}
-              </button>
-              <button type="button" className="play-icon-rail-label-btn" onClick={() => setShowGroupInfo(true)} title="Configurações do grupo">
-                <IconSettingsGear size={16} />
               </button>
             </div>
             {group.description && <span>{group.description}</span>}
@@ -552,7 +554,15 @@ function GroupView({ me, group, channels, selectedChannel, messages, hasReplaySe
                     <IconVideo size={15} /> {c.name}
                   </button>
                   {joinedVoiceChannel?.id === c.id && voiceParticipants.map((p) => (
-                    <div key={p.id} className="play-channel-voice-member">{p.name}</div>
+                    <div key={p.id} className="play-channel-voice-member">
+                      <AvatarBox
+                        src={p.id === me.id ? myPlayProfile.avatar_url : membersById[p.id]?.avatar_url || null}
+                        id={p.id}
+                        fallbackLetter={p.name[0]?.toUpperCase()}
+                        className="avatar-sm"
+                      />
+                      {p.name}
+                    </div>
                   ))}
                 </div>
               ))}
@@ -578,6 +588,7 @@ function GroupView({ me, group, channels, selectedChannel, messages, hasReplaySe
                 {messages.length === 0 && <p className="play-empty">nenhuma mensagem ainda</p>}
                 {messages.map((m) => (
                   <div key={m.id} className="play-message">
+                    <AvatarBox src={m.author?.avatar_url} id={m.author_id} fallbackLetter={(m.author ? displayName(m.author) : '?')[0]?.toUpperCase()} className="avatar-sm" />
                     <div className="play-message-body">
                       <div className="play-message-row">
                         <strong>
@@ -627,7 +638,7 @@ function GroupView({ me, group, channels, selectedChannel, messages, hasReplaySe
 
           {joinedVoiceChannel && (
             <div style={{ display: selectedChannel?.id === joinedVoiceChannel.id ? 'flex' : 'none', flex: 1, minWidth: 0, flexDirection: 'column', overflow: 'hidden' }}>
-              <VoiceChannel key={joinedVoiceChannel.id} me={me} channel={joinedVoiceChannel} onParticipantsChange={setVoiceParticipants} onLeave={leaveVoice} />
+              <VoiceChannel key={joinedVoiceChannel.id} me={myPlayProfile} membersById={membersById} channel={joinedVoiceChannel} onParticipantsChange={setVoiceParticipants} onLeave={leaveVoice} />
             </div>
           )}
 
@@ -895,7 +906,7 @@ type ParticipantTile = {
   videoTrack?: Track
 }
 
-function VoiceChannel({ me, channel, onParticipantsChange, onLeave }: { me: Profile; channel: PlayChannel; onParticipantsChange: (p: VoiceParticipantInfo[]) => void; onLeave: () => void }) {
+function VoiceChannel({ me, membersById, channel, onParticipantsChange, onLeave }: { me: Profile; membersById: Record<string, Profile>; channel: PlayChannel; onParticipantsChange: (p: VoiceParticipantInfo[]) => void; onLeave: () => void }) {
   const roomRef = useRef<Room | null>(null)
   const [connected, setConnected] = useState(false)
   const [connecting, setConnecting] = useState(true)
@@ -1014,7 +1025,7 @@ function VoiceChannel({ me, channel, onParticipantsChange, onLeave }: { me: Prof
                 {p.videoTrack ? (
                   <video ref={(el) => { videoRefs.current[p.id] = el; if (el && p.videoTrack) p.videoTrack.attach(el) }} autoPlay playsInline muted={p.isLocal} />
                 ) : (
-                  <AvatarBox src={p.isLocal ? me.avatar_url : null} id={p.id} fallbackLetter={p.name[0]?.toUpperCase()} className="play-voice-avatar" />
+                  <AvatarBox src={p.isLocal ? me.avatar_url : membersById[p.id]?.avatar_url || null} id={p.id} fallbackLetter={p.name[0]?.toUpperCase()} className="play-voice-avatar" />
                 )}
                 <span className="play-voice-name">
                   {p.micOn ? <IconMic size={13} /> : <IconMicOff size={13} />} {p.name}{p.isLocal ? ' (você)' : ''}

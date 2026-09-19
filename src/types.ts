@@ -55,6 +55,14 @@ export type TypingPayload = {
 
 export type PanelView = 'root' | 'contact' | 'group' | 'friends'
 
+export type ContactCategory = {
+  id: string
+  user_id: string
+  name: string
+  position: number
+  created_at: string
+}
+
 export type PlayGroup = {
   id: string
   name: string

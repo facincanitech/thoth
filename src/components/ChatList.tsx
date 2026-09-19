@@ -37,7 +37,7 @@ import {
   IconTrash,
   IconUser,
 } from './icons'
-import type { Community, Conversation, PanelView, Profile } from '../types'
+import type { Community, ContactCategory, Conversation, PanelView, Profile } from '../types'
 
 type AccountView = 'root' | 'profile' | 'appearance' | 'account' | 'privacy' | 'blocked' | 'terms' | 'privacy-policy'
 
@@ -301,6 +301,8 @@ export function ChatList({
   const [groupQuery, setGroupQuery] = useState('')
   const [communities, setCommunities] = useState<Community[]>([])
   const [myCommunities, setMyCommunities] = useState<Community[]>([])
+  const [contactCategories, setContactCategories] = useState<ContactCategory[]>([])
+  const [categoryMembers, setCategoryMembers] = useState<Record<string, string[]>>({})
   const [communityMemberCount, setCommunityMemberCount] = useState(0)
   const [trendingCommunities, setTrendingCommunities] = useState<(Community & { comment_count: number })[]>([])
   const [newCommunityName, setNewCommunityName] = useState('')
@@ -435,6 +437,12 @@ export function ChatList({
     return {}
   })
   const [dragSectionId, setDragSectionId] = useState<string | null>(null)
+  const [showNewCategory, setShowNewCategory] = useState(false)
+  const [newCategoryName, setNewCategoryName] = useState('')
+  const [categoryMenuOpenId, setCategoryMenuOpenId] = useState<string | null>(null)
+  const [renameCategoryId, setRenameCategoryId] = useState<string | null>(null)
+  const [renameCategoryDraft, setRenameCategoryDraft] = useState('')
+  const [manageCategoryId, setManageCategoryId] = useState<string | null>(null)
   const draggedSectionIdRef = useRef<string | null>(null)
   const desktopContactListRef = useRef<HTMLDivElement>(null)
 
@@ -807,9 +815,20 @@ export function ChatList({
     loadCommunities()
     loadMyCommunities()
     loadMyGroups()
+    loadContactCategories()
     if (!me) return
     const channel = supabase
       .channel(`member-updates:${me.id}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'contact_categories', filter: `user_id=eq.${me.id}` },
+        () => loadContactCategories(),
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'contact_category_members' },
+        () => loadContactCategories(),
+      )
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'conversation_members', filter: `user_id=eq.${me.id}` },
@@ -1245,6 +1264,54 @@ export function ChatList({
         .map((row) => row.community as unknown as Community)
         .filter(Boolean),
     )
+  }
+
+  async function loadContactCategories() {
+    if (!me || !isTauriDesktop) return
+    const { data: cats } = await supabase.from('contact_categories').select('*').eq('user_id', me.id).order('position', { ascending: true })
+    setContactCategories((cats || []) as ContactCategory[])
+    const ids = (cats || []).map((c) => c.id as string)
+    if (!ids.length) { setCategoryMembers({}); return }
+    const { data: members } = await supabase.from('contact_category_members').select('category_id, conversation_id').in('category_id', ids)
+    const map: Record<string, string[]> = {}
+    for (const row of members || []) {
+      const catId = row.category_id as string
+      if (!map[catId]) map[catId] = []
+      map[catId].push(row.conversation_id as string)
+    }
+    setCategoryMembers(map)
+  }
+
+  async function createContactCategory(name: string) {
+    if (!me || !name.trim()) return
+    const { error } = await supabase.from('contact_categories').insert({ user_id: me.id, name: name.trim().slice(0, 20), position: contactCategories.length })
+    if (error) { console.error('create contact category failed', error); return }
+    setShowNewCategory(false)
+    setNewCategoryName('')
+    await loadContactCategories()
+  }
+
+  async function renameContactCategory(id: string, name: string) {
+    if (!name.trim()) return
+    const { error } = await supabase.from('contact_categories').update({ name: name.trim().slice(0, 20) }).eq('id', id)
+    if (error) { console.error('rename contact category failed', error); return }
+    setRenameCategoryId(null)
+    await loadContactCategories()
+  }
+
+  async function deleteContactCategory(id: string) {
+    const { error } = await supabase.from('contact_categories').delete().eq('id', id)
+    if (error) { console.error('delete contact category failed', error); return }
+    await loadContactCategories()
+  }
+
+  async function toggleCategoryMember(categoryId: string, conversationId: string, inCategory: boolean) {
+    if (inCategory) {
+      await supabase.from('contact_category_members').delete().eq('category_id', categoryId).eq('conversation_id', conversationId)
+    } else {
+      await supabase.from('contact_category_members').insert({ category_id: categoryId, conversation_id: conversationId })
+    }
+    await loadContactCategories()
   }
 
   async function loadTrendingCommunities() {
@@ -1772,18 +1839,30 @@ export function ChatList({
       </button>
     )
 
-    const sectionTitle: Record<string, string> = { favoritos: 'Favoritos', conversas: 'Conversas', grupos: 'Grupos', comunidades: 'Comunidades' }
-    const sectionCount: Record<string, number> = {
-      favoritos: favoriteConvs.length,
-      conversas: regularConvs.length,
-      grupos: groupConvs.length,
-      comunidades: sortedCommunities.length,
+    const categoryById = Object.fromEntries(contactCategories.map((c) => [c.id, c]))
+    const customCategoryKeys = contactCategories.map((c) => c.id)
+    const allSectionKeys = [...DESKTOP_SECTION_KEYS, ...customCategoryKeys]
+
+    const sectionTitle = (key: string): string => {
+      if (key === 'favoritos') return 'Favoritos'
+      if (key === 'conversas') return 'Conversas'
+      if (key === 'grupos') return 'Grupos'
+      if (key === 'comunidades') return 'Comunidades'
+      return categoryById[key]?.name || 'Categoria'
+    }
+    const categoryConvs = (key: string) => conversations.filter((c) => (categoryMembers[key] || []).includes(c.id))
+    const sectionCount = (key: string): number => {
+      if (key === 'favoritos') return favoriteConvs.length
+      if (key === 'conversas') return regularConvs.length
+      if (key === 'grupos') return groupConvs.length
+      if (key === 'comunidades') return sortedCommunities.length
+      return categoryConvs(key).length
     }
     const orderedSectionKeys = (() => {
-      const saved = desktopSectionOrder.filter((k) => DESKTOP_SECTION_KEYS.includes(k))
-      const rest = DESKTOP_SECTION_KEYS.filter((k) => !saved.includes(k))
+      const saved = desktopSectionOrder.filter((k) => allSectionKeys.includes(k))
+      const rest = allSectionKeys.filter((k) => !saved.includes(k))
       return [...saved, ...rest]
-    })().filter((k) => k === 'conversas' || sectionCount[k] > 0)
+    })().filter((k) => k === 'conversas' || customCategoryKeys.includes(k) || sectionCount(k) > 0)
 
     const dmPresence = (c: ConvWithLabel) => (c.otherId ? { lastSeenAt: c.otherLastSeenAt, isIdle: c.otherIsIdle } : undefined)
 
@@ -1794,7 +1873,10 @@ export function ChatList({
         return regularConvs.filter((c) => matches(c.label)).map((c) => contactRow(c.id, c.label, c.avatarUrl, c.unreadCount, () => onSelect(c), dmPresence(c)))
       }
       if (key === 'grupos') return groupConvs.filter((c) => matches(c.label)).map((c) => contactRow(c.id, c.label, c.avatarUrl, c.unreadCount, () => onSelect(c)))
-      return sortedCommunities.filter((c) => matches(c.name || '')).map((c) => contactRow(c.id, c.name || '', c.image_url, 0, () => onSelectCommunity(c)))
+      if (key === 'comunidades') return sortedCommunities.filter((c) => matches(c.name || '')).map((c) => contactRow(c.id, c.name || '', c.image_url, 0, () => onSelectCommunity(c)))
+      const items = categoryConvs(key).filter((c) => matches(c.label))
+      if (items.length === 0) return <p className="msn-empty">nenhum contato nessa categoria ainda</p>
+      return items.map((c) => contactRow(c.id, c.label, c.avatarUrl, c.unreadCount, () => onSelect(c), dmPresence(c)))
     }
 
     desktopContactsSurface = (
@@ -1835,6 +1917,7 @@ export function ChatList({
         <section className="msn-contact-list" ref={desktopContactListRef}>
           {orderedSectionKeys.map((key) => {
             const open = desktopOpenSections[key] !== false
+            const isCustom = customCategoryKeys.includes(key)
             return (
               <details key={key} open={open} data-section-id={key} className={dragSectionId === key ? 'dragging' : ''}>
                 <summary
@@ -1856,13 +1939,95 @@ export function ChatList({
                     <IconGrip size={12} />
                   </span>
                   <span className={`msn-section-chevron${open ? ' open' : ''}`}><IconChevronDown size={13} /></span>
-                  {sectionTitle[key]} <small>{sectionCount[key]}</small>
+                  {sectionTitle(key)} <small>{sectionCount(key)}</small>
+                  {isCustom && (
+                    <button
+                      type="button"
+                      className="msn-category-menu-btn"
+                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); setCategoryMenuOpenId((v) => (v === key ? null : key)) }}
+                    >
+                      <IconMore size={14} />
+                    </button>
+                  )}
+                  {isCustom && categoryMenuOpenId === key && (
+                    <div className="request-menu msn-category-menu" onClick={(e) => e.stopPropagation()}>
+                      <button type="button" onClick={() => { setRenameCategoryId(key); setRenameCategoryDraft(categoryById[key]?.name || ''); setCategoryMenuOpenId(null) }}>
+                        <IconEdit size={14} /> Renomear
+                      </button>
+                      <button type="button" onClick={() => { setManageCategoryId(key); setCategoryMenuOpenId(null) }}>
+                        <IconPlus size={14} /> Gerenciar contatos
+                      </button>
+                      <button type="button" className="decline" onClick={() => { deleteContactCategory(key); setCategoryMenuOpenId(null) }}>
+                        <IconTrash size={14} /> Excluir categoria
+                      </button>
+                    </div>
+                  )}
                 </summary>
                 {sectionContent(key)}
               </details>
             )
           })}
+          <button type="button" className="msn-new-category-btn" onClick={() => setShowNewCategory(true)}>
+            <IconPlus size={13} /> Nova categoria
+          </button>
         </section>
+
+        {showNewCategory && (
+          <div className="modal-backdrop" onClick={() => setShowNewCategory(false)}>
+            <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+              <h2>Nova categoria</h2>
+              <input
+                placeholder="Nome (até 20 caracteres)"
+                value={newCategoryName}
+                maxLength={20}
+                onChange={(e) => setNewCategoryName(e.target.value)}
+              />
+              <button type="button" className="google-btn" style={{ marginTop: 10 }} disabled={!newCategoryName.trim()} onClick={() => createContactCategory(newCategoryName)}>
+                Criar
+              </button>
+              <button type="button" className="modal-close" onClick={() => setShowNewCategory(false)}>fechar</button>
+            </div>
+          </div>
+        )}
+
+        {renameCategoryId && (
+          <div className="modal-backdrop" onClick={() => setRenameCategoryId(null)}>
+            <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+              <h2>Renomear categoria</h2>
+              <input
+                placeholder="Nome (até 20 caracteres)"
+                value={renameCategoryDraft}
+                maxLength={20}
+                onChange={(e) => setRenameCategoryDraft(e.target.value)}
+              />
+              <button type="button" className="google-btn" style={{ marginTop: 10 }} disabled={!renameCategoryDraft.trim()} onClick={() => renameContactCategory(renameCategoryId, renameCategoryDraft)}>
+                Salvar
+              </button>
+              <button type="button" className="modal-close" onClick={() => setRenameCategoryId(null)}>fechar</button>
+            </div>
+          </div>
+        )}
+
+        {manageCategoryId && (
+          <div className="modal-backdrop" onClick={() => setManageCategoryId(null)}>
+            <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+              <h2>Contatos em "{categoryById[manageCategoryId]?.name}"</h2>
+              <div className="msn-manage-category-list">
+                {conversations.filter((c) => !c.isArchived).map((c) => {
+                  const inCategory = (categoryMembers[manageCategoryId] || []).includes(c.id)
+                  return (
+                    <label key={c.id} className="msn-manage-category-row">
+                      <input type="checkbox" checked={inCategory} onChange={() => toggleCategoryMember(manageCategoryId, c.id, inCategory)} />
+                      <AvatarBox src={c.avatarUrl} id={c.id} fallbackLetter={c.label[0]?.toUpperCase()} className="avatar-sm" />
+                      <span>{c.label}</span>
+                    </label>
+                  )
+                })}
+              </div>
+              <button type="button" className="modal-close" onClick={() => setManageCategoryId(null)}>fechar</button>
+            </div>
+          </div>
+        )}
       </section>
     )
   }

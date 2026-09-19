@@ -33,9 +33,9 @@ export async function openPlayWindow() {
   }
   new WebviewWindow(label, {
     url: 'index.html?tauriPlay=1',
-    title: 'Thoth Play — ThothChat',
-    width: 980,
-    height: 680,
+    title: 'Thoth Play',
+    width: 1200,
+    height: 820,
     minWidth: 760,
     minHeight: 480,
     decorations: false,

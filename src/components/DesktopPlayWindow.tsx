@@ -34,7 +34,7 @@ export function DesktopPlayWindow() {
 
   return (
     <div className="desktop-window-shell play-window-shell">
-      <DesktopTitleBar title="Thoth Play — ThothChat" />
+      <DesktopTitleBar title="Thoth Play" />
       <div className="app play-desktop-app">
         {profile ? (
           <ThothPlay me={profile} onBack={() => currentWindow().close()} />
