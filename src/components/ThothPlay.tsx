@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ChangeEvent, type MouseEvent as ReactMouseEvent } from 'react'
+import { useEffect, useRef, useState, type ChangeEvent, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent } from 'react'
 import { Room, RoomEvent, Track, type RemoteParticipant, type LocalParticipant, type TrackPublication } from 'livekit-client'
 import { supabase } from '../lib/supabase'
 import { fetchLiveKitToken } from '../lib/livekit'
@@ -48,6 +48,7 @@ type ChannelMessage = PlayMessage & { author?: Profile }
 
 export function ThothPlay({ me, onBack }: Props) {
   const [myPlayProfile, setMyPlayProfile] = useState<Profile>(me)
+  const [playTheme, setPlayTheme] = useState<'light' | 'dark'>('dark')
   const [showProfile, setShowProfile] = useState(false)
   const [myGroups, setMyGroups] = useState<PlayGroup[]>([])
   const [browseGroups, setBrowseGroups] = useState<PlayGroup[]>([])
@@ -95,12 +96,22 @@ export function ThothPlay({ me, onBack }: Props) {
 
   async function loadMyPlayProfile() {
     const { data } = await supabase.from('play_profiles').select('*').eq('user_id', me.id).maybeSingle()
-    setMyPlayProfile(mergePlayProfile(me, data as PlayProfile | null))
+    const p = data as PlayProfile | null
+    setMyPlayProfile(mergePlayProfile(me, p))
+    setPlayTheme(p?.theme_preference || 'dark')
   }
 
   useEffect(() => {
     loadMyPlayProfile()
   }, [me.id])
+
+  // No desktop, a raiz temada de verdade e a janela Tauri inteira
+  // (.play-window-shell, renderizada por DesktopPlayWindow por fora do que
+  // este componente controla) - propaga o tema escolhido pra ela tambem, sem
+  // isso a troca manual so funcionaria no web/mobile.
+  useEffect(() => {
+    document.querySelector('.play-window-shell')?.setAttribute('data-theme', playTheme)
+  }, [playTheme])
 
   async function fetchChannels(groupId: string) {
     const { data } = await supabase.from('play_channels').select('*').eq('group_id', groupId).order('position', { ascending: true })
@@ -289,7 +300,7 @@ export function ThothPlay({ me, onBack }: Props) {
   }
 
   return (
-    <div className="play-app-shell">
+    <div className="play-app-shell" data-theme={playTheme}>
       <PlayIconRail
         myGroups={myGroups}
         selectedGroupId={selectedGroup?.id ?? null}
@@ -1468,8 +1479,10 @@ function ProfilePanel({ me, open, onClose, onSaved }: { me: Profile; open: boole
   const [font, setFont] = useState<string | null>(null)
   const [effect, setEffect] = useState<'solid' | 'gradient' | 'neon' | 'prism' | null>(null)
   const [color, setColor] = useState<string | null>(null)
+  const [themePref, setThemePref] = useState<'light' | 'dark'>('dark')
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
+  const [cropFile, setCropFile] = useState<File | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -1483,6 +1496,7 @@ function ProfilePanel({ me, open, onClose, onSaved }: { me: Profile; open: boole
       setFont(p?.name_style_font || null)
       setEffect(p?.name_style_effect || null)
       setColor(p?.name_style_color || null)
+      setThemePref(p?.theme_preference || 'dark')
       setLoaded(true)
     })
   }, [me.id, open])
@@ -1500,17 +1514,23 @@ function ProfilePanel({ me, open, onClose, onSaved }: { me: Profile; open: boole
       name_style_font: font,
       name_style_effect: effect,
       name_style_color: color,
+      theme_preference: themePref,
     })
     setSaving(false)
     onSaved()
   }
 
-  async function handleAvatarPick(e: ChangeEvent<HTMLInputElement>) {
+  function handleAvatarPick(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
-    if (!file) return
+    if (file) setCropFile(file)
+    e.target.value = ''
+  }
+
+  async function handleCropConfirm(blob: Blob) {
+    setCropFile(null)
     setUploading(true)
     try {
-      const url = await uploadImage(file, me.id, 'play-avatar')
+      const url = await uploadImage(new File([blob], 'avatar.jpg', { type: 'image/jpeg' }), me.id, 'play-avatar')
       setAvatarUrl(url)
       await upsert({ avatar_url: url })
       onSaved()
@@ -1520,7 +1540,9 @@ function ProfilePanel({ me, open, onClose, onSaved }: { me: Profile; open: boole
   }
 
   return (
-    <div className={`new-conv-panel${open ? ' open' : ''}`}>
+    <>
+      {open && <div className="play-profile-panel-backdrop" onClick={onClose} />}
+      <div className={`new-conv-panel play-profile-panel${open ? ' open' : ''}`}>
       <div className="new-conv-header">
         <button type="button" className="icon-btn" onClick={onClose}><IconArrowLeft size={20} /></button>
         <strong>Perfil</strong>
@@ -1569,14 +1591,99 @@ function ProfilePanel({ me, open, onClose, onSaved }: { me: Profile; open: boole
                 </button>
               ))}
             </div>
-            <label style={{ marginTop: 10 }}>Cor</label>
-            <input type="color" value={color && color.startsWith('#') ? color : '#3b6ef6'} onChange={(ev) => setColor(ev.target.value)} style={{ width: 60, height: 34, padding: 2, marginTop: 2 }} />
+            <label style={{ marginTop: 10 }}>Cor{effect === 'prism' ? ' (fixa no efeito prisma)' : ''}</label>
+            <input
+              type="color"
+              value={color && color.startsWith('#') ? color : '#3b6ef6'}
+              onChange={(ev) => setColor(ev.target.value)}
+              disabled={effect === 'prism'}
+              style={{ width: 60, height: 34, padding: 2, marginTop: 2, opacity: effect === 'prism' ? 0.4 : 1, cursor: effect === 'prism' ? 'not-allowed' : 'pointer' }}
+            />
+
+            <label style={{ marginTop: 14 }}>Tema do Play</label>
+            <div className="play-group-privacy-toggle">
+              <button type="button" className={themePref === 'light' ? 'active' : ''} onClick={() => setThemePref('light')}>Claro</button>
+              <button type="button" className={themePref === 'dark' ? 'active' : ''} onClick={() => setThemePref('dark')}>Escuro</button>
+            </div>
           </>
         )}
 
         <button type="button" className="google-btn" style={{ marginTop: 14 }} disabled={saving} onClick={save}>
           {saving ? 'Salvando...' : 'Salvar'}
         </button>
+      </div>
+      </div>
+      {cropFile && <AvatarCropModal file={cropFile} onCancel={() => setCropFile(null)} onConfirm={handleCropConfirm} />}
+    </>
+  )
+}
+
+function AvatarCropModal({ file, onCancel, onConfirm }: { file: File; onCancel: () => void; onConfirm: (blob: Blob) => void }) {
+  const SIZE = 240
+  const OUT = 256
+  const [imgUrl] = useState(() => URL.createObjectURL(file))
+  const [zoom, setZoom] = useState(1)
+  const [pos, setPos] = useState({ x: 0, y: 0 })
+  const dragRef = useRef<{ startX: number; startY: number; origX: number; origY: number } | null>(null)
+  const imgRef = useRef<HTMLImageElement>(null)
+
+  useEffect(() => () => URL.revokeObjectURL(imgUrl), [imgUrl])
+
+  function onPointerDown(e: ReactPointerEvent<HTMLDivElement>) {
+    dragRef.current = { startX: e.clientX, startY: e.clientY, origX: pos.x, origY: pos.y }
+    e.currentTarget.setPointerCapture(e.pointerId)
+  }
+  function onPointerMove(e: ReactPointerEvent<HTMLDivElement>) {
+    if (!dragRef.current) return
+    setPos({ x: dragRef.current.origX + (e.clientX - dragRef.current.startX), y: dragRef.current.origY + (e.clientY - dragRef.current.startY) })
+  }
+  function onPointerUp() { dragRef.current = null }
+
+  function confirm() {
+    const img = imgRef.current
+    if (!img) return
+    const canvas = document.createElement('canvas')
+    canvas.width = OUT
+    canvas.height = OUT
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+    const baseScale = Math.max(SIZE / img.naturalWidth, SIZE / img.naturalHeight)
+    const scale = baseScale * zoom * (OUT / SIZE)
+    const drawW = img.naturalWidth * scale
+    const drawH = img.naturalHeight * scale
+    const drawX = OUT / 2 - drawW / 2 + pos.x * (OUT / SIZE)
+    const drawY = OUT / 2 - drawH / 2 + pos.y * (OUT / SIZE)
+    ctx.save()
+    ctx.beginPath()
+    ctx.arc(OUT / 2, OUT / 2, OUT / 2, 0, Math.PI * 2)
+    ctx.clip()
+    ctx.drawImage(img, drawX, drawY, drawW, drawH)
+    ctx.restore()
+    canvas.toBlob((blob) => { if (blob) onConfirm(blob) }, 'image/jpeg', 0.9)
+  }
+
+  return (
+    <div className="modal-backdrop" onClick={onCancel}>
+      <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+        <h2>Ajustar foto</h2>
+        <div
+          className="play-avatar-crop-viewport"
+          style={{ width: SIZE, height: SIZE }}
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={onPointerUp}
+        >
+          <img
+            ref={imgRef}
+            src={imgUrl}
+            alt=""
+            draggable={false}
+            style={{ transform: `translate(calc(-50% + ${pos.x}px), calc(-50% + ${pos.y}px)) scale(${zoom})` }}
+          />
+        </div>
+        <input type="range" min="1" max="3" step="0.05" value={zoom} onChange={(e) => setZoom(Number(e.target.value))} style={{ width: '100%', marginTop: 12 }} />
+        <button type="button" className="google-btn" style={{ marginTop: 10 }} onClick={confirm}>Usar essa foto</button>
+        <button type="button" className="modal-close" onClick={onCancel}>cancelar</button>
       </div>
     </div>
   )

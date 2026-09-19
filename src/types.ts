@@ -83,6 +83,7 @@ export type PlayProfile = {
   name_style_font: string | null
   name_style_effect: 'solid' | 'gradient' | 'neon' | 'prism' | null
   name_style_color: string | null
+  theme_preference: 'light' | 'dark' | null
   updated_at: string
 }
 

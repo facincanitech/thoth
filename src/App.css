@@ -846,7 +846,7 @@ body{
 .name-effect-prism{
   background-image:linear-gradient(90deg,#ff0000,#ff9900,#33ff00,#00fffb,#0066ff,#cc00ff,#ff0000);
   background-size:400% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;
-  animation:namePrismShift 8s linear infinite;
+  animation:namePrismShift 20s linear infinite;
 }
 @keyframes namePrismShift{
   0%{background-position:400% 50%}
@@ -1495,7 +1495,27 @@ body{
 .play-empty{color:var(--muted);font-size:13px;padding:8px 0}
 .play-empty.error{color:#e5484d}
 
-.play-app-shell{flex:1;min-width:0;min-height:0;display:flex;overflow:hidden;background:var(--bg-deep)}
+/* Play tem tema proprio (claro/escuro, escolhido no perfil) - independente
+   do tema geral do app (que pode estar em frutiger/contraste/etc). */
+.play-app-shell{position:relative;flex:1;min-width:0;min-height:0;display:flex;overflow:hidden;background:var(--bg-deep)}
+.play-app-shell[data-theme="light"]{
+  --bg-deep:#d8ebf7;--bg-panel:#fff;--bg-surface:#fff;--bg-surface-2:#ffffff;--bg-selected:#eef8ff;
+  --line:#c7dced;--line-2:#c7dced;--muted:#5c7688;--text:#1c2733;--text-secondary:#3f5b6d;
+  --accent-text:#087dac;--avatar-bg:#eef8ff;--green:#5fb4e2;--on-button:#fff;--input:#ffffff;
+  --shadow:0 12px 36px rgb(8 125 172 / 12%);
+}
+.play-app-shell[data-theme="dark"]{
+  --bg-deep:#10151e;--bg-panel:#161d28;--bg-surface:#1c2532;--bg-surface-2:#222d3c;--bg-selected:#243451;
+  --line:#293342;--line-2:#364152;--muted:#9ca7b8;--text:#eef1f7;--text-secondary:#bec7d5;
+  --accent-text:#a4b5ff;--avatar-bg:#35445c;--green:#7892ff;--on-button:#fff;--input:#222d3c;
+  --shadow:0 12px 36px rgb(0 0 0 / 22%);
+}
+.play-profile-panel-backdrop{position:absolute;inset:0;background:rgb(0 0 0 / 35%);z-index:39}
+.play-profile-panel{inset:0 auto 0 0;width:360px;max-width:88vw;box-shadow:2px 0 24px rgb(0 0 0 / 25%)}
+
+.play-avatar-crop-viewport{position:relative;overflow:hidden;border-radius:50%;background:#000;margin:0 auto;touch-action:none;cursor:grab}
+.play-avatar-crop-viewport:active{cursor:grabbing}
+.play-avatar-crop-viewport img{position:absolute;top:50%;left:50%;width:100%;height:100%;object-fit:cover;transform-origin:center;pointer-events:none;user-select:none}
 .play-group-view{flex:1;min-width:0;min-height:0;display:flex;overflow:hidden}
 
 /* Rail fica fora do grupo/home - lista permanente dos "meus grupos" (estilo

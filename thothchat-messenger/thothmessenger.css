@@ -357,6 +357,25 @@
 .play-window-shell .modal-card h2{color:var(--text-base)}
 .play-window-shell .google-btn{background:linear-gradient(#29bdf1,#087dcc);border-color:#0574b2;color:#fff}
 
+/* Tema claro/escuro do Play e independente do resto do app (escolhido no
+   perfil, nao segue a aparencia do exe) - atributo explicito sempre vence o
+   prefers-color-scheme abaixo, que so continua servindo de fallback quando
+   ninguem escolheu nada ainda. */
+.play-window-shell[data-theme="light"]{
+  --bg-deep:#f8fdff;--bg-panel:#eefaff;--bg-surface:#fff;--bg-surface-2:#dff4fc;--bg-selected:#d2f1fc;
+  --line:#82c6df;--line-2:#acdceb;--text:#073d68;--text-base:#073d68;--text-secondary:#285f82;
+  --muted:#628ba2;--accent-text:#0877bd;--input:#fff;--avatar-bg:#dcedf5;--green:#078cd1;--on-button:#fff;
+  --play-glass-top:#f7fdff;--play-glass-bottom:#ccebf7;--play-rail-top:#18afe3;--play-rail-bottom:#047dac;
+  --play-canvas:#fff;--play-heading:#0752a0;--play-cyan:#08a9eb;--shadow:0 10px 28px rgb(0 69 103 / 18%);
+}
+.play-window-shell[data-theme="dark"]{
+  --bg-deep:#07111c;--bg-panel:#0b2031;--bg-surface:#0b1b29;--bg-surface-2:#0a1926;--bg-selected:#0b3651;
+  --line:#087eb0;--line-2:#18506d;--text:#d8f3ff;--text-base:#d8f3ff;--text-secondary:#a6cce0;
+  --muted:#78a5be;--accent-text:#35c7ff;--input:#071827;--avatar-bg:#142b3d;--green:#1aaee8;--on-button:#fff;
+  --play-glass-top:#123b59;--play-glass-bottom:#0a2539;--play-rail-top:#075e91;--play-rail-bottom:#04263d;
+  --play-canvas:#081827;--play-heading:#66d7ff;--play-cyan:#18baf4;--shadow:0 12px 30px rgb(0 0 0 / 45%);
+}
+
 @media(prefers-color-scheme:dark){
   .play-window-shell{
     --bg-deep:#07111c;--bg-panel:#0b2031;--bg-surface:#0b1b29;--bg-surface-2:#0a1926;--bg-selected:#0b3651;
