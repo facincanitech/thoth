@@ -17,6 +17,7 @@ import { downloadAndInstallUpdate } from '../lib/appUpdate'
 import { downloadAndInstallDesktopUpdate } from '../lib/desktopUpdate'
 import { isTauriDesktop } from '../lib/platform'
 import { getPresenceColor } from '../lib/presence'
+import { playMessageSound } from '../lib/notificationSound'
 import {
   IconArchive,
   IconArrowLeft,
@@ -842,7 +843,11 @@ export function ChatList({
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'messages' },
-        () => loadConversations(),
+        (payload) => {
+          loadConversations()
+          const row = payload.new as { author_id?: string }
+          if (row.author_id && row.author_id !== me.id) playMessageSound()
+        },
       )
       .on(
         'postgres_changes',

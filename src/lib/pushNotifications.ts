@@ -36,13 +36,17 @@ export async function registerPushNotifications(userId: string) {
 
   await LocalNotifications.requestPermissions().catch(() => {})
 
+  // Canal de notificacao no Android e imutavel depois de criado (o SO ignora
+  // troca de som em canal ja existente) - id novo (_v2) pra quem ja tinha o
+  // app instalado com o canal antigo (som padrao) realmente ganhar o som
+  // customizado, em vez de continuar preso no canal velho pra sempre.
   await LocalNotifications.createChannel({
-    id: 'flux_messages',
+    id: 'flux_messages_v2',
     name: 'Mensagens do ThothChat',
     description: 'Mensagens, sininho e winks',
     importance: 5,
     visibility: 1,
-    sound: undefined,
+    sound: 'notify.mp3',
     vibration: true,
     lights: true,
   }).catch(() => {})
@@ -102,7 +106,7 @@ export async function registerPushNotifications(userId: string) {
           id: Math.floor(Math.random() * 1000000),
           title: notification.title || 'ThothChat',
           body: notification.body || '',
-          channelId: isCall ? 'flux_calls' : 'flux_messages',
+          channelId: isCall ? 'flux_calls' : 'flux_messages_v2',
           ...(!isCall && data?.conversationId
             ? { actionTypeId: 'MESSAGE_REPLY', extra: { conversationId: data.conversationId } }
             : {}),

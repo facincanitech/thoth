@@ -1,26 +1,10 @@
-let audioCtx: AudioContext | null = null
-
-function getContext() {
-  if (!audioCtx) audioCtx = new AudioContext()
-  return audioCtx
-}
+let nudgeAudio: HTMLAudioElement | null = null
 
 export function playNudgeSound() {
   try {
-    const ctx = getContext()
-    const now = ctx.currentTime
-    ;[0, 0.12].forEach((offset) => {
-      const osc = ctx.createOscillator()
-      const gain = ctx.createGain()
-      osc.type = 'square'
-      osc.frequency.value = 880
-      gain.gain.setValueAtTime(0.15, now + offset)
-      gain.gain.exponentialRampToValueAtTime(0.001, now + offset + 0.1)
-      osc.connect(gain)
-      gain.connect(ctx.destination)
-      osc.start(now + offset)
-      osc.stop(now + offset + 0.1)
-    })
+    if (!nudgeAudio) nudgeAudio = new Audio(`${import.meta.env.BASE_URL}sounds/nudge.mp3`)
+    nudgeAudio.currentTime = 0
+    nudgeAudio.play().catch(() => {})
   } catch {
     // audio not available (autoplay policy, unsupported browser) — fail silently
   }
