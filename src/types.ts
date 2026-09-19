@@ -69,6 +69,7 @@ export type PlayGroup = {
   description: string | null
   image_url: string | null
   is_closed: boolean
+  tags: string[]
   invite_code: string
   created_by: string
   created_at: string

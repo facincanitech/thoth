@@ -11,7 +11,7 @@ import { uploadImage } from '../lib/uploadImage'
 import {
   IconArrowLeft, IconChevronDown, IconCopy, IconEdit, IconGamepad, IconGrip, IconHash, IconHeadphones,
   IconLock, IconLockOpen, IconLogout, IconMic, IconMicOff, IconMonitorShare, IconPhoneOff, IconPlus,
-  IconSend, IconSettingsGear, IconTrash, IconUser, IconVideo, IconVideoOff,
+  IconSearch, IconSend, IconSettingsGear, IconTrash, IconUser, IconVideo, IconVideoOff,
 } from './icons'
 import type { PlayCategory, PlayChannel, PlayGroup, PlayMessage, PlayProfile, Profile } from '../types'
 
@@ -542,6 +542,7 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
     const channel = supabase
       .channel(`play-profiles-refresh:${group.id}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'play_profiles' }, () => loadMembers())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'play_group_members', filter: `group_id=eq.${group.id}` }, () => loadMembers())
       .subscribe()
     return () => {
       cancelled = true
@@ -847,6 +848,8 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
             <GroupInfoPanel
               group={group}
               myRole={myRole}
+              members={members}
+              me={me}
               open={showGroupInfo}
               onClose={() => setShowGroupInfo(false)}
               onUpdate={onGroupUpdate}
@@ -1002,28 +1005,100 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
   )
 }
 
-function GroupInfoPanel({ group, myRole, open, onClose, onUpdate }: {
-  group: PlayGroup; myRole: string | null; open: boolean; onClose: () => void; onUpdate: (patch: Partial<PlayGroup>) => void
+function GroupInfoPanel({ group, myRole, members, me, open, onClose, onUpdate }: {
+  group: PlayGroup; myRole: string | null; members: GroupMember[]; me: Profile; open: boolean; onClose: () => void; onUpdate: (patch: Partial<PlayGroup>) => void
 }) {
+  const canManage = myRole === 'owner' || myRole === 'admin'
   const isOwner = myRole === 'owner'
+  const [tab, setTab] = useState<'geral' | 'membros'>('geral')
   const [name, setName] = useState(group.name)
   const [description, setDescription] = useState(group.description || '')
+  const [tagDraft, setTagDraft] = useState('')
+  const [tags, setTags] = useState<string[]>(group.tags || [])
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const fileRef = useRef<HTMLInputElement>(null)
+  const [privacySaving, setPrivacySaving] = useState(false)
+  const [closePassword, setClosePassword] = useState('')
+  const [showClosePrompt, setShowClosePrompt] = useState(false)
+  const [memberSearch, setMemberSearch] = useState('')
+  const [bans, setBans] = useState<{ user_id: string; profile?: Profile }[]>([])
 
   useEffect(() => {
     setName(group.name)
     setDescription(group.description || '')
+    setTags(group.tags || [])
   }, [group.id, open])
+
+  useEffect(() => {
+    if (!open || tab !== 'membros' || !canManage) return
+    let cancelled = false
+    async function loadBans() {
+      const { data: rows } = await supabase.from('play_group_bans').select('user_id').eq('group_id', group.id)
+      const ids = (rows || []).map((r) => r.user_id as string)
+      if (!ids.length) { if (!cancelled) setBans([]); return }
+      const { data: profiles } = await supabase.from('profiles').select('*').in('id', ids)
+      if (cancelled) return
+      const profileMap = Object.fromEntries((profiles || []).map((p) => [p.id, p as Profile]))
+      setBans(ids.map((id) => ({ user_id: id, profile: profileMap[id] })))
+    }
+    loadBans()
+    return () => { cancelled = true }
+  }, [open, tab, canManage, group.id])
 
   async function save() {
     setSaving(true)
     setError(null)
-    const { error: err } = await supabase.from('play_groups').update({ name: name.trim(), description: description.trim() || null }).eq('id', group.id)
+    const { error: err } = await supabase.from('play_groups').update({ name: name.trim(), description: description.trim() || null, tags }).eq('id', group.id)
     setSaving(false)
     if (err) { setError(err.message); return }
-    onUpdate({ name: name.trim(), description: description.trim() || null })
+    onUpdate({ name: name.trim(), description: description.trim() || null, tags })
+  }
+
+  function addTag() {
+    const t = tagDraft.trim()
+    if (!t || tags.length >= 4) return
+    setTags([...tags, t])
+    setTagDraft('')
+  }
+
+  function removeTag(t: string) {
+    setTags(tags.filter((x) => x !== t))
+  }
+
+  async function handleImagePick(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploading(true)
+    try {
+      const url = await uploadImage(file, group.id, 'play-group')
+      await supabase.from('play_groups').update({ image_url: url }).eq('id', group.id)
+      onUpdate({ image_url: url })
+    } finally {
+      setUploading(false)
+      if (fileRef.current) fileRef.current.value = ''
+    }
+  }
+
+  async function togglePrivacy(nextClosed: boolean) {
+    if (nextClosed) { setShowClosePrompt(true); return }
+    setPrivacySaving(true)
+    const { error: err } = await supabase.rpc('set_play_group_privacy', { p_group_id: group.id, p_is_closed: false })
+    setPrivacySaving(false)
+    if (!err) onUpdate({ is_closed: false })
+  }
+
+  async function confirmClose() {
+    setPrivacySaving(true)
+    const { error: err } = await supabase.rpc('set_play_group_privacy', { p_group_id: group.id, p_is_closed: true, p_password: closePassword || null })
+    setPrivacySaving(false)
+    if (!err) {
+      onUpdate({ is_closed: true })
+      setShowClosePrompt(false)
+      setClosePassword('')
+    }
   }
 
   async function deleteGroup() {
@@ -1032,49 +1107,153 @@ function GroupInfoPanel({ group, myRole, open, onClose, onUpdate }: {
     window.location.reload()
   }
 
+  async function kickMember(userId: string) {
+    if (!confirm('Remover esta pessoa do grupo?')) return
+    await supabase.from('play_group_members').delete().eq('group_id', group.id).eq('user_id', userId)
+  }
+
+  async function banMember(userId: string) {
+    if (!confirm('Banir esta pessoa? Ela não vai poder voltar por convite até ser desbanida.')) return
+    await supabase.rpc('ban_play_group_member', { p_group_id: group.id, p_user_id: userId })
+    setBans((prev) => (prev.some((b) => b.user_id === userId) ? prev : [...prev, { user_id: userId }]))
+  }
+
+  async function unbanMember(userId: string) {
+    await supabase.rpc('unban_play_group_member', { p_group_id: group.id, p_user_id: userId })
+    setBans((prev) => prev.filter((b) => b.user_id !== userId))
+  }
+
+  const filteredMembers = members.filter((m) => displayName(m.profile).toLowerCase().includes(memberSearch.trim().toLowerCase()))
+
   return (
     <div className={`new-conv-panel${open ? ' open' : ''}`}>
       <div className="new-conv-header">
         <button type="button" className="icon-btn" onClick={onClose}><IconArrowLeft size={20} /></button>
         <strong>Sobre o grupo</strong>
       </div>
-      <div className="play-group-info-body">
-        <div className="play-group-info-avatar">
-          <AvatarBox src={group.image_url} id={group.id} fallbackLetter={group.name[0]?.toUpperCase()} className="play-group-avatar" />
-        </div>
-        {isOwner ? (
-          <>
-            <label>Nome</label>
-            <input value={name} onChange={(e) => setName(e.target.value)} />
-            <label style={{ marginTop: 10 }}>Descrição</label>
-            <input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Sem descrição" />
-            {error && <p className="auth-error">{error}</p>}
-            <button type="button" className="google-btn" style={{ marginTop: 10 }} disabled={saving || !name.trim()} onClick={save}>
-              {saving ? 'Salvando...' : 'Salvar'}
-            </button>
-          </>
-        ) : (
-          <>
-            <h2 style={{ margin: '8px 0 4px' }}>{group.name}</h2>
-            <p style={{ color: 'var(--text-secondary)' }}>{group.description || 'sem descrição'}</p>
-          </>
-        )}
-        <div className="play-group-info-badge">
-          {group.is_closed ? <><IconLock size={13} /> Grupo fechado</> : <><IconLockOpen size={13} /> Grupo aberto</>}
-        </div>
 
-        {isOwner && (
-          confirmDelete ? (
-            <div style={{ marginTop: 20 }}>
-              <p style={{ color: 'var(--danger, #e5484d)' }}>Excluir o grupo apaga todos os canais e mensagens. Não dá pra desfazer.</p>
-              <button type="button" className="settings-danger-btn" onClick={deleteGroup}>Confirmar exclusão</button>
-              <button type="button" className="modal-close" onClick={() => setConfirmDelete(false)}>cancelar</button>
-            </div>
+      {canManage && (
+        <div className="play-group-info-tabs">
+          <button type="button" className={tab === 'geral' ? 'active' : ''} onClick={() => setTab('geral')}>Geral</button>
+          <button type="button" className={tab === 'membros' ? 'active' : ''} onClick={() => setTab('membros')}>Membros</button>
+        </div>
+      )}
+
+      {(tab === 'geral' || !canManage) && (
+        <div className="play-group-info-body">
+          <div className="play-group-info-avatar">
+            {isOwner ? (
+              <button type="button" onClick={() => fileRef.current?.click()} style={{ border: 0, padding: 0, cursor: 'pointer', background: 'none' }} disabled={uploading}>
+                <AvatarBox src={group.image_url} id={group.id} fallbackLetter={group.name[0]?.toUpperCase()} className="play-group-avatar" />
+              </button>
+            ) : (
+              <AvatarBox src={group.image_url} id={group.id} fallbackLetter={group.name[0]?.toUpperCase()} className="play-group-avatar" />
+            )}
+            {isOwner && <input ref={fileRef} type="file" accept="image/*" hidden onChange={handleImagePick} />}
+            {uploading && <span className="play-empty">enviando...</span>}
+          </div>
+          {isOwner ? (
+            <>
+              <label>Nome</label>
+              <input value={name} onChange={(e) => setName(e.target.value)} />
+              <label style={{ marginTop: 10 }}>Descrição</label>
+              <input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Sem descrição" />
+              <label style={{ marginTop: 10 }}>Características (até 4)</label>
+              <div className="play-group-tags">
+                {tags.map((t) => (
+                  <span key={t} className="play-group-tag">{t} <button type="button" onClick={() => removeTag(t)}>×</button></span>
+                ))}
+              </div>
+              {tags.length < 4 && (
+                <div className="play-invite-code-row" style={{ marginTop: 6 }}>
+                  <input placeholder="ex.: 🎮 gamer" value={tagDraft} onChange={(e) => setTagDraft(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') addTag() }} />
+                  <button type="button" className="google-btn" style={{ width: 'auto' }} onClick={addTag}>Adicionar</button>
+                </div>
+              )}
+              {error && <p className="auth-error">{error}</p>}
+              <button type="button" className="google-btn" style={{ marginTop: 10 }} disabled={saving || !name.trim()} onClick={save}>
+                {saving ? 'Salvando...' : 'Salvar'}
+              </button>
+
+              <label style={{ marginTop: 16 }}>Privacidade</label>
+              <div className="play-group-privacy-toggle">
+                <button type="button" className={!group.is_closed ? 'active' : ''} disabled={privacySaving} onClick={() => togglePrivacy(false)}>
+                  <IconLockOpen size={13} /> Aberto
+                </button>
+                <button type="button" className={group.is_closed ? 'active' : ''} disabled={privacySaving} onClick={() => togglePrivacy(true)}>
+                  <IconLock size={13} /> Fechado
+                </button>
+              </div>
+              {showClosePrompt && (
+                <div className="play-invite-code-row" style={{ marginTop: 8 }}>
+                  <input type="password" placeholder="Senha (opcional)" value={closePassword} onChange={(e) => setClosePassword(e.target.value)} />
+                  <button type="button" className="google-btn" style={{ width: 'auto' }} disabled={privacySaving} onClick={confirmClose}>Confirmar</button>
+                </div>
+              )}
+            </>
           ) : (
-            <button type="button" className="settings-danger-btn" style={{ marginTop: 20 }} onClick={() => setConfirmDelete(true)}>Excluir grupo</button>
-          )
-        )}
-      </div>
+            <>
+              <h2 style={{ margin: '8px 0 4px' }}>{group.name}</h2>
+              <p style={{ color: 'var(--text-secondary)' }}>{group.description || 'sem descrição'}</p>
+              {tags.length > 0 && (
+                <div className="play-group-tags">
+                  {tags.map((t) => <span key={t} className="play-group-tag">{t}</span>)}
+                </div>
+              )}
+            </>
+          )}
+          <div className="play-group-info-badge">
+            {group.is_closed ? <><IconLock size={13} /> Grupo fechado</> : <><IconLockOpen size={13} /> Grupo aberto</>}
+          </div>
+
+          {isOwner && (
+            confirmDelete ? (
+              <div style={{ marginTop: 20 }}>
+                <p style={{ color: 'var(--danger, #e5484d)' }}>Excluir o grupo apaga todos os canais e mensagens. Não dá pra desfazer.</p>
+                <button type="button" className="settings-danger-btn" onClick={deleteGroup}>Confirmar exclusão</button>
+                <button type="button" className="modal-close" onClick={() => setConfirmDelete(false)}>cancelar</button>
+              </div>
+            ) : (
+              <button type="button" className="settings-danger-btn" style={{ marginTop: 20 }} onClick={() => setConfirmDelete(true)}>Excluir grupo</button>
+            )
+          )}
+        </div>
+      )}
+
+      {tab === 'membros' && canManage && (
+        <div className="play-group-info-body">
+          <div className="play-member-search">
+            <IconSearch size={14} />
+            <input placeholder="Buscar membro..." value={memberSearch} onChange={(e) => setMemberSearch(e.target.value)} />
+          </div>
+          {filteredMembers.map((m) => (
+            <div key={m.profile.id} className="play-manage-member-row">
+              <AvatarBox src={m.profile.avatar_url} id={m.profile.id} fallbackLetter={displayName(m.profile)[0]?.toUpperCase()} className="avatar-sm" />
+              <span>{displayName(m.profile)}{m.profile.id === me.id ? ' (você)' : ''}</span>
+              <span className="play-manage-member-role">{m.role}</span>
+              {m.role === 'member' && m.profile.id !== me.id && (
+                <div className="play-manage-member-actions">
+                  <button type="button" onClick={() => kickMember(m.profile.id)} title="Remover"><IconLogout size={14} /></button>
+                  <button type="button" className="danger" onClick={() => banMember(m.profile.id)} title="Banir"><IconTrash size={14} /></button>
+                </div>
+              )}
+            </div>
+          ))}
+
+          {bans.length > 0 && (
+            <>
+              <label style={{ marginTop: 16 }}>Banidos</label>
+              {bans.map((b) => (
+                <div key={b.user_id} className="play-manage-member-row">
+                  <AvatarBox src={b.profile?.avatar_url || null} id={b.user_id} fallbackLetter={(b.profile ? displayName(b.profile) : '?')[0]?.toUpperCase()} className="avatar-sm" />
+                  <span>{b.profile ? displayName(b.profile) : 'usuário'}</span>
+                  <button type="button" className="play-manage-member-unban" onClick={() => unbanMember(b.user_id)}>Desbanir</button>
+                </div>
+              ))}
+            </>
+          )}
+        </div>
+      )}
     </div>
   )
 }
