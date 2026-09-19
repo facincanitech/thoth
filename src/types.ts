@@ -92,9 +92,18 @@ export type PlayGroupMember = {
   joined_at: string
 }
 
+export type PlayCategory = {
+  id: string
+  group_id: string
+  name: string
+  position: number
+  created_at: string
+}
+
 export type PlayChannel = {
   id: string
   group_id: string
+  category_id: string | null
   name: string
   kind: 'text' | 'voice'
   position: number

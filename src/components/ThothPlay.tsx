@@ -9,11 +9,11 @@ import { ReplayPlayer, type ReplayEvent } from './ReplayPlayer'
 import { StyledName, NAME_FONTS, NAME_EFFECTS } from './StyledName'
 import { uploadImage } from '../lib/uploadImage'
 import {
-  IconArrowLeft, IconChevronDown, IconCopy, IconGamepad, IconHash, IconHeadphones, IconLock, IconLockOpen,
-  IconLogout, IconMic, IconMicOff, IconMonitorShare, IconPhoneOff, IconPlus, IconSend, IconSettingsGear,
-  IconUser, IconVideo, IconVideoOff,
+  IconArrowLeft, IconChevronDown, IconCopy, IconEdit, IconGamepad, IconGrip, IconHash, IconHeadphones,
+  IconLock, IconLockOpen, IconLogout, IconMic, IconMicOff, IconMonitorShare, IconPhoneOff, IconPlus,
+  IconSend, IconSettingsGear, IconTrash, IconUser, IconVideo, IconVideoOff,
 } from './icons'
-import type { PlayChannel, PlayGroup, PlayMessage, PlayProfile, Profile } from '../types'
+import type { PlayCategory, PlayChannel, PlayGroup, PlayMessage, PlayProfile, Profile } from '../types'
 
 // A identidade dentro do Thoth Play e separada da conta principal - editar nome/
 // foto/status aqui dentro nao mexe no perfil usado no chat/mensageiro. So cai no
@@ -54,6 +54,7 @@ export function ThothPlay({ me, onBack }: Props) {
   const [loading, setLoading] = useState(true)
   const [selectedGroup, setSelectedGroup] = useState<PlayGroup | null>(null)
   const [channels, setChannels] = useState<PlayChannel[]>([])
+  const [categories, setCategories] = useState<PlayCategory[]>([])
   const [selectedChannel, setSelectedChannel] = useState<PlayChannel | null>(null)
   const [messages, setMessages] = useState<ChannelMessage[]>([])
   const [hasReplaySet, setHasReplaySet] = useState<Set<string>>(new Set())
@@ -108,6 +109,13 @@ export function ThothPlay({ me, onBack }: Props) {
     return list
   }
 
+  async function fetchCategories(groupId: string) {
+    const { data } = await supabase.from('play_categories').select('*').eq('group_id', groupId).order('position', { ascending: true })
+    const list = (data || []) as PlayCategory[]
+    setCategories(list)
+    return list
+  }
+
   async function loadChannels(groupId: string) {
     const list = await fetchChannels(groupId)
     const firstText = list.find((c) => c.kind === 'text')
@@ -118,12 +126,13 @@ export function ThothPlay({ me, onBack }: Props) {
     setSelectedGroup(group)
     setSelectedChannel(null)
     setMessages([])
+    await fetchCategories(group.id)
     await loadChannels(group.id)
   }
 
-  // Sincroniza a lista de canais em tempo real - sem isso, um canal criado em
-  // outra aba/dispositivo (ou por outro membro) so aparecia se vc reabrisse o
-  // grupo do zero.
+  // Sincroniza canais e categorias em tempo real - sem isso, uma mudanca feita
+  // em outra aba/dispositivo (ou por outro membro) so aparecia se vc reabrisse
+  // o grupo do zero.
   useEffect(() => {
     if (!selectedGroup) return
     const channel = supabase
@@ -132,6 +141,11 @@ export function ThothPlay({ me, onBack }: Props) {
         'postgres_changes',
         { event: '*', schema: 'public', table: 'play_channels', filter: `group_id=eq.${selectedGroup.id}` },
         () => fetchChannels(selectedGroup.id),
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'play_categories', filter: `group_id=eq.${selectedGroup.id}` },
+        () => fetchCategories(selectedGroup.id),
       )
       .subscribe()
     return () => {
@@ -292,6 +306,7 @@ export function ThothPlay({ me, onBack }: Props) {
           myPlayProfile={myPlayProfile}
           group={selectedGroup}
           channels={channels}
+          categories={categories}
           selectedChannel={selectedChannel}
           messages={messages}
           hasReplaySet={hasReplaySet}
@@ -301,6 +316,7 @@ export function ThothPlay({ me, onBack }: Props) {
           onSend={sendMessage}
           onSelectChannel={openChannel}
           onChannelsChange={() => fetchChannels(selectedGroup.id)}
+          onCategoriesChange={() => fetchCategories(selectedGroup.id)}
           onGroupUpdate={(patch) => setSelectedGroup((g) => (g ? { ...g, ...patch } : g))}
           onLeftGroup={() => { goHome(); loadGroups() }}
           onExitToMessenger={onBack}
@@ -449,6 +465,7 @@ type GroupViewProps = {
   myPlayProfile: Profile
   group: PlayGroup
   channels: PlayChannel[]
+  categories: PlayCategory[]
   selectedChannel: PlayChannel | null
   messages: ChannelMessage[]
   hasReplaySet: Set<string>
@@ -458,6 +475,7 @@ type GroupViewProps = {
   onSend: () => void
   onSelectChannel: (c: PlayChannel) => void
   onChannelsChange: () => void
+  onCategoriesChange: () => void
   onGroupUpdate: (patch: Partial<PlayGroup>) => void
   onLeftGroup: () => void
   onExitToMessenger: () => void
@@ -466,7 +484,7 @@ type GroupViewProps = {
 type GroupMember = { profile: Profile; role: string }
 type VoiceParticipantInfo = { id: string; name: string }
 
-function GroupView({ me, myPlayProfile, group, channels, selectedChannel, messages, hasReplaySet, liveTyping, draft, onDraftChange, onSend, onSelectChannel, onChannelsChange, onGroupUpdate, onLeftGroup, onExitToMessenger }: GroupViewProps) {
+function GroupView({ me, myPlayProfile, group, channels, categories, selectedChannel, messages, hasReplaySet, liveTyping, draft, onDraftChange, onSend, onSelectChannel, onChannelsChange, onCategoriesChange, onGroupUpdate, onLeftGroup, onExitToMessenger }: GroupViewProps) {
   const [showNewChannel, setShowNewChannel] = useState(false)
   const [joinedVoiceChannel, setJoinedVoiceChannel] = useState<PlayChannel | null>(null)
   const [openReplayId, setOpenReplayId] = useState<string | null>(null)
@@ -476,12 +494,18 @@ function GroupView({ me, myPlayProfile, group, channels, selectedChannel, messag
   const [showInvite, setShowInvite] = useState(false)
   const [newChannelName, setNewChannelName] = useState('')
   const [newChannelKind, setNewChannelKind] = useState<'text' | 'voice'>('text')
+  const [newChannelCategoryId, setNewChannelCategoryId] = useState<string | null>(null)
+  const [showNewCategory, setShowNewCategory] = useState(false)
+  const [newCategoryName, setNewCategoryName] = useState('')
+  const [catMenu, setCatMenu] = useState<{ categoryId: string; x: number; y: number } | null>(null)
+  const [renameCategoryId, setRenameCategoryId] = useState<string | null>(null)
+  const [renameCategoryDraft, setRenameCategoryDraft] = useState('')
+  const [dragChannelId, setDragChannelId] = useState<string | null>(null)
+  const [dragCategoryId, setDragCategoryId] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
   const [members, setMembers] = useState<GroupMember[]>([])
   const [memberTab, setMemberTab] = useState<'group' | 'voice'>('group')
   const [voiceParticipants, setVoiceParticipants] = useState<VoiceParticipantInfo[]>([])
-  const textChannels = channels.filter((c) => c.kind === 'text')
-  const voiceChannels = channels.filter((c) => c.kind === 'voice')
 
   useEffect(() => {
     setVoiceParticipants([])
@@ -530,15 +554,73 @@ function GroupView({ me, myPlayProfile, group, channels, selectedChannel, messag
   const inVoiceIds = new Set(voiceParticipants.map((p) => p.id))
   const myRole = members.find((m) => m.profile.id === me.id)?.role || null
   const membersById = Object.fromEntries(members.map((m) => [m.profile.id, m.profile]))
+  const canManage = myRole === 'owner' || myRole === 'admin'
+  const channelsByCategory = (categoryId: string) => channels.filter((c) => c.category_id === categoryId).sort((a, b) => a.position - b.position)
+  const uncategorized = channels.filter((c) => !c.category_id || !categories.some((cat) => cat.id === c.category_id)).sort((a, b) => a.position - b.position)
+
+  function openNewChannelModal(categoryId: string | null, kind: 'text' | 'voice' = 'text') {
+    setNewChannelCategoryId(categoryId)
+    setNewChannelKind(kind)
+    setShowNewChannel(true)
+  }
 
   async function createChannel() {
     if (!newChannelName.trim()) return
+    const siblingCount = newChannelCategoryId ? channelsByCategory(newChannelCategoryId).length : uncategorized.length
     const { error } = await supabase.from('play_channels').insert({
-      group_id: group.id, name: newChannelName.trim(), kind: newChannelKind, position: channels.length,
+      group_id: group.id, name: newChannelName.trim(), kind: newChannelKind, category_id: newChannelCategoryId, position: siblingCount,
     })
     if (error) { console.error('create channel failed', error); return }
     setNewChannelName('')
     setShowNewChannel(false)
+    onChannelsChange()
+  }
+
+  async function createCategory() {
+    if (!newCategoryName.trim()) return
+    const { error } = await supabase.from('play_categories').insert({ group_id: group.id, name: newCategoryName.trim(), position: categories.length })
+    if (error) { console.error('create category failed', error); return }
+    setNewCategoryName('')
+    setShowNewCategory(false)
+    onCategoriesChange()
+  }
+
+  async function renameCategory() {
+    if (!renameCategoryId || !renameCategoryDraft.trim()) return
+    await supabase.from('play_categories').update({ name: renameCategoryDraft.trim() }).eq('id', renameCategoryId)
+    setRenameCategoryId(null)
+    onCategoriesChange()
+  }
+
+  async function deleteCategory(categoryId: string) {
+    if (!confirm('Excluir esta categoria? Os canais dela ficam sem categoria.')) return
+    await supabase.from('play_categories').delete().eq('id', categoryId)
+    onCategoriesChange()
+  }
+
+  async function reorderCategories(draggedId: string, targetId: string) {
+    const ordered = [...categories].sort((a, b) => a.position - b.position)
+    const fromIdx = ordered.findIndex((c) => c.id === draggedId)
+    const toIdx = ordered.findIndex((c) => c.id === targetId)
+    if (fromIdx === -1 || toIdx === -1 || fromIdx === toIdx) return
+    const [moved] = ordered.splice(fromIdx, 1)
+    ordered.splice(toIdx, 0, moved)
+    await Promise.all(ordered.map((c, i) => (c.position === i ? null : supabase.from('play_categories').update({ position: i }).eq('id', c.id))))
+    onCategoriesChange()
+  }
+
+  async function moveChannel(draggedId: string, targetCategoryId: string | null, targetChannelId: string | null) {
+    const dragged = channels.find((c) => c.id === draggedId)
+    if (!dragged) return
+    const destList = (targetCategoryId ? channelsByCategory(targetCategoryId) : uncategorized).filter((c) => c.id !== draggedId)
+    const targetIdx = targetChannelId ? destList.findIndex((c) => c.id === targetChannelId) : destList.length
+    destList.splice(targetIdx === -1 ? destList.length : targetIdx, 0, dragged)
+    await Promise.all(destList.map((c, i) => {
+      const patch: { position: number; category_id?: string | null } = { position: i }
+      if (c.id === draggedId) patch.category_id = targetCategoryId
+      if (c.position === i && c.category_id === (c.id === draggedId ? targetCategoryId : c.category_id)) return null
+      return supabase.from('play_channels').update(patch).eq('id', c.id)
+    }))
     onChannelsChange()
   }
 
@@ -639,38 +721,128 @@ function GroupView({ me, myPlayProfile, group, channels, selectedChannel, messag
 
         <div className="play-group-body">
           <div className="play-channel-sidebar-wrap">
-            <aside className="play-channel-sidebar">
-              <div className="play-channel-group-title">
-                <span>Canais de texto</span>
-                <button type="button" onClick={() => { setNewChannelKind('text'); setShowNewChannel(true) }}><IconPlus size={14} /></button>
-              </div>
-              {textChannels.map((c) => (
-                <button key={c.id} type="button" className={`play-channel-item${selectedChannel?.id === c.id ? ' active' : ''}`} onClick={() => handleSelectChannel(c)}>
-                  <IconHash size={15} /> {c.name}
-                </button>
-              ))}
-              <div className="play-channel-group-title">
-                <span>Canais de voz</span>
-                <button type="button" onClick={() => { setNewChannelKind('voice'); setShowNewChannel(true) }}><IconPlus size={14} /></button>
-              </div>
-              {voiceChannels.map((c) => (
-                <div key={c.id}>
-                  <button type="button" className={`play-channel-item${selectedChannel?.id === c.id ? ' active' : ''}`} onClick={() => handleSelectChannel(c)}>
-                    <IconVideo size={15} /> {c.name}
-                  </button>
-                  {joinedVoiceChannel?.id === c.id && voiceParticipants.map((p) => (
-                    <div key={p.id} className="play-channel-voice-member">
-                      <AvatarBox
-                        src={p.id === me.id ? myPlayProfile.avatar_url : membersById[p.id]?.avatar_url || null}
-                        id={p.id}
-                        fallbackLetter={p.name[0]?.toUpperCase()}
-                        className="avatar-sm"
-                      />
-                      {p.name}
-                    </div>
-                  ))}
+            <aside
+              className="play-channel-sidebar"
+              onContextMenu={(e) => {
+                if (!canManage || (e.target as HTMLElement).closest('.play-channel-group-title')) return
+                e.preventDefault()
+                setShowNewCategory(true)
+              }}
+            >
+              {categories.slice().sort((a, b) => a.position - b.position).map((cat) => (
+                <div
+                  key={cat.id}
+                  draggable={canManage}
+                  onDragStart={() => setDragCategoryId(cat.id)}
+                  onDragOver={(e) => { if (dragCategoryId) e.preventDefault() }}
+                  onDrop={(e) => { e.preventDefault(); if (dragCategoryId && dragCategoryId !== cat.id) reorderCategories(dragCategoryId, cat.id); setDragCategoryId(null) }}
+                >
+                  <div
+                    className="play-channel-group-title"
+                    onContextMenu={(e) => { if (!canManage) return; e.preventDefault(); setCatMenu({ categoryId: cat.id, x: e.clientX, y: e.clientY }) }}
+                  >
+                    {canManage && <span className="play-category-grip"><IconGrip size={12} /></span>}
+                    <span>{cat.name}</span>
+                    {canManage && (
+                      <button type="button" onClick={() => openNewChannelModal(cat.id)} title="Criar canal"><IconPlus size={14} /></button>
+                    )}
+                  </div>
+                  <div
+                    onDragOver={(e) => { if (dragChannelId) e.preventDefault() }}
+                    onDrop={(e) => { e.preventDefault(); if (dragChannelId) moveChannel(dragChannelId, cat.id, null); setDragChannelId(null) }}
+                  >
+                    {channelsByCategory(cat.id).map((c) => (
+                      <div
+                        key={c.id}
+                        draggable={canManage}
+                        onDragStart={(e) => { e.stopPropagation(); setDragChannelId(c.id) }}
+                        onDragOver={(e) => { if (dragChannelId) { e.preventDefault(); e.stopPropagation() } }}
+                        onDrop={(e) => { e.preventDefault(); e.stopPropagation(); if (dragChannelId) moveChannel(dragChannelId, c.category_id, c.id); setDragChannelId(null) }}
+                      >
+                        <button type="button" className={`play-channel-item${selectedChannel?.id === c.id ? ' active' : ''}`} onClick={() => handleSelectChannel(c)}>
+                          {canManage && <span className="play-channel-grip"><IconGrip size={11} /></span>}
+                          {c.kind === 'text' ? <IconHash size={15} /> : <IconVideo size={15} />} {c.name}
+                        </button>
+                        {c.kind === 'voice' && joinedVoiceChannel?.id === c.id && voiceParticipants.map((p) => (
+                          <div key={p.id} className="play-channel-voice-member">
+                            <AvatarBox
+                              src={p.id === me.id ? myPlayProfile.avatar_url : membersById[p.id]?.avatar_url || null}
+                              id={p.id}
+                              fallbackLetter={p.name[0]?.toUpperCase()}
+                              className="avatar-sm"
+                            />
+                            {p.name}
+                          </div>
+                        ))}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               ))}
+
+              {uncategorized.length > 0 && (
+                <div>
+                  <div className="play-channel-group-title"><span>Sem categoria</span></div>
+                  <div
+                    onDragOver={(e) => { if (dragChannelId) e.preventDefault() }}
+                    onDrop={(e) => { e.preventDefault(); if (dragChannelId) moveChannel(dragChannelId, null, null); setDragChannelId(null) }}
+                  >
+                    {uncategorized.map((c) => (
+                      <div
+                        key={c.id}
+                        draggable={canManage}
+                        onDragStart={(e) => { e.stopPropagation(); setDragChannelId(c.id) }}
+                        onDragOver={(e) => { if (dragChannelId) { e.preventDefault(); e.stopPropagation() } }}
+                        onDrop={(e) => { e.preventDefault(); e.stopPropagation(); if (dragChannelId) moveChannel(dragChannelId, c.category_id, c.id); setDragChannelId(null) }}
+                      >
+                        <button type="button" className={`play-channel-item${selectedChannel?.id === c.id ? ' active' : ''}`} onClick={() => handleSelectChannel(c)}>
+                          {canManage && <span className="play-channel-grip"><IconGrip size={11} /></span>}
+                          {c.kind === 'text' ? <IconHash size={15} /> : <IconVideo size={15} />} {c.name}
+                        </button>
+                        {c.kind === 'voice' && joinedVoiceChannel?.id === c.id && voiceParticipants.map((p) => (
+                          <div key={p.id} className="play-channel-voice-member">
+                            <AvatarBox
+                              src={p.id === me.id ? myPlayProfile.avatar_url : membersById[p.id]?.avatar_url || null}
+                              id={p.id}
+                              fallbackLetter={p.name[0]?.toUpperCase()}
+                              className="avatar-sm"
+                            />
+                            {p.name}
+                          </div>
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {catMenu && (
+                <>
+                  <div className="play-group-menu-backdrop" onClick={() => setCatMenu(null)} />
+                  <div className="play-group-menu" style={{ position: 'fixed', top: catMenu.y, left: catMenu.x }}>
+                    <button type="button" onClick={() => { openNewChannelModal(catMenu.categoryId); setCatMenu(null) }}>
+                      <IconPlus size={14} /> Criar canal aqui
+                    </button>
+                    <button type="button" onClick={() => { setShowNewCategory(true); setCatMenu(null) }}>
+                      <IconPlus size={14} /> Criar categoria
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const cat = categories.find((c) => c.id === catMenu.categoryId)
+                        setRenameCategoryId(catMenu.categoryId)
+                        setRenameCategoryDraft(cat?.name || '')
+                        setCatMenu(null)
+                      }}
+                    >
+                      <IconEdit size={14} /> Renomear
+                    </button>
+                    <button type="button" className="danger" onClick={() => { deleteCategory(catMenu.categoryId); setCatMenu(null) }}>
+                      <IconTrash size={14} /> Excluir categoria
+                    </button>
+                  </div>
+                </>
+              )}
             </aside>
             <GroupInfoPanel
               group={group}
@@ -793,10 +965,36 @@ function GroupView({ me, myPlayProfile, group, channels, selectedChannel, messag
       {showNewChannel && (
         <div className="modal-backdrop" onClick={() => setShowNewChannel(false)}>
           <div className="modal-card" onClick={(e) => e.stopPropagation()}>
-            <h2>Criar canal de {newChannelKind === 'text' ? 'texto' : 'voz'}</h2>
+            <h2>Criar canal</h2>
             <input placeholder="Nome do canal" value={newChannelName} onChange={(e) => setNewChannelName(e.target.value)} />
+            <div className="play-channel-kind-toggle">
+              <button type="button" className={newChannelKind === 'text' ? 'active' : ''} onClick={() => setNewChannelKind('text')}><IconHash size={14} /> Texto</button>
+              <button type="button" className={newChannelKind === 'voice' ? 'active' : ''} onClick={() => setNewChannelKind('voice')}><IconVideo size={14} /> Voz</button>
+            </div>
             <button type="button" className="google-btn" style={{ marginTop: 10 }} onClick={createChannel}>Criar</button>
             <button type="button" className="modal-close" onClick={() => setShowNewChannel(false)}>fechar</button>
+          </div>
+        </div>
+      )}
+
+      {showNewCategory && (
+        <div className="modal-backdrop" onClick={() => setShowNewCategory(false)}>
+          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+            <h2>Criar categoria</h2>
+            <input placeholder="Nome da categoria" value={newCategoryName} onChange={(e) => setNewCategoryName(e.target.value)} />
+            <button type="button" className="google-btn" style={{ marginTop: 10 }} onClick={createCategory}>Criar</button>
+            <button type="button" className="modal-close" onClick={() => setShowNewCategory(false)}>fechar</button>
+          </div>
+        </div>
+      )}
+
+      {renameCategoryId && (
+        <div className="modal-backdrop" onClick={() => setRenameCategoryId(null)}>
+          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+            <h2>Renomear categoria</h2>
+            <input placeholder="Nome da categoria" value={renameCategoryDraft} onChange={(e) => setRenameCategoryDraft(e.target.value)} />
+            <button type="button" className="google-btn" style={{ marginTop: 10 }} onClick={renameCategory}>Salvar</button>
+            <button type="button" className="modal-close" onClick={() => setRenameCategoryId(null)}>fechar</button>
           </div>
         </div>
       )}
