@@ -13,7 +13,7 @@ import {
   IconLock, IconLockOpen, IconLogout, IconMic, IconMicOff, IconMonitorShare, IconPhoneOff, IconPlus,
   IconSearch, IconSend, IconSettingsGear, IconTrash, IconUser, IconVideo, IconVideoOff,
 } from './icons'
-import type { PlayCategory, PlayChannel, PlayGroup, PlayMessage, PlayProfile, PlayRole, Profile } from '../types'
+import type { Bot, PlayCategory, PlayChannel, PlayGroup, PlayMessage, PlayProfile, PlayRole, Profile } from '../types'
 
 // A identidade dentro do Thoth Play e separada da conta principal - editar nome/
 // foto/status aqui dentro nao mexe no perfil usado no chat/mensageiro. So cai no
@@ -1013,7 +1013,7 @@ function GroupInfoPanel({ group, myRole, members, me, channels, categories, open
 }) {
   const canManage = myRole === 'owner' || myRole === 'admin'
   const isOwner = myRole === 'owner'
-  const [tab, setTab] = useState<'geral' | 'membros' | 'cargos'>('geral')
+  const [tab, setTab] = useState<'geral' | 'membros' | 'cargos' | 'bots'>('geral')
   const [name, setName] = useState(group.name)
   const [description, setDescription] = useState(group.description || '')
   const [tagDraft, setTagDraft] = useState('')
@@ -1034,6 +1034,8 @@ function GroupInfoPanel({ group, myRole, members, me, channels, categories, open
   const [expandedRoleId, setExpandedRoleId] = useState<string | null>(null)
   const [newRoleName, setNewRoleName] = useState('')
   const [newRoleEmoji, setNewRoleEmoji] = useState('')
+  const [botCatalog, setBotCatalog] = useState<Bot[]>([])
+  const [installedBotIds, setInstalledBotIds] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     setName(group.name)
@@ -1083,6 +1085,32 @@ function GroupInfoPanel({ group, myRole, members, me, channels, categories, open
     if (!open || tab !== 'cargos' || !canManage) return
     loadRoles()
   }, [open, tab, canManage, group.id])
+
+  useEffect(() => {
+    if (!open || tab !== 'bots' || !canManage) return
+    let cancelled = false
+    async function loadBots() {
+      const [{ data: catalog }, { data: installed }] = await Promise.all([
+        supabase.from('bots').select('*'),
+        supabase.from('play_group_bots').select('bot_id').eq('group_id', group.id),
+      ])
+      if (cancelled) return
+      setBotCatalog((catalog || []) as Bot[])
+      setInstalledBotIds(new Set((installed || []).map((r) => r.bot_id as string)))
+    }
+    loadBots()
+    return () => { cancelled = true }
+  }, [open, tab, canManage, group.id])
+
+  async function toggleBot(botId: string, installed: boolean) {
+    if (installed) {
+      await supabase.from('play_group_bots').delete().eq('group_id', group.id).eq('bot_id', botId)
+      setInstalledBotIds((prev) => { const next = new Set(prev); next.delete(botId); return next })
+    } else {
+      await supabase.from('play_group_bots').insert({ group_id: group.id, bot_id: botId, installed_by: me.id })
+      setInstalledBotIds((prev) => new Set(prev).add(botId))
+    }
+  }
 
   async function createRole() {
     if (!newRoleName.trim() || roles.length >= 10) return
@@ -1208,6 +1236,7 @@ function GroupInfoPanel({ group, myRole, members, me, channels, categories, open
           <button type="button" className={tab === 'geral' ? 'active' : ''} onClick={() => setTab('geral')}>Geral</button>
           <button type="button" className={tab === 'membros' ? 'active' : ''} onClick={() => setTab('membros')}>Membros</button>
           <button type="button" className={tab === 'cargos' ? 'active' : ''} onClick={() => setTab('cargos')}>Cargos</button>
+          <button type="button" className={tab === 'bots' ? 'active' : ''} onClick={() => setTab('bots')}>Bots</button>
         </div>
       )}
 
@@ -1374,6 +1403,26 @@ function GroupInfoPanel({ group, myRole, members, me, channels, categories, open
                     ))}
                   </div>
                 )}
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {tab === 'bots' && canManage && (
+        <div className="play-group-info-body">
+          {botCatalog.length === 0 && <p className="play-empty">nenhum bot disponível no catálogo ainda</p>}
+          {botCatalog.map((bot) => {
+            const installed = installedBotIds.has(bot.id)
+            return (
+              <div key={bot.id} className="play-bot-row">
+                <div className="play-bot-row-copy">
+                  <strong>{bot.name}</strong>
+                  <span>{bot.description}</span>
+                </div>
+                <button type="button" className={`play-bot-switch${installed ? ' on' : ''}`} onClick={() => toggleBot(bot.id, installed)}>
+                  <span className="play-bot-switch-knob" />
+                </button>
               </div>
             )
           })}
