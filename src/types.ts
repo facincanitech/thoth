@@ -111,6 +111,15 @@ export type PlayChannel = {
   created_at: string
 }
 
+export type PlayRole = {
+  id: string
+  group_id: string
+  name: string
+  emoji: string | null
+  position: number
+  created_at: string
+}
+
 export type PlayMessage = {
   id: string
   channel_id: string

@@ -1638,3 +1638,9 @@ body{
 .play-manage-member-actions button.danger:hover{color:#e5484d}
 .play-manage-member-unban{border:1px solid var(--line-2);background:none;color:var(--accent-text);border-radius:7px;padding:4px 9px;font-size:12px;cursor:pointer}
 
+.play-role-block{border:1px solid var(--line-2);border-radius:10px;margin-bottom:8px;overflow:hidden}
+.play-role-header{width:100%;display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border:0;background:var(--bg-panel);color:var(--text);cursor:pointer;font-size:13px;font-weight:600;text-align:left}
+.play-role-detail{padding:10px 12px;border-top:1px solid var(--line-2);display:flex;flex-direction:column}
+.play-role-cat-label{display:block;margin-top:8px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.play-role-check-row{display:flex;align-items:center;gap:8px;padding:5px 0;font-size:13px;cursor:pointer}
+

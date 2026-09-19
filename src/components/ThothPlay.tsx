@@ -13,7 +13,7 @@ import {
   IconLock, IconLockOpen, IconLogout, IconMic, IconMicOff, IconMonitorShare, IconPhoneOff, IconPlus,
   IconSearch, IconSend, IconSettingsGear, IconTrash, IconUser, IconVideo, IconVideoOff,
 } from './icons'
-import type { PlayCategory, PlayChannel, PlayGroup, PlayMessage, PlayProfile, Profile } from '../types'
+import type { PlayCategory, PlayChannel, PlayGroup, PlayMessage, PlayProfile, PlayRole, Profile } from '../types'
 
 // A identidade dentro do Thoth Play e separada da conta principal - editar nome/
 // foto/status aqui dentro nao mexe no perfil usado no chat/mensageiro. So cai no
@@ -850,6 +850,8 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
               myRole={myRole}
               members={members}
               me={me}
+              channels={channels}
+              categories={categories}
               open={showGroupInfo}
               onClose={() => setShowGroupInfo(false)}
               onUpdate={onGroupUpdate}
@@ -1005,12 +1007,13 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
   )
 }
 
-function GroupInfoPanel({ group, myRole, members, me, open, onClose, onUpdate }: {
-  group: PlayGroup; myRole: string | null; members: GroupMember[]; me: Profile; open: boolean; onClose: () => void; onUpdate: (patch: Partial<PlayGroup>) => void
+function GroupInfoPanel({ group, myRole, members, me, channels, categories, open, onClose, onUpdate }: {
+  group: PlayGroup; myRole: string | null; members: GroupMember[]; me: Profile; channels: PlayChannel[]; categories: PlayCategory[]
+  open: boolean; onClose: () => void; onUpdate: (patch: Partial<PlayGroup>) => void
 }) {
   const canManage = myRole === 'owner' || myRole === 'admin'
   const isOwner = myRole === 'owner'
-  const [tab, setTab] = useState<'geral' | 'membros'>('geral')
+  const [tab, setTab] = useState<'geral' | 'membros' | 'cargos'>('geral')
   const [name, setName] = useState(group.name)
   const [description, setDescription] = useState(group.description || '')
   const [tagDraft, setTagDraft] = useState('')
@@ -1025,6 +1028,12 @@ function GroupInfoPanel({ group, myRole, members, me, open, onClose, onUpdate }:
   const [showClosePrompt, setShowClosePrompt] = useState(false)
   const [memberSearch, setMemberSearch] = useState('')
   const [bans, setBans] = useState<{ user_id: string; profile?: Profile }[]>([])
+  const [roles, setRoles] = useState<PlayRole[]>([])
+  const [roleMemberIds, setRoleMemberIds] = useState<Record<string, string[]>>({})
+  const [roleChannelIds, setRoleChannelIds] = useState<Record<string, string[]>>({})
+  const [expandedRoleId, setExpandedRoleId] = useState<string | null>(null)
+  const [newRoleName, setNewRoleName] = useState('')
+  const [newRoleEmoji, setNewRoleEmoji] = useState('')
 
   useEffect(() => {
     setName(group.name)
@@ -1047,6 +1056,68 @@ function GroupInfoPanel({ group, myRole, members, me, open, onClose, onUpdate }:
     loadBans()
     return () => { cancelled = true }
   }, [open, tab, canManage, group.id])
+
+  async function loadRoles() {
+    const { data: roleRows } = await supabase.from('play_roles').select('*').eq('group_id', group.id).order('position', { ascending: true })
+    const roleList = (roleRows || []) as PlayRole[]
+    setRoles(roleList)
+    if (!roleList.length) { setRoleMemberIds({}); setRoleChannelIds({}); return }
+    const roleIds = roleList.map((r) => r.id)
+    const { data: rm } = await supabase.from('play_role_members').select('role_id, user_id').in('role_id', roleIds)
+    const memberMap: Record<string, string[]> = {}
+    for (const row of rm || []) {
+      const rId = row.role_id as string
+      memberMap[rId] = [...(memberMap[rId] || []), row.user_id as string]
+    }
+    setRoleMemberIds(memberMap)
+    const { data: ca } = await supabase.from('play_channel_role_access').select('role_id, channel_id').in('role_id', roleIds)
+    const channelMap: Record<string, string[]> = {}
+    for (const row of ca || []) {
+      const rId = row.role_id as string
+      channelMap[rId] = [...(channelMap[rId] || []), row.channel_id as string]
+    }
+    setRoleChannelIds(channelMap)
+  }
+
+  useEffect(() => {
+    if (!open || tab !== 'cargos' || !canManage) return
+    loadRoles()
+  }, [open, tab, canManage, group.id])
+
+  async function createRole() {
+    if (!newRoleName.trim() || roles.length >= 10) return
+    await supabase.from('play_roles').insert({ group_id: group.id, name: newRoleName.trim(), emoji: newRoleEmoji.trim() || null, position: roles.length })
+    setNewRoleName('')
+    setNewRoleEmoji('')
+    loadRoles()
+  }
+
+  async function deleteRole(roleId: string) {
+    if (!confirm('Excluir este cargo?')) return
+    await supabase.from('play_roles').delete().eq('id', roleId)
+    if (expandedRoleId === roleId) setExpandedRoleId(null)
+    loadRoles()
+  }
+
+  async function toggleRoleMember(roleId: string, userId: string, has: boolean) {
+    if (has) {
+      await supabase.from('play_role_members').delete().eq('role_id', roleId).eq('user_id', userId)
+      setRoleMemberIds((prev) => ({ ...prev, [roleId]: (prev[roleId] || []).filter((id) => id !== userId) }))
+    } else {
+      await supabase.from('play_role_members').insert({ role_id: roleId, user_id: userId })
+      setRoleMemberIds((prev) => ({ ...prev, [roleId]: [...(prev[roleId] || []), userId] }))
+    }
+  }
+
+  async function toggleRoleChannel(roleId: string, channelId: string, has: boolean) {
+    if (has) {
+      await supabase.from('play_channel_role_access').delete().eq('role_id', roleId).eq('channel_id', channelId)
+      setRoleChannelIds((prev) => ({ ...prev, [roleId]: (prev[roleId] || []).filter((id) => id !== channelId) }))
+    } else {
+      await supabase.from('play_channel_role_access').insert({ role_id: roleId, channel_id: channelId })
+      setRoleChannelIds((prev) => ({ ...prev, [roleId]: [...(prev[roleId] || []), channelId] }))
+    }
+  }
 
   async function save() {
     setSaving(true)
@@ -1136,6 +1207,7 @@ function GroupInfoPanel({ group, myRole, members, me, open, onClose, onUpdate }:
         <div className="play-group-info-tabs">
           <button type="button" className={tab === 'geral' ? 'active' : ''} onClick={() => setTab('geral')}>Geral</button>
           <button type="button" className={tab === 'membros' ? 'active' : ''} onClick={() => setTab('membros')}>Membros</button>
+          <button type="button" className={tab === 'cargos' ? 'active' : ''} onClick={() => setTab('cargos')}>Cargos</button>
         </div>
       )}
 
@@ -1252,6 +1324,59 @@ function GroupInfoPanel({ group, myRole, members, me, open, onClose, onUpdate }:
               ))}
             </>
           )}
+        </div>
+      )}
+
+      {tab === 'cargos' && canManage && (
+        <div className="play-group-info-body">
+          {roles.length < 10 && (
+            <div className="play-invite-code-row" style={{ marginBottom: 12 }}>
+              <input placeholder="emoji" value={newRoleEmoji} onChange={(e) => setNewRoleEmoji(e.target.value)} style={{ width: 52, flex: 'none', textAlign: 'center' }} />
+              <input placeholder="Nome do cargo" value={newRoleName} onChange={(e) => setNewRoleName(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') createRole() }} />
+              <button type="button" className="google-btn" style={{ width: 'auto' }} onClick={createRole}>Criar</button>
+            </div>
+          )}
+          {roles.length === 0 && <p className="play-empty">nenhum cargo criado ainda</p>}
+          {roles.map((role) => {
+            const memberIds = new Set(roleMemberIds[role.id] || [])
+            const channelIds = new Set(roleChannelIds[role.id] || [])
+            const expanded = expandedRoleId === role.id
+            return (
+              <div key={role.id} className="play-role-block">
+                <button type="button" className="play-role-header" onClick={() => setExpandedRoleId(expanded ? null : role.id)}>
+                  <span>{role.emoji ? `${role.emoji} ` : ''}{role.name}</span>
+                  <span className="play-manage-member-role">{memberIds.size} membro(s)</span>
+                </button>
+                {expanded && (
+                  <div className="play-role-detail">
+                    <button type="button" className="settings-danger-btn" style={{ marginBottom: 12 }} onClick={() => deleteRole(role.id)}>Excluir cargo</button>
+
+                    <label>Membros com este cargo</label>
+                    {members.map((m) => (
+                      <label key={m.profile.id} className="play-role-check-row">
+                        <input type="checkbox" checked={memberIds.has(m.profile.id)} onChange={() => toggleRoleMember(role.id, m.profile.id, memberIds.has(m.profile.id))} />
+                        <AvatarBox src={m.profile.avatar_url} id={m.profile.id} fallbackLetter={displayName(m.profile)[0]?.toUpperCase()} className="avatar-sm" />
+                        {displayName(m.profile)}
+                      </label>
+                    ))}
+
+                    <label style={{ marginTop: 14 }}>Canais visíveis (nenhum marcado = visível pra todo mundo)</label>
+                    {categories.map((cat) => (
+                      <div key={cat.id}>
+                        <span className="play-role-cat-label">{cat.name}</span>
+                        {channels.filter((c) => c.category_id === cat.id).map((c) => (
+                          <label key={c.id} className="play-role-check-row">
+                            <input type="checkbox" checked={channelIds.has(c.id)} onChange={() => toggleRoleChannel(role.id, c.id, channelIds.has(c.id))} />
+                            {c.kind === 'text' ? <IconHash size={13} /> : <IconVideo size={13} />} {c.name}
+                          </label>
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )
+          })}
         </div>
       )}
     </div>
