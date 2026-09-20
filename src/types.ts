@@ -118,6 +118,7 @@ export type PlayRole = {
   name: string
   emoji: string | null
   permissions: string[]
+  hoisted: boolean
   position: number
   created_at: string
 }

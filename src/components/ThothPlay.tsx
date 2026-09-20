@@ -826,6 +826,8 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
   const [showNewCategory, setShowNewCategory] = useState(false)
   const [newCategoryName, setNewCategoryName] = useState('')
   const [catMenu, setCatMenu] = useState<{ categoryId: string; x: number; y: number } | null>(null)
+  const [chanMenu, setChanMenu] = useState<{ channelId: string; x: number; y: number } | null>(null)
+  const [renameChannelDraft, setRenameChannelDraft] = useState<{ id: string; name: string } | null>(null)
   const [renameCategoryId, setRenameCategoryId] = useState<string | null>(null)
   const [renameCategoryDraft, setRenameCategoryDraft] = useState('')
   const [dragChannelId, setDragChannelId] = useState<string | null>(null)
@@ -835,6 +837,7 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
   const [memberTab, setMemberTab] = useState<'group' | 'voice'>('group')
   const [voiceParticipants, setVoiceParticipants] = useState<VoiceParticipantInfo[]>([])
   const [groupRoles, setGroupRoles] = useState<PlayRole[]>([])
+  const [roleIdsByUser, setRoleIdsByUser] = useState<Record<string, string[]>>({})
   const [roleQuickMenu, setRoleQuickMenu] = useState<{ userId: string; name: string; x: number; y: number } | null>(null)
   const [roleQuickMenuIds, setRoleQuickMenuIds] = useState<Set<string>>(new Set())
 
@@ -884,6 +887,33 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
   const onlineMembers = members.filter((m) => getPresenceColor(m.profile.last_seen_at, m.profile.is_idle) !== 'offline')
   const offlineMembers = members.filter((m) => getPresenceColor(m.profile.last_seen_at, m.profile.is_idle) === 'offline')
   const inVoiceIds = new Set(voiceParticipants.map((p) => p.id))
+  // Cargos com "mostrar separado": quem tem mais de um cai no de cima (ordem = prioridade)
+  const hoistedRoles = groupRoles.filter((r) => r.hoisted).sort((a, b) => a.position - b.position)
+  const isOnline = (m: GroupMember) => getPresenceColor(m.profile.last_seen_at, m.profile.is_idle) !== 'offline'
+  const renderMemberRow = (m: GroupMember, offline: boolean) => (
+    <div key={m.profile.id} className={'play-member-row' + (offline ? ' offline' : '')}>
+      <AvatarBox src={m.profile.avatar_url} id={m.profile.id} fallbackLetter={displayName(m.profile)[0]?.toUpperCase()} className="avatar-sm" />
+      <span
+        className={canAssign && m.profile.id !== me.id ? 'play-name-clickable' : undefined}
+        onContextMenu={(e) => { e.preventDefault(); openRoleQuickMenu(m.profile.id, displayName(m.profile), e.clientX, e.clientY) }}
+        onClick={(e) => openRoleQuickMenu(m.profile.id, displayName(m.profile), e.clientX, e.clientY)}
+      >
+        {offline ? displayName(m.profile) : <StyledName name={displayName(m.profile)} font={m.profile.name_style_font} effect={m.profile.name_style_effect} color={m.profile.name_style_color} />}
+      </span>
+      {!offline && inVoiceIds.has(m.profile.id) && <IconHeadphones size={14} />}
+    </div>
+  )
+  const roleSections = hoistedRoles
+    .map((role) => ({
+      role,
+      list: members
+        .filter((m) => hoistedRoles.find((r) => (roleIdsByUser[m.profile.id] || []).includes(r.id))?.id === role.id)
+        .sort((a, b) => Number(isOnline(b)) - Number(isOnline(a))),
+    }))
+    .filter((sec) => sec.list.length > 0)
+  const sectionedIds = new Set(roleSections.flatMap((sec) => sec.list.map((m) => m.profile.id)))
+  const onlineRest = onlineMembers.filter((m) => !sectionedIds.has(m.profile.id))
+  const offlineRest = offlineMembers.filter((m) => !sectionedIds.has(m.profile.id))
   const myRole = members.find((m) => m.profile.id === me.id)?.role || null
   const membersById = Object.fromEntries(members.map((m) => [m.profile.id, m.profile]))
   const isStaff = myRole === 'owner' || myRole === 'admin'
@@ -953,6 +983,27 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
     await supabase.from('play_categories').update({ name: renameCategoryDraft.trim() }).eq('id', renameCategoryId)
     setRenameCategoryId(null)
     onCategoriesChange()
+  }
+
+  async function renameChannelSave() {
+    if (!renameChannelDraft || !renameChannelDraft.name.trim()) return
+    await supabase.from('play_channels').update({ name: renameChannelDraft.name.trim() }).eq('id', renameChannelDraft.id)
+    setRenameChannelDraft(null)
+    onChannelsChange()
+  }
+
+  async function deleteChannel(channelId: string) {
+    const ch = channels.find((c) => c.id === channelId)
+    if (!ch) return
+    if (!confirm('Excluir o canal "' + ch.name + '"? As mensagens dele são apagadas junto.')) return
+    if (joinedVoiceChannel?.id === channelId) setJoinedVoiceChannel(null)
+    const { error } = await supabase.from('play_channels').delete().eq('id', channelId)
+    if (error) { console.error('delete channel failed', error); return }
+    if (selectedChannel?.id === channelId) {
+      const other = channels.find((c) => c.id !== channelId && c.kind === 'text')
+      if (other) onSelectChannel(other)
+    }
+    onChannelsChange()
   }
 
   async function deleteCategory(categoryId: string) {
@@ -1081,6 +1132,36 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
       supabase.removeChannel(ch)
     }
   }, [group.id, me.id])
+
+  // cargos do servidor + quem tem quais - alimenta a separacao por cargo na lista de membros
+  useEffect(() => {
+    let cancelled = false
+    async function loadRoleData() {
+      const { data: roleRows } = await supabase.from('play_roles').select('*').eq('group_id', group.id).order('position', { ascending: true })
+      const list = (roleRows || []) as PlayRole[]
+      if (cancelled) return
+      setGroupRoles(list)
+      if (!list.length) { setRoleIdsByUser({}); return }
+      const { data: rm } = await supabase.from('play_role_members').select('role_id, user_id').in('role_id', list.map((r) => r.id))
+      if (cancelled) return
+      const map: Record<string, string[]> = {}
+      for (const row of rm || []) {
+        const uid = row.user_id as string
+        map[uid] = [...(map[uid] || []), row.role_id as string]
+      }
+      setRoleIdsByUser(map)
+    }
+    loadRoleData()
+    const ch = supabase
+      .channel('play-roledata:' + group.id)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'play_roles', filter: 'group_id=eq.' + group.id }, () => loadRoleData())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'play_role_members' }, () => loadRoleData())
+      .subscribe()
+    return () => {
+      cancelled = true
+      supabase.removeChannel(ch)
+    }
+  }, [group.id])
 
   // id de tile pode ser "usuario" (tela ou camera principal) ou "usuario:cam" (camera junto da transmissao)
   function trackOf(id: string): Track | undefined {
@@ -1378,6 +1459,7 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
                       <div
                         key={c.id}
                         draggable={canManage}
+                        onContextMenu={(e) => { if (!canManage) return; e.preventDefault(); e.stopPropagation(); setChanMenu({ channelId: c.id, x: e.clientX, y: e.clientY }) }}
                         onDragStart={(e) => { e.stopPropagation(); setDragChannelId(c.id) }}
                         onDragOver={(e) => { if (dragChannelId) { e.preventDefault(); e.stopPropagation() } }}
                         onDrop={(e) => { e.preventDefault(); e.stopPropagation(); if (dragChannelId) moveChannel(dragChannelId, c.category_id, c.id); setDragChannelId(null) }}
@@ -1414,6 +1496,7 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
                       <div
                         key={c.id}
                         draggable={canManage}
+                        onContextMenu={(e) => { if (!canManage) return; e.preventDefault(); e.stopPropagation(); setChanMenu({ channelId: c.id, x: e.clientX, y: e.clientY }) }}
                         onDragStart={(e) => { e.stopPropagation(); setDragChannelId(c.id) }}
                         onDragOver={(e) => { if (dragChannelId) { e.preventDefault(); e.stopPropagation() } }}
                         onDrop={(e) => { e.preventDefault(); e.stopPropagation(); if (dragChannelId) moveChannel(dragChannelId, c.category_id, c.id); setDragChannelId(null) }}
@@ -1437,6 +1520,20 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
                     ))}
                   </div>
                 </div>
+              )}
+
+              {chanMenu && (
+                <>
+                  <div className="play-group-menu-backdrop" onClick={() => setChanMenu(null)} onContextMenu={(e) => { e.preventDefault(); setChanMenu(null) }} />
+                  <div className="play-group-menu" style={{ position: 'fixed', top: chanMenu.y, left: chanMenu.x }}>
+                    <button type="button" onClick={() => { const ch = channels.find((c) => c.id === chanMenu.channelId); setChanMenu(null); if (ch) setRenameChannelDraft({ id: ch.id, name: ch.name }) }}>
+                      <IconEdit size={14} /> Renomear canal
+                    </button>
+                    <button type="button" className="danger" onClick={() => { const id = chanMenu.channelId; setChanMenu(null); deleteChannel(id) }}>
+                      <IconTrash size={14} /> Excluir canal
+                    </button>
+                  </div>
+                </>
               )}
 
               {catMenu && (
@@ -1595,37 +1692,20 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
             </div>
             {memberTab === 'group' ? (
               <>
-                {onlineMembers.length > 0 && (
-                  <div className="play-member-group-title">ONLINE — {onlineMembers.length}</div>
-                )}
-                {onlineMembers.map((m) => (
-                  <div key={m.profile.id} className="play-member-row">
-                    <AvatarBox src={m.profile.avatar_url} id={m.profile.id} fallbackLetter={displayName(m.profile)[0]?.toUpperCase()} className="avatar-sm" />
-                    <span
-                      className={canAssign && m.profile.id !== me.id ? 'play-name-clickable' : undefined}
-                      onContextMenu={(e) => { e.preventDefault(); openRoleQuickMenu(m.profile.id, displayName(m.profile), e.clientX, e.clientY) }}
-                      onClick={(e) => openRoleQuickMenu(m.profile.id, displayName(m.profile), e.clientX, e.clientY)}
-                    >
-                      <StyledName name={displayName(m.profile)} font={m.profile.name_style_font} effect={m.profile.name_style_effect} color={m.profile.name_style_color} />
-                    </span>
-                    {inVoiceIds.has(m.profile.id) && <IconHeadphones size={14} />}
+                {roleSections.map((sec) => (
+                  <div key={sec.role.id}>
+                    <div className="play-member-group-title">{sec.role.emoji ? sec.role.emoji + ' ' : ''}{sec.role.name.toUpperCase()} — {sec.list.length}</div>
+                    {sec.list.map((m) => renderMemberRow(m, !isOnline(m)))}
                   </div>
                 ))}
-                {offlineMembers.length > 0 && (
-                  <div className="play-member-group-title">OFFLINE — {offlineMembers.length}</div>
+                {onlineRest.length > 0 && (
+                  <div className="play-member-group-title">ONLINE — {onlineRest.length}</div>
                 )}
-                {offlineMembers.map((m) => (
-                  <div key={m.profile.id} className="play-member-row offline">
-                    <AvatarBox src={m.profile.avatar_url} id={m.profile.id} fallbackLetter={displayName(m.profile)[0]?.toUpperCase()} className="avatar-sm" />
-                    <span
-                      className={canAssign && m.profile.id !== me.id ? 'play-name-clickable' : undefined}
-                      onContextMenu={(e) => { e.preventDefault(); openRoleQuickMenu(m.profile.id, displayName(m.profile), e.clientX, e.clientY) }}
-                      onClick={(e) => openRoleQuickMenu(m.profile.id, displayName(m.profile), e.clientX, e.clientY)}
-                    >
-                      {displayName(m.profile)}
-                    </span>
-                  </div>
-                ))}
+                {onlineRest.map((m) => renderMemberRow(m, false))}
+                {offlineRest.length > 0 && (
+                  <div className="play-member-group-title">OFFLINE — {offlineRest.length}</div>
+                )}
+                {offlineRest.map((m) => renderMemberRow(m, true))}
               </>
             ) : (
               <>
@@ -1795,6 +1875,17 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
         </div>
       )}
 
+      {renameChannelDraft && (
+        <div className="modal-backdrop" onClick={() => setRenameChannelDraft(null)}>
+          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+            <h2>Renomear canal</h2>
+            <input autoFocus placeholder="Nome do canal" value={renameChannelDraft.name} onChange={(e) => setRenameChannelDraft({ ...renameChannelDraft, name: e.target.value })} onKeyDown={(e) => { if (e.key === 'Enter') renameChannelSave() }} />
+            <button type="button" className="google-btn" style={{ marginTop: 10 }} onClick={renameChannelSave}>Salvar</button>
+            <button type="button" className="modal-close" onClick={() => setRenameChannelDraft(null)}>cancelar</button>
+          </div>
+        </div>
+      )}
+
       {showNewCategory && (
         <div className="modal-backdrop" onClick={() => setShowNewCategory(false)}>
           <div className="modal-card" onClick={(e) => e.stopPropagation()}>
@@ -1859,7 +1950,7 @@ function GroupInfoPanel({ group, myRole, members, me, can, channels, categories,
   const [showRoleEmojiPicker, setShowRoleEmojiPicker] = useState(false)
   const [rosterRoleId, setRosterRoleId] = useState<string | null>(null)
   const [rosterAdding, setRosterAdding] = useState(false)
-  const [roleEdit, setRoleEdit] = useState<{ id: string; name: string; emoji: string; permissions: string[] } | null>(null)
+  const [roleEdit, setRoleEdit] = useState<{ id: string; name: string; emoji: string; permissions: string[]; hoisted: boolean } | null>(null)
   const [botCatalog, setBotCatalog] = useState<Bot[]>([])
   const [installedBotIds, setInstalledBotIds] = useState<Set<string>>(new Set())
 
@@ -1997,9 +2088,20 @@ function GroupInfoPanel({ group, myRole, members, me, can, channels, categories,
     loadRoles()
   }
 
+  async function moveRole(roleId: string, dir: -1 | 1) {
+    const idx = roles.findIndex((r) => r.id === roleId)
+    const target = idx + dir
+    if (idx < 0 || target < 0 || target >= roles.length) return
+    const next = [...roles]
+    ;[next[idx], next[target]] = [next[target], next[idx]]
+    setRoles(next)
+    await Promise.all(next.map((r, i) => (r.position === i ? null : supabase.from('play_roles').update({ position: i }).eq('id', r.id))))
+    loadRoles()
+  }
+
   async function saveRoleEdit() {
     if (!roleEdit || !roleEdit.name.trim()) return
-    await supabase.from('play_roles').update({ name: roleEdit.name.trim(), emoji: roleEdit.emoji || null, permissions: roleEdit.permissions }).eq('id', roleEdit.id)
+    await supabase.from('play_roles').update({ name: roleEdit.name.trim(), emoji: roleEdit.emoji || null, permissions: roleEdit.permissions, hoisted: roleEdit.hoisted }).eq('id', roleEdit.id)
     setRoleEdit(null)
     loadRoles()
   }
@@ -2289,7 +2391,13 @@ function GroupInfoPanel({ group, myRole, members, me, can, channels, categories,
                     </button>
 
                     {canManageRoles && (
-                      <button type="button" className="play-role-list-btn" style={{ marginTop: 8 }} onClick={() => setRoleEdit({ id: role.id, name: role.name, emoji: role.emoji || '', permissions: [...(role.permissions || [])] })}>
+                      <div className="play-role-order-row">
+                        <button type="button" className="play-role-list-btn" onClick={() => moveRole(role.id, -1)}>Subir na lista</button>
+                        <button type="button" className="play-role-list-btn" onClick={() => moveRole(role.id, 1)}>Descer</button>
+                      </div>
+                    )}
+                    {canManageRoles && (
+                      <button type="button" className="play-role-list-btn" style={{ marginTop: 8 }} onClick={() => setRoleEdit({ id: role.id, name: role.name, emoji: role.emoji || '', permissions: [...(role.permissions || [])], hoisted: !!role.hoisted })}>
                         Configurar cargo
                       </button>
                     )}
@@ -2328,6 +2436,10 @@ function GroupInfoPanel({ group, myRole, members, me, can, channels, categories,
                     <button key={em} type="button" className={roleEdit.emoji === em ? 'active' : ''} onClick={() => setRoleEdit({ ...roleEdit, emoji: em })}>{em}</button>
                   ))}
                 </div>
+                <label className="play-role-check-row" style={{ marginTop: 14 }}>
+                  <input type="checkbox" checked={roleEdit.hoisted} onChange={() => setRoleEdit({ ...roleEdit, hoisted: !roleEdit.hoisted })} />
+                  Mostrar este cargo separado na lista de membros
+                </label>
                 <label className="play-channel-modal-label" style={{ marginTop: 14 }}>O que este cargo pode fazer</label>
                 {PLAY_PERMISSIONS.map((grp) => (
                   <div key={grp.group}>

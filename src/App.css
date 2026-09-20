@@ -2016,3 +2016,4 @@ body{
 .play-role-emoji-row button{min-width:34px;height:34px;border:1px solid var(--line-2);border-radius:8px;background:var(--bg-surface-2);color:var(--text);cursor:pointer;font-size:16px}
 .play-role-emoji-row button.active{border-color:var(--accent-text);background:var(--bg-selected)}
 [data-theme="messenger"] .play-app-shell .play-manage-member-row .avatar-sm{width:30px;height:30px;padding:1px;border-width:2px;border-radius:7px}
+.play-role-order-row{display:flex;gap:6px;margin-top:8px}
