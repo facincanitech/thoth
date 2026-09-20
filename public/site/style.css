@@ -25,3 +25,5 @@ footer{min-height:130px;display:flex;align-items:center;justify-content:space-be
 @keyframes recPulse{50%{opacity:.35}}@keyframes demoProgress{from{transform:scaleX(0)}to{transform:scaleX(1)}}
 @media(max-width:900px){.modes{grid-template-columns:1fr}.mode-card{min-height:280px}.mode-icon{margin:35px 0 45px}}
 @media(max-width:700px){.composer-tools{gap:12px}.composer-tools button{width:26px}.chat-line{max-width:88%}.modes{margin-bottom:95px}}
+
+.hero-downloads{flex-wrap:wrap}.download--web{flex-basis:100%;max-width:450px;color:var(--cyan);background:rgba(27,214,255,.06);border-color:rgba(27,214,255,.45)}.download--web svg{fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}.final-actions a:last-child{color:white;background:#06214a;border:1px solid rgba(255,255,255,.28)}
