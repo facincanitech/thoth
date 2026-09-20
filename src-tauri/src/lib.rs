@@ -1,3 +1,35 @@
+// Baixa o instalador novo pra pasta temporaria e roda. O PowerShell (desanexado, sem
+// janela) espera o download, fecha este app (o instalador nao consegue sobrescrever
+// um exe em uso) e abre o instalador.
+#[cfg(desktop)]
+#[tauri::command]
+fn download_and_run_installer(url: String) -> Result<(), String> {
+  #[cfg(windows)]
+  {
+    use std::os::windows::process::CommandExt;
+    if !url.starts_with("https://") {
+      return Err("url invalida".into());
+    }
+    let safe_url = url.replace('\'', "");
+    let script = format!(
+      "$ErrorActionPreference='Stop'; $p=Join-Path $env:TEMP 'ThothMessenger-Update.exe';        [Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12;        Invoke-WebRequest -UseBasicParsing -Uri '{}' -OutFile $p;        Stop-Process -Id {} -Force -ErrorAction SilentlyContinue; Start-Process $p",
+      safe_url,
+      std::process::id()
+    );
+    std::process::Command::new("powershell")
+      .args(["-NoProfile", "-WindowStyle", "Hidden", "-Command", &script])
+      .creation_flags(0x08000000)
+      .spawn()
+      .map_err(|e| e.to_string())?;
+    Ok(())
+  }
+  #[cfg(not(windows))]
+  {
+    let _ = url;
+    Err("so windows".into())
+  }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
   let mut builder = tauri::Builder::default();
@@ -17,6 +49,7 @@ pub fn run() {
   }
 
   builder
+    .invoke_handler(tauri::generate_handler![download_and_run_installer])
     .plugin(tauri_plugin_shell::init())
     .plugin(tauri_plugin_deep_link::init())
     .setup(|app| {
