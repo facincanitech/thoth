@@ -6,6 +6,12 @@ import { DesktopChatWindow } from './components/DesktopChatWindow.tsx'
 import { DesktopPlayWindow } from './components/DesktopPlayWindow.tsx'
 import { isTauriDesktop } from './lib/platform.ts'
 
+// Sem o menu nativo do navegador (voltar/imprimir/traduzir...) em nenhuma janela - so nos
+// campos de texto, pra poder colar. Os menus proprios do app continuam funcionando.
+document.addEventListener('contextmenu', (e) => {
+  if (!(e.target as HTMLElement | null)?.closest('input, textarea, [contenteditable="true"]')) e.preventDefault()
+})
+
 const searchParams = isTauriDesktop ? new URLSearchParams(window.location.search) : null
 const tauriChatId = searchParams?.get('tauriChat') ?? null
 const isTauriPlay = searchParams?.get('tauriPlay') === '1'
