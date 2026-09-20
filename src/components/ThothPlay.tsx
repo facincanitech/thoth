@@ -15,8 +15,9 @@ import { uploadImage } from '../lib/uploadImage'
 import {
   IconArrowLeft, IconChat, IconChevronDown, IconCopy, IconEdit, IconGamepad, IconGrip, IconHash, IconHeadphones,
   IconLock, IconLockOpen, IconLogout, IconMic, IconMicOff, IconMonitorShare, IconPanelLeft, IconFolder, IconMore, IconPause, IconPlay, IconFullscreen, IconShrink, IconVolume, IconVolumeOff, IconPhoneOff, IconPlus,
-  IconAttach, IconSearch, IconSend, IconSmile, IconSettingsGear, IconTrash, IconUser, IconVideo, IconVideoOff,
+  IconAttach, IconSearch, IconSend, IconSmile, IconSettingsGear, IconTrash, IconUser, IconMinusCircle, IconVideo, IconVideoOff,
 } from './icons'
+import { BANNER_COLORS } from './ChatList'
 import { fetchRandomStation, searchPublicStations, isHlsStream, type RadioStation } from '../lib/sonor'
 import { DEFAULT_PLAY_THEME, PLAY_THEMES, normalizePlayTheme, type PlayThemeId } from '../lib/playThemes'
 import type { Bot, PlayBotButton, PlaySonorSession, PlayCategory, PlayChannel, PlayGroup, PlayMessage, PlayProfile, PlayRole, Profile } from '../types'
@@ -753,7 +754,7 @@ function PlayProfileCard({ profile, roles, userRoleIds, canAssign, onToggleRole,
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal-card play-profile-card" onClick={(e) => e.stopPropagation()}>
-        <div className="play-profile-card-banner" style={{ backgroundColor: profile.banner_color || '#3b6ef6', backgroundImage: profile.banner_image_url ? 'url(' + profile.banner_image_url + ')' : undefined }} />
+        <div className="play-profile-card-banner" style={profile.banner_image_url ? { backgroundImage: 'url(' + profile.banner_image_url + ')', backgroundSize: 'cover', backgroundPosition: '50% 50%' } : { background: profile.banner_color || 'var(--green)' }} />
         <AvatarBox src={profile.avatar_url} id={profile.id} fallbackLetter={displayName(profile)[0]?.toUpperCase()} className="play-profile-card-avatar" />
         <h2><StyledName name={displayName(profile)} font={profile.name_style_font} effect={profile.name_style_effect} color={profile.name_style_color} /></h2>
         {profile.status && <p className="play-profile-card-status">{profile.status}</p>}
@@ -2645,7 +2646,6 @@ function ProfilePanel({ me, open, onClose, onSaved }: { me: Profile; open: boole
   const [profileTags, setProfileTags] = useState<string[]>([])
   const [bannerUploading, setBannerUploading] = useState(false)
   const bannerFileRef = useRef<HTMLInputElement>(null)
-  const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [cropFile, setCropFile] = useState<File | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
@@ -2682,21 +2682,9 @@ function ProfilePanel({ me, open, onClose, onSaved }: { me: Profile; open: boole
     onSaved()
   }
 
-  async function save() {
-    setSaving(true)
-    await upsert({
-      display_name: displayNameDraft.trim() || null,
-      status: statusDraft.trim() || null,
-      avatar_url: avatarUrl,
-      name_style_font: font,
-      name_style_effect: effect,
-      name_style_color: color,
-      theme_preference: themePref,
-      banner_color: bannerColor,
-      banner_image_url: bannerImage,
-      tags: profileTags,
-    })
-    setSaving(false)
+  // sem botao Salvar: cada campo grava sozinho ao mudar (igual ao perfil do Messenger)
+  async function autosave(patch: Partial<PlayProfile>) {
+    await upsert(patch)
     onSaved()
   }
 
@@ -2708,9 +2696,21 @@ function ProfilePanel({ me, open, onClose, onSaved }: { me: Profile; open: boole
     try {
       const url = await uploadImage(file, me.id, 'play-banner')
       setBannerImage(url)
+      await autosave({ banner_image_url: url })
     } finally {
       setBannerUploading(false)
     }
+  }
+
+  function pickBannerColor(c: string | null) {
+    setBannerColor(c)
+    setBannerImage(null)
+    autosave({ banner_color: c, banner_image_url: null })
+  }
+
+  function removeBannerImage() {
+    setBannerImage(null)
+    autosave({ banner_image_url: null })
   }
 
   function handleAvatarPick(e: ChangeEvent<HTMLInputElement>) {
@@ -2741,29 +2741,59 @@ function ProfilePanel({ me, open, onClose, onSaved }: { me: Profile; open: boole
         <strong>Perfil</strong>
       </div>
       <div className="play-group-info-body">
-        <label>Card do perfil (aparece quando clicam no seu nome)</label>
         <div
-          className="play-card-banner-preview"
-          style={{ backgroundColor: bannerColor || '#3b6ef6', backgroundImage: bannerImage ? 'url(' + bannerImage + ')' : undefined }}
-        />
-        <div className="play-invite-code-row" style={{ marginTop: 6 }}>
-          <input type="color" value={bannerColor && bannerColor.startsWith('#') ? bannerColor : '#3b6ef6'} onChange={(ev) => setBannerColor(ev.target.value)} style={{ width: 48, flex: 'none', padding: 2 }} />
-          <button type="button" className="google-btn" style={{ width: 'auto' }} disabled={bannerUploading} onClick={() => bannerFileRef.current?.click()}>{bannerUploading ? 'Enviando...' : 'Imagem de fundo'}</button>
-          {bannerImage && <button type="button" className="google-btn" style={{ width: 'auto' }} onClick={() => setBannerImage(null)}>Remover</button>}
+          className="profile-banner-preview"
+          style={{
+            display: 'block', width: '100%', minWidth: '100%', height: 188, minHeight: 188, boxSizing: 'border-box',
+            ...(bannerImage
+              ? { backgroundImage: 'url(' + bannerImage + ')', backgroundPosition: '50% 50%', backgroundSize: 'cover' }
+              : { background: bannerColor || 'var(--green)' }),
+          }}
+        >
+          <div className="profile-banner-preview-avatar" style={{ pointerEvents: 'auto', cursor: 'pointer' }} title="Trocar foto" onClick={() => fileRef.current?.click()}>
+            {avatarUrl ? <img src={avatarUrl} alt="" /> : <IconUser size={26} />}
+          </div>
         </div>
-        <input ref={bannerFileRef} type="file" accept="image/*" hidden onChange={handleBannerPick} />
-
-        <label style={{ marginTop: 14 }}>Foto</label>
-        <button type="button" className="play-group-info-avatar" onClick={() => fileRef.current?.click()} style={{ border: 0, cursor: 'pointer' }}>
-          <AvatarBox src={avatarUrl} id={me.id} fallbackLetter={(displayNameDraft || '?')[0]?.toUpperCase()} className="play-group-avatar" />
-        </button>
         <input ref={fileRef} type="file" accept="image/*" hidden onChange={handleAvatarPick} />
         {uploading && <p className="play-empty">enviando foto...</p>}
-        <label>Nome de exibição</label>
-        <input value={displayNameDraft} onChange={(e) => setDisplayNameDraft(e.target.value)} />
-        <label style={{ marginTop: 10 }}>Status</label>
-        <input value={statusDraft} onChange={(e) => setStatusDraft(e.target.value)} placeholder="De boa" />
+        <label style={{ marginTop: 12 }}>Imagem ou GIF</label>
+        <input ref={bannerFileRef} type="file" accept="image/*" hidden onChange={handleBannerPick} />
+        <button type="button" className="google-btn" disabled={bannerUploading} onClick={() => bannerFileRef.current?.click()}>
+          {bannerUploading ? 'enviando...' : bannerImage ? 'Trocar imagem' : 'Escolher imagem'}
+        </button>
+        {bannerImage && (
+          <button type="button" className="google-btn" style={{ marginTop: 6 }} onClick={removeBannerImage}>Remover imagem</button>
+        )}
 
+        <label style={{ marginTop: 12 }}>Cor de fundo (foto)</label>
+        <div className="banner-color-picker">
+          <button type="button" className={'banner-color-swatch banner-color-reset' + (!bannerColor && !bannerImage ? ' active' : '')} onClick={() => pickBannerColor(null)} title="Padrão">
+            <IconMinusCircle size={14} />
+          </button>
+          {BANNER_COLORS.map((c) => (
+            <button
+              key={c}
+              type="button"
+              className={'banner-color-swatch' + (!bannerImage && bannerColor === c ? ' active' : '')}
+              style={{ background: c }}
+              onClick={() => pickBannerColor(c)}
+            />
+          ))}
+          <input
+            type="color"
+            className="banner-color-swatch banner-color-custom"
+            value={bannerColor && bannerColor.startsWith('#') ? bannerColor : '#5865f2'}
+            onChange={(ev) => setBannerColor(ev.target.value)}
+            onBlur={(ev) => pickBannerColor(ev.target.value)}
+          />
+        </div>
+
+        <div className="appearance-separator" />
+
+        <label style={{ marginTop: 14 }}>Nome de exibição</label>
+        <input value={displayNameDraft} onChange={(e) => setDisplayNameDraft(e.target.value)} onBlur={() => autosave({ display_name: displayNameDraft.trim() || null })} onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()} />
+        <label style={{ marginTop: 10 }}>Status</label>
+        <input value={statusDraft} onChange={(e) => setStatusDraft(e.target.value)} onBlur={() => autosave({ status: statusDraft.trim() || null })} onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()} placeholder="De boa" />
 
         {loaded && (
           <>
@@ -2778,7 +2808,7 @@ function ProfilePanel({ me, open, onClose, onSaved }: { me: Profile; open: boole
                   type="button"
                   className={`name-font-option${(font || 'default') === f.id ? ' active' : ''}`}
                   style={f.id !== 'default' ? { fontFamily: f.family } : undefined}
-                  onClick={() => setFont(f.id === 'default' ? null : f.id)}
+                  onClick={() => { const v = f.id === 'default' ? null : f.id; setFont(v); autosave({ name_style_font: v }) }}
                 >
                   {f.label}
                 </button>
@@ -2791,7 +2821,7 @@ function ProfilePanel({ me, open, onClose, onSaved }: { me: Profile; open: boole
                   key={e.id}
                   type="button"
                   className={`name-effect-option${(effect || 'solid') === e.id ? ' active' : ''}`}
-                  onClick={() => setEffect(e.id)}
+                  onClick={() => { setEffect(e.id); autosave({ name_style_effect: e.id }) }}
                 >
                   {e.label}
                 </button>
@@ -2808,7 +2838,7 @@ function ProfilePanel({ me, open, onClose, onSaved }: { me: Profile; open: boole
                       title={pal.label}
                       className={'prism-palette' + ((color || 'rainbow') === pal.id ? ' active' : '')}
                       style={{ backgroundImage: 'linear-gradient(90deg,' + pal.colors.join(',') + ')' }}
-                      onClick={() => setColor(pal.id)}
+                      onClick={() => { setColor(pal.id); autosave({ name_style_color: pal.id }) }}
                     />
                   ))}
                 </div>
@@ -2820,13 +2850,14 @@ function ProfilePanel({ me, open, onClose, onSaved }: { me: Profile; open: boole
                   type="color"
                   value={color && color.startsWith('#') ? color : '#3b6ef6'}
                   onChange={(ev) => setColor(ev.target.value)}
+                  onBlur={(ev) => autosave({ name_style_color: ev.target.value })}
                   style={{ width: 60, height: 34, padding: 2, marginTop: 2 }}
                 />
               </>
             )}
 
             <label style={{ marginTop: 14 }}>Características (até 4)</label>
-            <TagEditor tags={profileTags} onChange={setProfileTags} />
+            <TagEditor tags={profileTags} onChange={(next) => { setProfileTags(next); autosave({ tags: next }) }} />
 
             <label style={{ marginTop: 14 }}>Tema do Play</label>
             <div className="play-theme-picker">
@@ -2852,9 +2883,6 @@ function ProfilePanel({ me, open, onClose, onSaved }: { me: Profile; open: boole
           </>
         )}
 
-        <button type="button" className="google-btn" style={{ marginTop: 14 }} disabled={saving} onClick={save}>
-          {saving ? 'Salvando...' : 'Salvar'}
-        </button>
       </div>
       </div>
       {cropFile && <AvatarCropModal file={cropFile} onCancel={() => setCropFile(null)} onConfirm={handleCropConfirm} />}

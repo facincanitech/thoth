@@ -48,7 +48,7 @@ export type GroupsView =
   | 'group-root' | 'group-create' | 'group-search' | 'group-trending' | 'group-mine'
   | 'community-root' | 'community-create' | 'community-search' | 'community-trending' | 'community-mine'
 
-const BANNER_COLORS = [
+export const BANNER_COLORS = [
   'linear-gradient(135deg,#36d1dc,#5b86e5)',
   'linear-gradient(135deg,#396afc,#c62d8f)',
   'linear-gradient(135deg,#43e97b,#38f9d7)',
