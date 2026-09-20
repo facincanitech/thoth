@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="180" height="360" viewBox="0 0 180 360">
+  <rect width="180" height="360" fill="#010502"/>
+  <g fill="#18d94a" font-family="monospace" font-size="11" opacity=".28">
+    <text x="8" y="12">010011010101101001001</text>
+    <text x="31" y="38">110010011010</text>
+    <text x="94" y="24">00110101101</text>
+    <text x="145" y="58">1011001</text>
+    <text x="12" y="82">10110100110101</text>
+    <text x="74" y="108">00101101001</text>
+    <text x="132" y="91">110101101</text>
+    <text x="21" y="139">010011010101</text>
+    <text x="105" y="158">101101001</text>
+    <text x="151" y="132">00101</text>
+    <text x="5" y="190">110101100101</text>
+    <text x="67" y="215">00110101101</text>
+    <text x="126" y="199">101001101</text>
+    <text x="26" y="247">0110100101</text>
+    <text x="91" y="265">1101001011</text>
+    <text x="149" y="239">01011</text>
+    <text x="9" y="298">101100101101</text>
+    <text x="72" y="326">011010011</text>
+    <text x="137" y="310">110101</text>
+  </g>
+  <g fill="#7bff9b" font-family="monospace" font-size="12" opacity=".72">
+    <text x="30" y="64">1</text><text x="93" y="48">0</text><text x="144" y="82">1</text>
+    <text x="12" y="113">0</text><text x="73" y="134">1</text><text x="131" y="119">0</text>
+    <text x="21" y="171">1</text><text x="105" y="188">0</text><text x="151" y="161">1</text>
+    <text x="5" y="224">0</text><text x="67" y="249">1</text><text x="126" y="232">0</text>
+    <text x="26" y="281">1</text><text x="91" y="303">0</text><text x="149" y="275">1</text>
+    <text x="9" y="341">0</text><text x="137" y="348">1</text>
+  </g>
+</svg>

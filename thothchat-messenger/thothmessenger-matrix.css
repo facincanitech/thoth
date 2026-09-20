@@ -424,8 +424,21 @@
 /* Play desktop: moldura das fotos nas listas de gerenciar (membros/banidos/cargos) menor */
 .play-window-shell .play-manage-member-row .avatar-sm,.play-window-shell .play-role-check-row .avatar-sm{width:30px!important;height:30px!important;padding:1px!important;border:2px solid #1a9b34!important;border-radius:6px!important}
 
-body{background:#010502!important}
-.rail{background:repeating-linear-gradient(180deg,#001106 0,#001106 18px,#00220b 19px)!important;border-right:1px solid #00ff55!important}
+:root{--bg-deep:#010502;--bg-panel:#031008;--bg-surface:#05170a;--bg-surface-2:#071e0c;--bg-selected:#0b3214;--line:#0d4820;--line-2:#126329;--text:#caffd4;--text-base:#d5ffdc;--text-secondary:#8cdb9b;--muted:#5ca66d;--accent-text:#36ff67;--input:#020b04;--rail-bg:#020a04;--rail-icon:#77cb88;--green:#20df50;--on-button:#001707}
+html,body,#root{background:#010502!important;color:#caffd4!important}
+.app,.desktop-window-shell{background:#010502!important;color:#caffd4!important}
+.titlebar{background:#020703!important;color:#5cff7d!important;border-bottom:1px solid #18c947!important}
+.rail{background:#010502 url('../src/assets/themes/matrix-rain.svg') center top/180px 360px repeat-y!important;border-right:1px solid #00ff55!important;animation:matrixRain 9s linear infinite!important}
+@keyframes matrixRain{to{background-position:center 360px}}
 .rail-link[aria-current="page"]{background:#00d747!important;color:#001406!important;box-shadow:0 0 14px #00ff5577!important}
-.chat-header,.top{background:linear-gradient(#06170b,#020904)!important}
-.messages{background:repeating-linear-gradient(0deg,#010602 0,#010602 23px,#06200c 24px)!important}
+.chat-header,.top,.msn-identity-card{background:linear-gradient(#06170b,#020904)!important;color:#caffd4!important;border-color:#125224!important}
+.chats,.chat-list,.msn-contacts-window,.msn-contact-list,.new-conv-panel{background:#020904!important;color:#caffd4!important}
+.messages{background:repeating-linear-gradient(0deg,#010502 0,#010502 27px,#06180b 28px)!important;color:#d5ffdc!important}
+.msn-search-row,.composer,.composer-icons{background:#020904!important;border-color:#125224!important}
+.search,.input,.msn-search-row input{background:#010502!important;color:#caffd4!important;border:1px solid #167435!important;box-shadow:inset 0 0 8px #000!important}
+.search input,.input textarea,.msn-search-row input{color:#caffd4!important;-webkit-text-fill-color:#caffd4!important}
+.search input::placeholder,.input textarea::placeholder,.msn-search-row input::placeholder{color:#5ca66d!important;opacity:1!important}
+.chat,.msn-contact,.name,.preview,.time,.status,.header-name,.header-text{color:#caffd4!important}
+.chat.selected,.msn-contact:active{background:#092d12!important;border-color:#167435!important}
+.bubble{color:#d5ffdc!important;background:#041208!important;border:1px solid #125426!important}.out .bubble{background:#082d12!important;border-color:#19893a!important}
+.system-message{color:#9debab!important;background:#092d12!important}.send,.send-text{background:#27df55!important;color:#001707!important}

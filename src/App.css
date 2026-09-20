@@ -2216,7 +2216,7 @@ body{
   --rail-icon:#77cb88;--shadow:0 12px 36px rgb(0 0 0 / 48%);
 }
 [data-theme="matrix"] body{font-family:"Courier New",monospace;background:#010502}
-[data-theme="matrix"] .rail{background:repeating-linear-gradient(180deg,#020b04 0,#020b04 19px,#06220d 20px);border-right:1px solid #18c947}
+[data-theme="matrix"] .rail{background:#010502 url('/themes/matrix-rain.svg') center top/180px 360px repeat-y;border-right:1px solid #18c947;animation:matrixRailRain 9s linear infinite}
 [data-theme="matrix"] .brand-image{filter:grayscale(1) sepia(1) saturate(8) hue-rotate(75deg) drop-shadow(0 0 6px #2fff60)}
 [data-theme="matrix"] .rail-wordmark,[data-theme="matrix"] .brand{color:#43ff6d;text-shadow:0 0 7px #18d94a}
 [data-theme="matrix"] .rail-link{border-radius:0}
@@ -2224,6 +2224,8 @@ body{
 [data-theme="matrix"] .chats{background:#020904;border-right-color:#104a21}
 [data-theme="matrix"] .top,[data-theme="matrix"] .chat-header{background:linear-gradient(#06170b,#020904);border-bottom-color:#125224}
 [data-theme="matrix"] .search,[data-theme="matrix"] .input{border-radius:0;border-color:#135c28;background:#010703}
+[data-theme="matrix"] .search input,[data-theme="matrix"] .input textarea{color:#caffd4;-webkit-text-fill-color:#caffd4}
+[data-theme="matrix"] .search input::placeholder,[data-theme="matrix"] .input textarea::placeholder{color:#5ca66d;opacity:1}
 [data-theme="matrix"] .filter-tab,[data-theme="matrix"] .filter-more-btn,[data-theme="matrix"] .chat{border-radius:0}
 [data-theme="matrix"] .filter-tab.active{color:#001707;background:#27df55;border-color:#42ff6d}
 [data-theme="matrix"] .chat.selected{background:#092d12;border-color:#167435}
@@ -2237,6 +2239,7 @@ body{
 [data-theme="matrix"] .send,[data-theme="matrix"] .send-text{color:#001707;background:#27df55;box-shadow:0 0 12px #23d95155}
 [data-theme="matrix"] .theme-option-matrix{color:#54ff78;border-color:#197b35;background:#031007}
 [data-theme="matrix"] .theme-option-matrix.active{color:#001707;background:#2ae159;box-shadow:0 0 12px #2ae15966}
+@keyframes matrixRailRain{to{background-position:center 360px}}
 
 /* MADEIRA --------------------------------------------------------- */
 [data-theme="wood"]{
@@ -2310,7 +2313,7 @@ body{
   }
 
   [data-theme="matrix"] .rail{
-    background:repeating-linear-gradient(90deg,#020b04 0,#020b04 26px,#06220d 27px);
+    background:#010502 url('/themes/matrix-rain.svg') center top/180px 360px repeat-y;
     box-shadow:0 -4px 18px rgb(32 223 80 / 9%);
   }
   [data-theme="matrix"] .rail-link{border:1px solid transparent}
@@ -2359,3 +2362,6 @@ html .desktop-window-shell:not(.desktop-chat-shell) .chats{width:auto;flex:1 1 0
 html .desktop-window-shell.desktop-web-shell .chats{width:clamp(330px,28vw,420px);flex:none;min-width:0;border-right:1px solid var(--line)}
 html .desktop-window-shell.desktop-web-shell .main{width:auto;flex:1;min-width:0}
 html .desktop-window-shell.desktop-web-shell{border:0;border-radius:0;box-shadow:none}
+
+/* painel com muito conteudo: itens nao podem encolher (a foto do perfil do Play sumia depois de carregar) */
+.play-group-info-body>*{flex-shrink:0}

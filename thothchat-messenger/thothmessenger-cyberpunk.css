@@ -424,9 +424,16 @@
 /* Play desktop: moldura das fotos nas listas de gerenciar (membros/banidos/cargos) menor */
 .play-window-shell .play-manage-member-row .avatar-sm,.play-window-shell .play-role-check-row .avatar-sm{width:30px!important;height:30px!important;padding:1px!important;border:2px solid #46cfe4!important;border-radius:6px!important}
 
-body{background:#050710 url('../themes/cyberpunk-city.png') center/cover fixed!important}
-.app{background:rgb(5 7 16 / 78%)!important}
-.rail{background:linear-gradient(rgb(7 8 19 / 90%),rgb(12 8 27 / 94%)),url('../themes/cyberpunk-city.png') left bottom/auto 100% fixed!important;border-right:1px solid #20e7ff!important}
+:root{--bg-deep:#050710;--bg-panel:#0b0d1c;--bg-surface:#101329;--bg-surface-2:#151936;--bg-selected:#182b4d;--line:#25305a;--line-2:#2a3865;--text:#f4f7ff;--text-base:#f4f7ff;--text-secondary:#bec8e8;--muted:#8993b5;--accent-text:#20e7ff;--input:#080d20;--rail-bg:#09091a;--rail-icon:#9aa8d2;--green:#20e7ff;--on-button:#061019}
+body{background:#050710 url('../src/assets/themes/cyberpunk-city.png') center/cover fixed!important;color:#f4f7ff!important}
+.app,.desktop-window-shell{background:rgb(5 7 16 / 74%)!important}
+.titlebar{background:linear-gradient(#141328,#070914)!important;border-bottom-color:#20e7ff!important}
+.rail{background:linear-gradient(rgb(7 8 19 / 82%),rgb(12 8 27 / 90%)),url('../src/assets/themes/cyberpunk-city.png') left bottom/auto 100% fixed!important;border-right:1px solid #20e7ff!important}
 .rail-link[aria-current="page"]{background:#20e7ff!important;color:#061019!important;box-shadow:0 0 16px #20e7ff88!important}
-.chat-header,.top{background:linear-gradient(135deg,#11142b,#21113a)!important}
-.messages{background:rgb(5 7 16 / 84%)!important}
+.chat-header,.top,.msn-identity-card{background:linear-gradient(135deg,#11142bee,#21113aee)!important;color:#f4f7ff!important;border-color:#2a3865!important}
+.messages{background:linear-gradient(#050710d9,#050710ed),url('../src/assets/themes/cyberpunk-city.png') center/cover fixed!important;color:#f4f7ff!important}
+.chats,.chat-list,.msn-contacts-window,.msn-contact-list,.new-conv-panel{background:#080a17eF!important;color:#f4f7ff!important}
+.msn-search-row,.composer,.composer-icons{background:#0b0d1cf2!important;border-color:#25305a!important}
+.search,.input,.msn-search-row input{background:#080d20!important;color:#f4f7ff!important;border-color:#345078!important}
+.chat,.msn-contact{color:#f4f7ff!important}.chat.selected,.msn-contact:active{background:#182b4d!important;border-color:#20e7ff!important}
+.bubble{color:#f4f7ff!important;background:#101329!important;border-color:#2a3865!important}.out .bubble{background:#311653!important;border-color:#a33da3!important}
