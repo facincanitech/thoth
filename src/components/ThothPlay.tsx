@@ -1428,7 +1428,7 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
               className="play-channel-sidebar"
               style={sidebarWidth ? { width: sidebarWidth } : undefined}
               onContextMenu={(e) => {
-                if (!canManage || (e.target as HTMLElement).closest('.play-channel-group-title, .play-channel-item, .play-channel-voice-member')) return
+                if (!canManage || (e.target as HTMLElement).closest('.play-channel-group-title, .play-channel-item, .play-channel-voice-member, .play-group-menu, .play-group-menu-backdrop')) return
                 e.preventDefault()
                 setShowNewCategory(true)
               }}
@@ -1538,7 +1538,7 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
 
               {catMenu && (
                 <>
-                  <div className="play-group-menu-backdrop" onClick={() => setCatMenu(null)} />
+                  <div className="play-group-menu-backdrop" onClick={() => setCatMenu(null)} onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); setCatMenu(null) }} />
                   <div className="play-group-menu" style={{ position: 'fixed', top: catMenu.y, left: catMenu.x }}>
                     <button type="button" onClick={() => { openNewChannelModal(catMenu.categoryId); setCatMenu(null) }}>
                       <IconPlus size={14} /> Criar canal aqui
