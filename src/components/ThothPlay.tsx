@@ -2674,6 +2674,8 @@ function VoiceChannel({ me, membersById, channel, onParticipantsChange, onLeave,
   const shareStart = useRef<Record<string, number>>({})
   const [shareMenuOpen, setShareMenuOpen] = useState(false)
   const [shareQuality, setShareQuality] = useState<'480' | '720'>('720')
+  const [shareLimit, setShareLimit] = useState<10 | 20 | 30>(30)
+  const [shareNotice, setShareNotice] = useState<string | null>(null)
   const attachedAudio = useRef<HTMLMediaElement[]>([])
 
   function syncParticipants(room: Room) {
@@ -2773,6 +2775,27 @@ function VoiceChannel({ me, membersById, channel, onParticipantsChange, onLeave,
     syncParticipants(room)
   }
 
+  // Transmissao tem tempo maximo (10/20/30 min) pra nao pesar: passou, encerra a tela
+  // sozinha e avisa, sem tirar a pessoa da chamada de voz.
+  useEffect(() => {
+    if (!screenEnabled) return
+    const t = setTimeout(async () => {
+      const room = roomRef.current
+      if (!room) return
+      await room.localParticipant.setScreenShareEnabled(false).catch(() => {})
+      setScreenEnabled(false)
+      syncParticipants(room)
+      setShareNotice('O compartilhamento de tela dura no máximo ' + shareLimit + ' minutos e foi encerrado. Você continua na chamada; compartilhe de novo se precisar.')
+    }, shareLimit * 60 * 1000)
+    return () => clearTimeout(t)
+  }, [screenEnabled, shareLimit])
+
+  useEffect(() => {
+    if (!shareNotice) return
+    const t = setTimeout(() => setShareNotice(null), 10000)
+    return () => clearTimeout(t)
+  }, [shareNotice])
+
   // Abre o seletor de tela/janela do sistema (serve tanto pra comecar quanto pra TROCAR
   // o que ta sendo compartilhado sem parar antes) - se cancelar, mantem a transmissao atual.
   async function chooseScreen() {
@@ -2803,6 +2826,7 @@ function VoiceChannel({ me, membersById, channel, onParticipantsChange, onLeave,
   return (
     <div className="play-voice-channel">
       <header className="play-text-channel-header"><IconVideo size={17} /> {channel.name}</header>
+      {shareNotice && <div className="play-share-notice">{shareNotice}</div>}
       {connecting && <p className="play-empty">conectando...</p>}
       {error && <p className="play-empty error">{error}</p>}
       {connected && (
@@ -2840,6 +2864,12 @@ function VoiceChannel({ me, membersById, channel, onParticipantsChange, onLeave,
                   <div className="play-group-menu-backdrop" onClick={() => setShareMenuOpen(false)} />
                   <div className="play-share-menu">
                     <strong>{screenEnabled ? 'Compartilhando sua tela' : 'Compartilhar tela'}</strong>
+                    <span className="play-share-menu-label">Duração máxima</span>
+                    <div className="play-share-quality">
+                      {([10, 20, 30] as const).map((m) => (
+                        <button key={m} type="button" className={shareLimit === m ? 'active' : ''} onClick={() => setShareLimit(m)}>{m} min</button>
+                      ))}
+                    </div>
                     <span className="play-share-menu-label">Qualidade</span>
                     <div className="play-share-quality">
                       <button type="button" className={shareQuality === '480' ? 'active' : ''} onClick={() => setShareQuality('480')}>480p</button>

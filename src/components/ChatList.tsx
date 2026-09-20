@@ -16,6 +16,7 @@ import { checkForUpdate } from '../lib/updateCheck'
 import { downloadAndInstallUpdate } from '../lib/appUpdate'
 import { downloadAndInstallDesktopUpdate } from '../lib/desktopUpdate'
 import { isTauriDesktop } from '../lib/platform'
+import { startDesktopGoogleLogin } from '../lib/desktopLogin'
 import { getPresenceColor } from '../lib/presence'
 import { playMessageSound } from '../lib/notificationSound'
 import {
@@ -1768,13 +1769,7 @@ export function ChatList({
       if (access_token && refresh_token) await supabase.auth.setSession({ access_token, refresh_token })
     }
     async function handleDesktopGoogleLogin() {
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: { redirectTo: 'https://facincanitech.github.io/thothchat/desktop-login.html', queryParams: { prompt: 'select_account' }, skipBrowserRedirect: true },
-      })
-      if (error || !data?.url) return
-      const { open } = await import('@tauri-apps/plugin-shell')
-      await open(data.url)
+      await startDesktopGoogleLogin()
     }
     return (
       <section className="msn-login-screen">

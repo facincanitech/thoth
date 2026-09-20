@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Capacitor } from '@capacitor/core'
 import { supabase } from '../lib/supabase'
+import { startDesktopGoogleLogin } from '../lib/desktopLogin'
 import { isTauriDesktop } from '../lib/platform'
 
 type Props = {
@@ -18,15 +19,8 @@ export function AuthModal({ onClose }: Props) {
       // liberada no Supabase, mesma origem do login web) que so entao tenta abrir
       // o app via deep link thoth://callback - navegar direto pra um protocolo
       // customizado a partir do navegador deixava a aba "pensando" pra sempre.
-      const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: { redirectTo: 'https://facincanitech.github.io/thothchat/desktop-login.html', queryParams: { prompt: 'select_account' }, skipBrowserRedirect: true },
-      })
-      if (oauthError) { setError(oauthError.message); return }
-      if (data?.url) {
-        const { open } = await import('@tauri-apps/plugin-shell')
-        await open(data.url)
-      }
+      const loginError = await startDesktopGoogleLogin()
+      if (loginError) setError(loginError)
       return
     }
     const redirectTo = Capacitor.isNativePlatform()

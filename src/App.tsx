@@ -97,33 +97,40 @@ function App() {
     return () => unlisten?.()
   }, [])
 
+  // Atalhos do menu da bandeja (clique direito no icone perto do relogio) -
+  // mesma navegacao que os botoes da rail/3 pontinhos, so chegando por evento
+  // em vez de clique direto, ja que o menu da bandeja e nativo (Rust).
+  // A funcao fica num ref atualizado a cada render: o listener e registrado uma vez
+  // so, e sem isso ele usava a versao velha (requireAuth achava que nao tinha login
+  // e nenhum atalho fazia nada).
+  const trayNavRef = useRef<(target: string) => void>(() => {})
+  trayNavRef.current = (target: string) => {
+    if (target === 'home') {
+      goHome()
+    } else if (target === 'new') {
+      requireAuth(() => {
+        setStatusOpen(false)
+        setAccountOpen(false)
+        setGroupsOpen(false)
+        setPanelView('contact')
+        setPanelOpen(true)
+      })
+    } else if (target === 'status') {
+      openStatus()
+    } else if (target === 'groups') {
+      openGroups()
+    } else if (target === 'communities') {
+      openCommunities()
+    } else if (target === 'play') {
+      openPlay()
+    }
+  }
+
   useEffect(() => {
     if (!isTauriDesktop) return
-    // Atalhos do menu da bandeja (clique direito no icone perto do relogio) -
-    // mesma navegacao que os botoes da rail/3 pontinhos, so chegando por evento
-    // em vez de clique direto, ja que o menu da bandeja e nativo (Rust).
-    function handleTrayNav(target: string) {
-      if (target === 'new') {
-        requireAuth(() => {
-          setStatusOpen(false)
-          setAccountOpen(false)
-          setGroupsOpen(false)
-          setPanelView('contact')
-          setPanelOpen(true)
-        })
-      } else if (target === 'status') {
-        openStatus()
-      } else if (target === 'groups') {
-        openGroups()
-      } else if (target === 'communities') {
-        openCommunities()
-      } else if (target === 'play') {
-        openPlay()
-      }
-    }
     let unlistenTray: (() => void) | undefined
     import('@tauri-apps/api/event').then(({ listen }) =>
-      listen<string>('tray-nav', (event) => handleTrayNav(event.payload)),
+      listen<string>('tray-nav', (event) => trayNavRef.current(event.payload)),
     ).then((fn) => { unlistenTray = fn })
     return () => unlistenTray?.()
   }, [])
