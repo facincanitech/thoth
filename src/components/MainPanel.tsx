@@ -7,7 +7,7 @@ import { getCustomWinks, saveCustomWink, deleteCustomWink, fileToDataUrl, type C
 import { getCustomStickers, saveCustomSticker, deleteCustomSticker, uploadStickerImage, resizeStickerImage, type CustomSticker } from '../lib/stickers'
 import { searchGifs, type GifResult } from '../lib/gifSearch'
 import { getPresenceColor } from '../lib/presence'
-import { isTauriDesktop } from '../lib/platform'
+import { useDesktopLayout } from '../lib/useDesktopLayout'
 import { getErrorMessage } from '../lib/errors'
 import { displayName } from '../lib/displayName'
 import { SettingsRow } from './SettingsRow'
@@ -139,6 +139,7 @@ type Props = {
 }
 
 export function MainPanel({ me, conversation, onBack, onConversationUpdate, blockedIds, onOpenCommunity, onStartCall, inviteDemoSignal, sidebarCollapsed, onToggleSidebar }: Props) {
+  const desktopLayout = useDesktopLayout()
   const [messages, setMessages] = useState<Message[]>([])
   const [members, setMembers] = useState<Record<string, MemberMeta>>({})
   const [draft, setDraft] = useState('')
@@ -2067,7 +2068,7 @@ export function MainPanel({ me, conversation, onBack, onConversationUpdate, bloc
               displayTitle
             )}
             {isOrganicGroup && <span className="grupal-badge">Grupo Orgânico</span>}
-            {isTauriDesktop && otherMember?.status && (
+            {desktopLayout && otherMember?.status && (
               <span className="header-status-phrase" title={otherMember.status}>{otherMember.status}</span>
             )}
             {nudgeFrom && (

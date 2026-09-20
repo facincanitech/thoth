@@ -19,14 +19,16 @@ import { registerPushNotifications, setCurrentConversationId, clearAllNotificati
 import { promptDisableBatteryOptimization, promptFullScreenIntentPermission } from './lib/batteryOpt'
 import { readCache, writeCache } from './lib/cache'
 import { isTauriDesktop } from './lib/platform'
-import { applyDesktopTheme } from './lib/desktopTheme'
+import { applyDesktopTheme, removeDesktopSkin } from './lib/desktopTheme'
+import { useDesktopLayout } from './lib/useDesktopLayout'
 import { ensureCallWindow, openChatWindow, openPlayWindow, requestCall } from './lib/desktopWindows'
 import { DesktopTitleBar } from './components/DesktopChrome'
 import './App.css'
 
-type Theme = 'dark' | 'light' | 'contrast' | 'frutiger' | 'messenger' | 'cyberpunk'
+type Theme = 'dark' | 'light' | 'contrast' | 'frutiger' | 'messenger' | 'cyberpunk' | 'matrix' | 'wood'
 
 function App() {
+  const desktopLayout = useDesktopLayout()
   useEffect(() => {
     document.title = `Thoth Messenger v${APP_VERSION}`
   }, [])
@@ -41,7 +43,7 @@ function App() {
       }
       const saved = localStorage.getItem('ferus-theme')
       if (saved === 'frutiger') return 'messenger' // tema Frutiger antigo foi removido
-      if (saved === 'dark' || saved === 'light' || saved === 'contrast' || saved === 'frutiger' || saved === 'messenger' || saved === 'cyberpunk') return saved
+      if (saved === 'dark' || saved === 'light' || saved === 'contrast' || saved === 'frutiger' || saved === 'messenger' || saved === 'cyberpunk' || saved === 'matrix' || saved === 'wood') return saved
     } catch {
       // ignore
     }
@@ -53,11 +55,12 @@ function App() {
     // ThothChat Messenger (desktop/Tauri) tem visual proprio e fixo, sem sistema de
     // tema - o CSS dele (thothchat-messenger/thothmessenger.css) e carregado em main.tsx antes
     // do app montar e nao depende de data-theme nenhum. Nao mexe nisso aqui.
-    if (isTauriDesktop) {
+    if (desktopLayout) {
       applyDesktopTheme(theme)
       try { localStorage.setItem('ferus-theme', theme) } catch { /* ignore */ }
       return
     }
+    removeDesktopSkin()
     if (theme === 'dark') delete document.documentElement.dataset.theme
     else document.documentElement.dataset.theme = theme
     try {
@@ -65,7 +68,7 @@ function App() {
     } catch {
       // ignore
     }
-  }, [theme])
+  }, [theme, desktopLayout])
 
   useEffect(() => {
     const listenerPromise = CapacitorApp.addListener('appUrlOpen', ({ url }) => {
@@ -732,6 +735,11 @@ function App() {
         {appTree}
       </div>
     )
+  }
+
+  // navegador largo: mesma estrutura/temas do .exe, sem a barra de titulo do Windows
+  if (desktopLayout) {
+    return <div className="desktop-window-shell desktop-chat-shell desktop-web-shell">{appTree}</div>
   }
 
   return appTree

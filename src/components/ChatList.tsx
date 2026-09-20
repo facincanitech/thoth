@@ -16,6 +16,7 @@ import { checkForUpdate } from '../lib/updateCheck'
 import { downloadAndInstallUpdate } from '../lib/appUpdate'
 import { downloadAndInstallDesktopUpdate } from '../lib/desktopUpdate'
 import { isTauriDesktop } from '../lib/platform'
+import { useDesktopLayout } from '../lib/useDesktopLayout'
 import { startDesktopGoogleLogin } from '../lib/desktopLogin'
 import { getPresenceColor } from '../lib/presence'
 import { playMessageSound } from '../lib/notificationSound'
@@ -204,8 +205,8 @@ type Props = {
   communityTab: 'home' | 'info' | 'members' | 'settings'
   onCommunityTabChange: (tab: 'home' | 'info' | 'members' | 'settings') => void
   onCommunityBack: () => void
-  theme: 'dark' | 'light' | 'contrast' | 'frutiger' | 'messenger' | 'cyberpunk'
-  onThemeChange: (theme: 'dark' | 'light' | 'contrast' | 'frutiger' | 'messenger' | 'cyberpunk') => void
+  theme: 'dark' | 'light' | 'contrast' | 'frutiger' | 'messenger' | 'cyberpunk' | 'matrix' | 'wood'
+  onThemeChange: (theme: 'dark' | 'light' | 'contrast' | 'frutiger' | 'messenger' | 'cyberpunk' | 'matrix' | 'wood') => void
   statusOpen: boolean
   onStatusOpenChange: (open: boolean) => void
   onOpenStatus: () => void
@@ -277,6 +278,7 @@ export function ChatList({
   onOpenGroupsTip,
   onRequestInviteDemo,
 }: Props) {
+  const desktopLayout = useDesktopLayout()
   const [conversations, setConversations] = useState<ConvWithLabel[]>(() => {
     const lastUserId = (() => {
       try {
@@ -1288,7 +1290,7 @@ export function ChatList({
   }
 
   async function loadContactCategories() {
-    if (!me || !(isTauriDesktop || theme === 'messenger')) return
+    if (!me || !(desktopLayout || theme === 'messenger')) return
     const { data: cats } = await supabase.from('contact_categories').select('*').eq('user_id', me.id).order('position', { ascending: true })
     setContactCategories((cats || []) as ContactCategory[])
     const ids = (cats || []).map((c) => c.id as string)
@@ -1802,7 +1804,7 @@ export function ChatList({
   }
 
   // Lista de contatos estilo MSN (desktop) tambem no web/APK quando o tema e "Messenger".
-  const useMsnList = isTauriDesktop || theme === 'messenger'
+  const useMsnList = desktopLayout || theme === 'messenger'
   let desktopContactsSurface: ReactNode = null
   if (useMsnList) {
     const sortByChatOrder = <T extends { id: string }>(items: T[]): T[] => {
@@ -2889,6 +2891,20 @@ export function ChatList({
                     onClick={() => onThemeChange('cyberpunk')}
                   >
                     Cyberpunk
+                  </button>
+                  <button
+                    type="button"
+                    className={`theme-option theme-option-matrix${theme === 'matrix' ? ' active' : ''}`}
+                    onClick={() => onThemeChange('matrix')}
+                  >
+                    Matrix
+                  </button>
+                  <button
+                    type="button"
+                    className={`theme-option theme-option-wood${theme === 'wood' ? ' active' : ''}`}
+                    onClick={() => onThemeChange('wood')}
+                  >
+                    Madeira
                   </button>
                 </div>
             </>

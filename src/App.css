@@ -2154,6 +2154,179 @@ body{
   [data-theme="cyberpunk"] .rail{border-right:0;border-top:1px solid #1de3f0;box-shadow:0 -5px 22px rgb(11 214 234 / 8%)}
   [data-theme="cyberpunk"] .top{background:linear-gradient(135deg,#15102c,#0b172d)}
 }
+
+/* RETRO / ORKUT --------------------------------------------------- */
+[data-theme="light"]{
+  --bg:#d9e6f5;--panel:#fff;--panel2:#fff;--line:#b5c9df;--text:#30405a;--text-base:#30405a;
+  --muted:#70839a;--bubble:#e8eff8;--hover:#eef4fb;--input:#fff;--bg-deep:#d9e6f5;--bg-panel:#fff;
+  --bg-surface:#fff;--bg-surface-2:#edf3fa;--bg-selected:#e6edf7;--line-2:#c4d3e5;
+  --text-secondary:#4d6380;--accent-text:#315d9b;--accent-dim-bg:#dbe8f7;--avatar-bg:#edf3fa;
+  --green:#315d9b;--green2:#254d86;--rail-bg:#d4e2f2;--rail-icon:#315d9b;--retro-pink:#d72f88;
+}
+[data-theme="light"] body{font-family:Arial,"Segoe UI",sans-serif;background:#d9e6f5}
+[data-theme="light"] .rail{background:#d5e3f3;border-right:1px solid #9fb8d4;box-shadow:none}
+[data-theme="light"] .rail-wordmark{color:var(--retro-pink);font-weight:800}
+[data-theme="light"] .brand{color:var(--retro-pink);letter-spacing:-.5px}
+[data-theme="light"] .rail-link{border-radius:2px;color:#315d9b}
+[data-theme="light"] .rail-link:hover{background:#e7eef8}
+[data-theme="light"] .rail-link[aria-current="page"]{color:#315d9b;background:#fff;border:1px solid #a9bfd9;box-shadow:none}
+[data-theme="light"] .chats{background:#d9e6f5;border-right:1px solid #9fb8d4}
+[data-theme="light"] .top{min-height:78px;background:#d9e6f5;border-bottom:0}
+[data-theme="light"] .search{height:36px;border-radius:2px;background:#fff;border:1px solid #aebfd3}
+[data-theme="light"] .filters{padding-bottom:10px;gap:4px}
+[data-theme="light"] .filter-tab,[data-theme="light"] .filter-more-btn{border-radius:2px;background:#eff4fa;border-color:#afc2d8}
+[data-theme="light"] .filter-tab.active,[data-theme="light"] .filter-more-btn.active{background:#6c8fbd;border-color:#587dab}
+[data-theme="light"] .chat-list{margin:0 8px 8px;padding:5px;background:#fff;border:1px solid #afc3da;border-radius:2px}
+[data-theme="light"] .chat{min-height:58px;margin:0;border-radius:1px;border-bottom:1px solid #e5ebf3}
+[data-theme="light"] .chat:hover{background:#eef4fb}
+[data-theme="light"] .chat.selected{background:#e1ebf7;border-color:#b2c9e1}
+[data-theme="light"] .chat.selected::before{top:0;bottom:0;width:4px;border-radius:0;background:var(--retro-pink)}
+[data-theme="light"] .photo,[data-theme="light"] .header-photo,[data-theme="light"] .avatar-sm{border-radius:2px;border-color:#b1c7df;background:#edf3fa}
+[data-theme="light"] .chat-header{min-height:70px;background:#fff;border-bottom:4px solid #d9e6f5}
+[data-theme="light"] .messages{background:#fff;padding-top:20px}
+[data-theme="light"] .date{border-radius:2px;background:#e5eef8;border-color:#bfd0e3}
+[data-theme="light"] .bubble{border:1px solid #c1d1e3;border-radius:3px;box-shadow:none}
+[data-theme="light"] .in .bubble{background:#fff;border-bottom-left-radius:3px}
+[data-theme="light"] .out .bubble{background:#e6eef8;border-bottom-right-radius:3px}
+[data-theme="light"] .composer{min-height:64px;background:#d9e6f5;border-top:1px solid #9fb8d4}
+[data-theme="light"] .composer-icons{border:1px solid #afc2d8;border-radius:2px}
+[data-theme="light"] .compose-btn,[data-theme="light"] .icon-btn{border-radius:2px}
+[data-theme="light"] .input{min-height:42px;border-radius:2px;border-color:#9fb7d1}
+[data-theme="light"] .send,[data-theme="light"] .send-text{border-radius:2px;background:#5f84b3}
+
+/* CYBERPUNK REWORK ------------------------------------------------ */
+[data-theme="cyberpunk"] body{background:#050710 url('/themes/cyberpunk-city.png') center/cover fixed}
+[data-theme="cyberpunk"] .app:not(.play-open){background:rgb(5 7 16 / 72%);backdrop-filter:blur(1px)}
+[data-theme="cyberpunk"] .rail{background:linear-gradient(rgb(7 8 19 / 88%),rgb(16 8 31 / 92%)),url('/themes/cyberpunk-city.png') left bottom/auto 100% fixed;border-right-color:#20e7ff}
+[data-theme="cyberpunk"] .chats{background:rgb(7 9 20 / 90%);backdrop-filter:blur(16px)}
+[data-theme="cyberpunk"] .top{background:linear-gradient(135deg,rgb(17 20 43 / 94%),rgb(33 17 58 / 94%))}
+[data-theme="cyberpunk"] .messages{background:linear-gradient(rgb(5 7 16 / 82%),rgb(5 7 16 / 90%)),url('/themes/cyberpunk-city.png') center/cover fixed}
+[data-theme="cyberpunk"] .chat-header,[data-theme="cyberpunk"] .composer{backdrop-filter:blur(18px)}
+[data-theme="cyberpunk"] .rail-link[aria-current="page"]{clip-path:polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px)}
+[data-theme="cyberpunk"] .bubble{clip-path:polygon(7px 0,100% 0,100% calc(100% - 7px),calc(100% - 7px) 100%,0 100%,0 7px);border-radius:0}
+
+/* MATRIX ---------------------------------------------------------- */
+[data-theme="matrix"]{
+  color-scheme:dark;--bg:#010502;--panel:#031008;--panel2:#06180b;--line:#0d4820;--text:#caffd4;
+  --text-base:#d5ffdc;--muted:#5ca66d;--bubble:#073713;--hover:#082b11;--input:#020b04;
+  --bg-deep:#010502;--bg-panel:#031008;--bg-surface:#05170a;--bg-surface-2:#071e0c;
+  --bg-selected:#0b3214;--line-2:#126329;--muted-2:#478a57;--text-secondary:#8cdb9b;
+  --accent-text:#36ff67;--avatar-bg:#0a2912;--accent-dim-bg:#0b3214;--danger-bg:#381018;
+  --danger:#ff5d72;--scrollbar:#17682c;--green:#20df50;--green2:#0ca238;--rail-bg:#020a04;
+  --rail-icon:#77cb88;--shadow:0 12px 36px rgb(0 0 0 / 48%);
+}
+[data-theme="matrix"] body{font-family:"Courier New",monospace;background:#010502}
+[data-theme="matrix"] .rail{background:repeating-linear-gradient(180deg,#020b04 0,#020b04 19px,#06220d 20px);border-right:1px solid #18c947}
+[data-theme="matrix"] .brand-image{filter:grayscale(1) sepia(1) saturate(8) hue-rotate(75deg) drop-shadow(0 0 6px #2fff60)}
+[data-theme="matrix"] .rail-wordmark,[data-theme="matrix"] .brand{color:#43ff6d;text-shadow:0 0 7px #18d94a}
+[data-theme="matrix"] .rail-link{border-radius:0}
+[data-theme="matrix"] .rail-link[aria-current="page"]{color:#001b07;background:#29e759;box-shadow:0 0 14px #20e55077}
+[data-theme="matrix"] .chats{background:#020904;border-right-color:#104a21}
+[data-theme="matrix"] .top,[data-theme="matrix"] .chat-header{background:linear-gradient(#06170b,#020904);border-bottom-color:#125224}
+[data-theme="matrix"] .search,[data-theme="matrix"] .input{border-radius:0;border-color:#135c28;background:#010703}
+[data-theme="matrix"] .filter-tab,[data-theme="matrix"] .filter-more-btn,[data-theme="matrix"] .chat{border-radius:0}
+[data-theme="matrix"] .filter-tab.active{color:#001707;background:#27df55;border-color:#42ff6d}
+[data-theme="matrix"] .chat.selected{background:#092d12;border-color:#167435}
+[data-theme="matrix"] .chat.selected::before{background:#35ff65;box-shadow:0 0 8px #35ff65}
+[data-theme="matrix"] .messages{background:repeating-linear-gradient(0deg,#010502 0,#010502 27px,#08210e 28px)}
+[data-theme="matrix"] .bubble{border:1px solid #125426;border-radius:0;box-shadow:0 0 12px rgb(24 218 69 / 6%)}
+[data-theme="matrix"] .in .bubble{background:#041208}
+[data-theme="matrix"] .out .bubble{background:#082d12;border-color:#19893a}
+[data-theme="matrix"] .composer{background:#020904;border-top-color:#125224}
+[data-theme="matrix"] .compose-btn,[data-theme="matrix"] .icon-btn,[data-theme="matrix"] .send,[data-theme="matrix"] .send-text{border-radius:0}
+[data-theme="matrix"] .send,[data-theme="matrix"] .send-text{color:#001707;background:#27df55;box-shadow:0 0 12px #23d95155}
+[data-theme="matrix"] .theme-option-matrix{color:#54ff78;border-color:#197b35;background:#031007}
+[data-theme="matrix"] .theme-option-matrix.active{color:#001707;background:#2ae159;box-shadow:0 0 12px #2ae15966}
+
+/* MADEIRA --------------------------------------------------------- */
+[data-theme="wood"]{
+  color-scheme:dark;--bg:#1d100a;--panel:#29170e;--panel2:#352016;--line:#624128;--text:#f5e4c9;
+  --text-base:#f5e4c9;--muted:#b89b79;--bubble:#5a3823;--hover:#422818;--input:#201109;
+  --bg-deep:#1a0e08;--bg-panel:#2a180f;--bg-surface:#372116;--bg-surface-2:#42291b;
+  --bg-selected:#5b3b25;--line-2:#795438;--muted-2:#9d8061;--text-secondary:#d9c09f;
+  --accent-text:#efc47f;--avatar-bg:#4b2e1d;--accent-dim-bg:#573820;--danger-bg:#4b2020;
+  --danger:#ef8d76;--scrollbar:#755036;--green:#c49553;--green2:#966b34;--rail-bg:#241209;
+  --rail-icon:#e4c69f;--shadow:0 12px 36px rgb(10 4 1 / 42%);
+}
+[data-theme="wood"] body{font-family:Georgia,"Times New Roman",serif;background:#1b0f09 url('/themes/walnut-grain.png') center/420px auto fixed}
+[data-theme="wood"] .app:not(.play-open){background:rgb(28 14 8 / 68%)}
+[data-theme="wood"] .rail{background:linear-gradient(rgb(36 18 9 / 25%),rgb(22 10 5 / 46%)),url('/themes/walnut-grain.png') center/360px auto;border-right:2px solid #b9874f;box-shadow:inset -5px 0 12px #160a05aa,5px 0 16px #0b0503aa}
+[data-theme="wood"] .brand-image{filter:sepia(.45) drop-shadow(0 2px 3px #130904)}
+[data-theme="wood"] .rail-wordmark,[data-theme="wood"] .brand{color:#f0d3a8;text-shadow:0 2px 2px #160a05}
+[data-theme="wood"] .rail-link{border-radius:5px;color:#e1c29b;text-shadow:0 1px #1a0b04}
+[data-theme="wood"] .rail-link:hover{background:#f0d09b22}
+[data-theme="wood"] .rail-link[aria-current="page"]{color:#3a1e0d;background:linear-gradient(#efd39f,#c99b5b);border:1px solid #f5dfb5;box-shadow:0 2px 8px #13080399;text-shadow:none}
+[data-theme="wood"] .chats{background:rgb(37 20 12 / 94%);border-right-color:#6c462d}
+[data-theme="wood"] .top,[data-theme="wood"] .chat-header{background:linear-gradient(rgb(77 45 27 / 94%),rgb(43 23 14 / 96%));border-bottom-color:#9a704b}
+[data-theme="wood"] .search,[data-theme="wood"] .input{background:#1d0f08;border-color:#765035;border-radius:6px;box-shadow:inset 0 2px 5px #0e0603}
+[data-theme="wood"] .filter-tab,[data-theme="wood"] .filter-more-btn{background:#382116;border-color:#6a472f;border-radius:5px}
+[data-theme="wood"] .filter-tab.active{color:#38200e;background:#dfbd84;border-color:#efd4a7}
+[data-theme="wood"] .chat{border-radius:5px}
+[data-theme="wood"] .chat.selected{background:#553721;border-color:#86603e}
+[data-theme="wood"] .chat.selected::before{background:#e0b873}
+[data-theme="wood"] .photo,[data-theme="wood"] .header-photo,[data-theme="wood"] .avatar-sm{border-radius:4px;border-color:#b18455;background:#4b2e1d;box-shadow:0 2px 5px #120703}
+[data-theme="wood"] .messages{background:linear-gradient(rgb(239 225 200 / 94%),rgb(225 205 171 / 96%)),url('/themes/walnut-grain.png') center/520px auto;color:#3e291b}
+[data-theme="wood"] .date{color:#64452d;background:#e5cfaa;border-color:#b89468}
+[data-theme="wood"] .bubble{border:1px solid #a9825c;border-radius:8px;box-shadow:0 2px 5px rgb(50 25 10 / 13%)}
+[data-theme="wood"] .in .bubble{color:#3d291c;background:#f6ead3}
+[data-theme="wood"] .out .bubble{color:#372113;background:#d8b37b;border-color:#aa7f49}
+[data-theme="wood"] .composer{background:linear-gradient(#4a2b1a,#2a160d);border-top-color:#9a704b}
+[data-theme="wood"] .composer-icons{padding:4px;background:#2b180f;border:1px solid #6c472f;border-radius:6px}
+[data-theme="wood"] .send,[data-theme="wood"] .send-text{color:#3b210f;background:linear-gradient(#edcf99,#c4914f);box-shadow:0 2px 7px #120703}
+[data-theme="wood"] .theme-option-wood{color:#edc991;border-color:#8c633f;background:linear-gradient(#4b2e1d,#2d190f)}
+[data-theme="wood"] .theme-option-wood.active{color:#3b210f;background:linear-gradient(#efd49f,#c69655);border-color:#f4dfba}
+
+/* As opcoes continuam reconheciveis mesmo antes do proprio tema estar ativo. */
+.theme-option-matrix{color:#22b94b;border-color:#1d7132;background:#07160b}
+.theme-option-wood{color:#6f4528;border-color:#a77d5b;background:#ead7ba}
+.theme-option-cyberpunk{color:#2bbdd0;border-color:#347386;background:#10172b}
+
+@media(max-width:760px){
+  [data-theme="light"] .rail,[data-theme="matrix"] .rail,[data-theme="wood"] .rail{border-right:0}
+  [data-theme="light"] .rail{border-top:1px solid #9fb8d4}
+  [data-theme="matrix"] .rail{border-top:1px solid #18c947}
+  [data-theme="wood"] .rail{border-top:2px solid #b9874f}
+}
+
+/* APK/mobile: cada tema veste a barra inferior existente. Nao muda ordem,
+   quantidade, tamanho estrutural ou comportamento dos itens de navegacao. */
+@media(max-width:760px){
+  [data-theme="light"] .rail{
+    background:linear-gradient(#eef4fb,#cfdeef);box-shadow:0 -2px 8px rgb(56 91 130 / 14%);
+  }
+  [data-theme="light"] .rail-link{border:1px solid transparent;border-radius:2px}
+  [data-theme="light"] .rail-link[aria-current="page"]{
+    background:#fff;border-color:#9fb8d4;border-bottom:3px solid var(--retro-pink);box-shadow:none;
+  }
+  [data-theme="light"] .rail-account .avatar-sm{border-radius:2px}
+
+  [data-theme="cyberpunk"] .rail{
+    background:linear-gradient(rgb(8 8 22 / 86%),rgb(18 8 34 / 94%)),url('/themes/cyberpunk-city.png') center bottom/cover;
+    border-top:1px solid #20e7ff;box-shadow:0 -5px 22px rgb(11 214 234 / 11%);
+  }
+  [data-theme="cyberpunk"] .rail-link{border-radius:0;clip-path:none}
+  [data-theme="cyberpunk"] .rail-link[aria-current="page"]{
+    clip-path:polygon(6px 0,100% 0,100% calc(100% - 6px),calc(100% - 6px) 100%,0 100%,0 6px);
+  }
+
+  [data-theme="matrix"] .rail{
+    background:repeating-linear-gradient(90deg,#020b04 0,#020b04 26px,#06220d 27px);
+    box-shadow:0 -4px 18px rgb(32 223 80 / 9%);
+  }
+  [data-theme="matrix"] .rail-link{border:1px solid transparent}
+  [data-theme="matrix"] .rail-link[aria-current="page"]{border-color:#64ff84;box-shadow:0 0 12px #20df5066}
+
+  [data-theme="wood"] .rail{
+    background:linear-gradient(rgb(35 17 9 / 20%),rgb(20 9 5 / 42%)),url('/themes/walnut-grain.png') center/420px auto;
+    box-shadow:inset 0 4px 9px #13080377,0 -3px 12px #10060299;
+  }
+  [data-theme="wood"] .rail-link{border:1px solid transparent}
+  [data-theme="wood"] .rail-link[aria-current="page"]{border-color:#f5dfb5;box-shadow:0 2px 7px #13080399}
+
+  [data-theme="contrast"] .rail{background:#000;border-top:2px solid #fff}
+  [data-theme="contrast"] .rail-link{border:1px solid transparent}
+  [data-theme="contrast"] .rail-link[aria-current="page"]{border-color:#fff}
+}
 .play-role-order-row{display:flex;gap:6px;margin-top:8px}
 
 /* Card do perfil (Play) */
@@ -2179,3 +2352,10 @@ body{
 .play-tag-add-row{position:relative}
 .play-tag-add-row .play-tag-emoji-picker{bottom:calc(100% + 6px);left:0;max-width:min(300px,100%);z-index:60}
 .play-tag-emoji-btn{width:42px;height:42px;flex:none;border:1px solid var(--line);border-radius:12px;background:var(--input);color:var(--muted);font-size:1.3rem;display:grid;place-items:center;cursor:pointer}
+
+/* Layout desktop: lista de contatos nunca passa da borda (o .chats era width:100% + flex-shrink:0 e o
+   sininho ficava alem da borda em tela cheia). No navegador largo a lista volta a ter largura de coluna. */
+html .desktop-window-shell:not(.desktop-chat-shell) .chats{width:auto;flex:1 1 0;min-width:0;max-width:100%}
+html .desktop-window-shell.desktop-web-shell .chats{width:clamp(330px,28vw,420px);flex:none;min-width:0;border-right:1px solid var(--line)}
+html .desktop-window-shell.desktop-web-shell .main{width:auto;flex:1;min-width:0}
+html .desktop-window-shell.desktop-web-shell{border:0;border-radius:0;box-shadow:none}
