@@ -18,6 +18,7 @@ import {
   IconAttach, IconSearch, IconSend, IconSmile, IconSettingsGear, IconTrash, IconUser, IconVideo, IconVideoOff,
 } from './icons'
 import { fetchRandomStation, searchPublicStations, isHlsStream, type RadioStation } from '../lib/sonor'
+import { DEFAULT_PLAY_THEME, PLAY_THEMES, normalizePlayTheme, type PlayThemeId } from '../lib/playThemes'
 import type { Bot, PlayBotButton, PlaySonorSession, PlayCategory, PlayChannel, PlayGroup, PlayMessage, PlayProfile, PlayRole, Profile } from '../types'
 
 function useIsMobile() {
@@ -66,6 +67,54 @@ const PLAY_PERMISSIONS: { group: string; items: { key: string; label: string }[]
 ]
 const DEFAULT_MEMBER_PERMS = ['voice_speak', 'voice_camera', 'voice_screen', 'use_commands']
 
+const TAG_EMOJIS = [
+  '🎮','🎬','🎵','🎧','🎤','🎸','📚','✏️','🎨','📷','💻','🤖','⚽','🏀','🏋️','🚴','🏊','🧗','🎯','🎲',
+  '🍕','🍔','🍣','☕','🍺','🍰','🌮','🐶','🐱','🦊','🐉','🌱','🌎','✈️','🏖️','🏔️','🚗','🏍️','🔥','⚡',
+  '😄','😎','🥳','😴','🤓','😈','👻','💜','💙','💚','❤️','⭐','🌙','☀️','🌈','🚀','👑','💎','🍀','🧠',
+]
+
+// Caracteristica = emoji fixo + nome (guardada como "🎮 gamer"). Serve pro servidor e pro perfil.
+function TagEditor({ tags, onChange, max = 4 }: { tags: string[]; onChange: (next: string[]) => void; max?: number }) {
+  const [emoji, setEmoji] = useState('')
+  const [label, setLabel] = useState('')
+  const [pickerOpen, setPickerOpen] = useState(false)
+  function add() {
+    const name = label.trim()
+    if (!name || tags.length >= max) return
+    onChange([...tags, (emoji ? emoji + ' ' : '') + name])
+    setLabel('')
+    setEmoji('')
+  }
+  return (
+    <div>
+      <div className="play-group-tags">
+        {tags.map((t) => (
+          <span key={t} className="play-group-tag">{t} <button type="button" onClick={() => onChange(tags.filter((x) => x !== t))}>×</button></span>
+        ))}
+      </div>
+      {tags.length < max && (
+        <div className="play-invite-code-row play-tag-add-row" style={{ marginTop: 6 }}>
+          <button type="button" className="play-tag-emoji-btn" title="Escolher emoji" onClick={() => setPickerOpen((v) => !v)}>
+            {emoji || <IconSmile size={18} />}
+          </button>
+          {pickerOpen && (
+            <>
+              <div className="play-group-menu-backdrop" onClick={() => setPickerOpen(false)} />
+              <div className="emoji-picker play-tag-emoji-picker">
+                {TAG_EMOJIS.map((em) => (
+                  <button key={em} type="button" onClick={() => { setEmoji(em); setPickerOpen(false) }}>{em}</button>
+                ))}
+              </div>
+            </>
+          )}
+          <input placeholder="ex.: gamer, filme, feliz" maxLength={20} value={label} onChange={(e) => setLabel(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') add() }} />
+          <button type="button" className="google-btn" style={{ width: 'auto' }} onClick={add}>Adicionar</button>
+        </div>
+      )}
+    </div>
+  )
+}
+
 const ROLE_EMOJIS = [
   '👑', '🛡️', '⭐', '🔥', '💎', '🎮', '🎤', '🎧', '🎨', '🔧',
   '📢', '🚀', '⚡', '🏆', '🎯', '🤖', '👾', '🎲', '🍀', '💜',
@@ -87,6 +136,7 @@ function mergePlayProfile(base: Profile, override: PlayProfile | null | undefine
     name_style_color: override.name_style_effect ? override.name_style_color : base.name_style_color,
     banner_color: override.banner_color || base.banner_color,
     banner_image_url: override.banner_image_url || base.banner_image_url,
+    play_tags: override.tags || [],
   }
 }
 
@@ -107,7 +157,7 @@ type ChannelMessage = PlayMessage & { author?: Profile }
 
 export function ThothPlay({ me, onBack }: Props) {
   const [myPlayProfile, setMyPlayProfile] = useState<Profile>(me)
-  const [playTheme, setPlayTheme] = useState<'light' | 'dark'>('dark')
+  const [playTheme, setPlayTheme] = useState<PlayThemeId>(DEFAULT_PLAY_THEME)
   const [showProfile, setShowProfile] = useState(false)
   const [myGroups, setMyGroups] = useState<PlayGroup[]>([])
   const [browseGroups, setBrowseGroups] = useState<PlayGroup[]>([])
@@ -157,7 +207,7 @@ export function ThothPlay({ me, onBack }: Props) {
     const { data } = await supabase.from('play_profiles').select('*').eq('user_id', me.id).maybeSingle()
     const p = data as PlayProfile | null
     setMyPlayProfile(mergePlayProfile(me, p))
-    setPlayTheme(p?.theme_preference || 'dark')
+    setPlayTheme(normalizePlayTheme(p?.theme_preference))
   }
 
   useEffect(() => {
@@ -707,6 +757,11 @@ function PlayProfileCard({ profile, roles, userRoleIds, canAssign, onToggleRole,
         <AvatarBox src={profile.avatar_url} id={profile.id} fallbackLetter={displayName(profile)[0]?.toUpperCase()} className="play-profile-card-avatar" />
         <h2><StyledName name={displayName(profile)} font={profile.name_style_font} effect={profile.name_style_effect} color={profile.name_style_color} /></h2>
         {profile.status && <p className="play-profile-card-status">{profile.status}</p>}
+        {!!profile.play_tags?.length && (
+          <div className="play-group-tags" style={{ justifyContent: 'center', padding: '0 16px 8px' }}>
+            {profile.play_tags.map((t) => <span key={t} className="play-group-tag">{t}</span>)}
+          </div>
+        )}
         <div className="play-profile-card-roles">
           {myRoles.map((r) => <span key={r.id} className="play-group-tag">{r.emoji ? r.emoji + ' ' : ''}{r.name}</span>)}
           {canAssign && (
@@ -1988,7 +2043,6 @@ function GroupInfoPanel({ group, myRole, members, me, can, channels, categories,
   const [tab, setTab] = useState<'geral' | 'membros' | 'cargos' | 'bots'>('geral')
   const [name, setName] = useState(group.name)
   const [description, setDescription] = useState(group.description || '')
-  const [tagDraft, setTagDraft] = useState('')
   const [tags, setTags] = useState<string[]>(group.tags || [])
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -2201,17 +2255,6 @@ function GroupInfoPanel({ group, myRole, members, me, can, channels, categories,
     onUpdate({ name: name.trim(), description: description.trim() || null, tags })
   }
 
-  function addTag() {
-    const t = tagDraft.trim()
-    if (!t || tags.length >= 4) return
-    setTags([...tags, t])
-    setTagDraft('')
-  }
-
-  function removeTag(t: string) {
-    setTags(tags.filter((x) => x !== t))
-  }
-
   async function handleImagePick(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
@@ -2312,17 +2355,7 @@ function GroupInfoPanel({ group, myRole, members, me, can, channels, categories,
               <label style={{ marginTop: 10 }}>Descrição</label>
               <input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Sem descrição" />
               <label style={{ marginTop: 10 }}>Características (até 4)</label>
-              <div className="play-group-tags">
-                {tags.map((t) => (
-                  <span key={t} className="play-group-tag">{t} <button type="button" onClick={() => removeTag(t)}>×</button></span>
-                ))}
-              </div>
-              {tags.length < 4 && (
-                <div className="play-invite-code-row" style={{ marginTop: 6 }}>
-                  <input placeholder="ex.: 🎮 gamer" value={tagDraft} onChange={(e) => setTagDraft(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') addTag() }} />
-                  <button type="button" className="google-btn" style={{ width: 'auto' }} onClick={addTag}>Adicionar</button>
-                </div>
-              )}
+              <TagEditor tags={tags} onChange={setTags} />
               {error && <p className="auth-error">{error}</p>}
               <button type="button" className="google-btn" style={{ marginTop: 10 }} disabled={saving || !name.trim()} onClick={save}>
                 {saving ? 'Salvando...' : 'Salvar'}
@@ -2606,9 +2639,10 @@ function ProfilePanel({ me, open, onClose, onSaved }: { me: Profile; open: boole
   const [font, setFont] = useState<string | null>(null)
   const [effect, setEffect] = useState<'solid' | 'gradient' | 'neon' | 'prism' | null>(null)
   const [color, setColor] = useState<string | null>(null)
-  const [themePref, setThemePref] = useState<'light' | 'dark'>('dark')
+  const [themePref, setThemePref] = useState<PlayThemeId>(DEFAULT_PLAY_THEME)
   const [bannerColor, setBannerColor] = useState<string | null>(null)
   const [bannerImage, setBannerImage] = useState<string | null>(null)
+  const [profileTags, setProfileTags] = useState<string[]>([])
   const [bannerUploading, setBannerUploading] = useState(false)
   const bannerFileRef = useRef<HTMLInputElement>(null)
   const [saving, setSaving] = useState(false)
@@ -2627,9 +2661,10 @@ function ProfilePanel({ me, open, onClose, onSaved }: { me: Profile; open: boole
       setFont(p?.name_style_font || null)
       setEffect(p?.name_style_effect || null)
       setColor(p?.name_style_color || null)
-      setThemePref(p?.theme_preference || 'dark')
+      setThemePref(normalizePlayTheme(p?.theme_preference))
       setBannerColor(p?.banner_color || null)
       setBannerImage(p?.banner_image_url || null)
+      setProfileTags(p?.tags || [])
       setLoaded(true)
     })
   }, [me.id, open])
@@ -2639,8 +2674,9 @@ function ProfilePanel({ me, open, onClose, onSaved }: { me: Profile; open: boole
   }
 
   // Tema aplica na hora (nao espera o "Salvar" geral) - senao clicar em
-  // Claro/Escuro parece nao fazer nada ate a pessoa lembrar de salvar.
-  async function applyTheme(next: 'light' | 'dark') {
+  // A escolha aplica na hora (nao espera o "Salvar" geral). As opcoes vem
+  // do catalogo central, entao novos temas nao exigem novos botoes aqui.
+  async function applyTheme(next: PlayThemeId) {
     setThemePref(next)
     await upsert({ theme_preference: next })
     onSaved()
@@ -2658,6 +2694,7 @@ function ProfilePanel({ me, open, onClose, onSaved }: { me: Profile; open: boole
       theme_preference: themePref,
       banner_color: bannerColor,
       banner_image_url: bannerImage,
+      tags: profileTags,
     })
     setSaving(false)
     onSaved()
@@ -2714,6 +2751,9 @@ function ProfilePanel({ me, open, onClose, onSaved }: { me: Profile; open: boole
         <input value={displayNameDraft} onChange={(e) => setDisplayNameDraft(e.target.value)} />
         <label style={{ marginTop: 10 }}>Status</label>
         <input value={statusDraft} onChange={(e) => setStatusDraft(e.target.value)} placeholder="De boa" />
+
+        <label style={{ marginTop: 14 }}>Características (até 4)</label>
+        <TagEditor tags={profileTags} onChange={setProfileTags} />
 
         <label style={{ marginTop: 14 }}>Card do perfil (aparece quando clicam no seu nome)</label>
         <div
@@ -2788,9 +2828,25 @@ function ProfilePanel({ me, open, onClose, onSaved }: { me: Profile; open: boole
             )}
 
             <label style={{ marginTop: 14 }}>Tema do Play</label>
-            <div className="play-group-privacy-toggle">
-              <button type="button" className={themePref === 'light' ? 'active' : ''} onClick={() => applyTheme('light')}>Claro</button>
-              <button type="button" className={themePref === 'dark' ? 'active' : ''} onClick={() => applyTheme('dark')}>Escuro</button>
+            <div className="play-theme-picker">
+              {PLAY_THEMES.map((theme) => (
+                <button
+                  key={theme.id}
+                  type="button"
+                  className={`play-theme-option${themePref === theme.id ? ' active' : ''}`}
+                  aria-pressed={themePref === theme.id}
+                  onClick={() => applyTheme(theme.id)}
+                >
+                  <span className="play-theme-preview" aria-hidden="true">
+                    {theme.colors.map((color) => <i key={color} style={{ background: color }} />)}
+                  </span>
+                  <span className="play-theme-option-copy">
+                    <strong>{theme.label}</strong>
+                    <small>{theme.description}</small>
+                  </span>
+                  <span className="play-theme-check" aria-hidden="true">✓</span>
+                </button>
+              ))}
             </div>
           </>
         )}

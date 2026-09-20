@@ -1501,10 +1501,14 @@ body{
    do tema geral do app (que pode estar em frutiger/contraste/etc). */
 .play-app-shell{color:var(--text);position:relative;flex:1;min-width:0;min-height:0;display:flex;overflow:hidden;background:var(--bg-deep)}
 .play-app-shell[data-theme="light"]{
-  --bg-deep:#d8ebf7;--bg-panel:#fff;--bg-surface:#fff;--bg-surface-2:#ffffff;--bg-selected:#eef8ff;
-  --line:#c7dced;--line-2:#c7dced;--muted:#5c7688;--text:#1c2733;--text-secondary:#3f5b6d;
-  --accent-text:#087dac;--avatar-bg:#eef8ff;--green:#5fb4e2;--on-button:#fff;--input:#ffffff;
-  --shadow:0 12px 36px rgb(8 125 172 / 12%);
+  color-scheme:light;
+  --bg-deep:#e7f4fb;--bg-panel:#f7fcff;--bg-surface:#fff;--bg-surface-2:#eaf7fc;--bg-selected:#d7effa;
+  --line:#b8d8e7;--line-2:#cce3ed;--muted:#607d8d;--text:#12364b;--text-secondary:#315c72;
+  --accent-text:#067eb6;--avatar-bg:#e4f5fc;--green:#078fc5;--on-button:#fff;--input:#fff;
+  --shadow:0 14px 38px rgb(27 94 126 / 15%);
+  background:
+    radial-gradient(circle at 72% -20%,rgb(255 255 255 / 95%),transparent 45%),
+    linear-gradient(145deg,#edf9fe,#d8edf7);
 }
 .play-app-shell[data-theme="dark"]{
   --bg-deep:#10151e;--bg-panel:#161d28;--bg-surface:#1c2532;--bg-surface-2:#222d3c;--bg-selected:#243451;
@@ -1514,6 +1518,55 @@ body{
 }
 .play-profile-panel-backdrop{position:absolute;inset:0;background:rgb(0 0 0 / 35%);z-index:39}
 .play-profile-panel{inset:0 auto 0 0;width:360px;max-width:88vw;box-shadow:2px 0 24px rgb(0 0 0 / 25%)}
+
+/* Aero claro: identidade diurna propria, sem perder a hierarquia do Play. */
+.play-app-shell[data-theme="light"] .play-icon-rail{
+  background:linear-gradient(180deg,#dff4fc,#c9e8f5);border-right-color:#acd2e3;
+  box-shadow:inset -1px 0 rgb(255 255 255 / 65%);
+}
+.play-app-shell[data-theme="light"] .play-icon-rail-home,
+.play-app-shell[data-theme="light"] .play-icon-rail-add{
+  color:#0877a9;background:rgb(255 255 255 / 72%);border:1px solid #b4d9e8;
+  box-shadow:0 3px 9px rgb(31 105 137 / 10%);
+}
+.play-app-shell[data-theme="light"] .play-icon-rail-group{
+  background:#fff;border:1px solid #b3d7e7;box-shadow:0 3px 9px rgb(31 105 137 / 12%);
+}
+.play-app-shell[data-theme="light"] .play-group-topbar,
+.play-app-shell[data-theme="light"] .play-text-channel-header{
+  background:linear-gradient(180deg,rgb(255 255 255 / 92%),#e8f6fc);
+  box-shadow:inset 0 1px #fff;
+}
+.play-app-shell[data-theme="light"] .play-channel-sidebar,
+.play-app-shell[data-theme="light"] .play-member-sidebar{
+  background:linear-gradient(180deg,#f5fbfe,#eaf6fb);
+}
+.play-app-shell[data-theme="light"] .play-channel-item.active{
+  color:#075d8a;background:linear-gradient(90deg,#d5f1fc,#eaf9ff);box-shadow:inset 3px 0 #08a3db;
+}
+.play-app-shell[data-theme="light"] .play-text-channel,
+.play-app-shell[data-theme="light"] .play-voice-channel{background:rgb(255 255 255 / 72%)}
+.play-app-shell[data-theme="light"] .play-messages{background:linear-gradient(180deg,#fff,#f9fdff)}
+.play-app-shell[data-theme="light"] .play-composer{background:#edf8fc}
+.play-app-shell[data-theme="light"] .play-composer input{box-shadow:inset 0 1px 3px rgb(24 91 123 / 8%)}
+.play-app-shell[data-theme="light"] .play-composer button{box-shadow:0 4px 12px rgb(7 143 197 / 22%)}
+
+.play-theme-picker{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:3px}
+.play-theme-option{
+  position:relative;min-width:0;display:flex;flex-direction:column;align-items:stretch;gap:9px;padding:9px;
+  color:var(--text);background:var(--bg-surface-2);border:1px solid var(--line-2);border-radius:12px;
+  text-align:left;cursor:pointer;transition:border-color .15s,transform .15s,box-shadow .15s;
+}
+.play-theme-option:hover{transform:translateY(-1px);border-color:var(--accent-text)}
+.play-theme-option.active{border-color:var(--accent-text);box-shadow:0 0 0 2px color-mix(in srgb,var(--accent-text) 18%,transparent)}
+.play-theme-preview{height:46px;display:flex;overflow:hidden;border:1px solid var(--line-2);border-radius:8px}
+.play-theme-preview i{flex:1}
+.play-theme-option-copy{display:flex;flex-direction:column;gap:3px}
+.play-theme-option-copy strong{font-size:12px}
+.play-theme-option-copy small{color:var(--muted);font-size:10px;line-height:1.35}
+.play-theme-check{position:absolute;top:13px;right:13px;width:19px;height:19px;display:grid;place-items:center;color:white;background:var(--accent-text);border:2px solid var(--bg-panel);border-radius:50%;font-size:10px;font-weight:800;opacity:0;transform:scale(.7);transition:.15s}
+.play-theme-option.active .play-theme-check{opacity:1;transform:scale(1)}
+@media(max-width:420px){.play-theme-picker{grid-template-columns:1fr}}
 
 .play-avatar-crop-viewport{position:relative;overflow:hidden;border-radius:50%;background:#000;margin:0 auto;touch-action:none;cursor:grab}
 .play-avatar-crop-viewport:active{cursor:grabbing}
@@ -2033,3 +2086,11 @@ body{
 .header-status-phrase{white-space:normal!important;overflow:hidden;display:-webkit-box!important;-webkit-line-clamp:3;-webkit-box-orient:vertical;line-height:1.25;word-break:break-word}
 /* perfil na barra lateral: sem a caixa em volta da foto */
 .desktop-window-shell .rail-account,[data-theme="messenger"] .rail-account{background:transparent!important;border-color:transparent!important;box-shadow:none!important}
+
+/* seletor de emoji do Play usa as cores do tema do Play (o skin do Messenger pintava de azul claro) */
+.play-app-shell .emoji-picker,.play-window-shell .emoji-picker{background:var(--bg-panel)!important;border:1px solid var(--line-2)!important;color:var(--text)!important;box-shadow:var(--shadow)!important}
+.play-app-shell .emoji-picker button,.play-window-shell .emoji-picker button{background:transparent!important;border:0!important}
+.play-app-shell .emoji-picker button:hover,.play-window-shell .emoji-picker button:hover{background:var(--bg-selected)!important}
+.play-tag-add-row{position:relative}
+.play-tag-add-row .play-tag-emoji-picker{bottom:calc(100% + 6px);left:0;max-width:min(300px,100%);z-index:60}
+.play-tag-emoji-btn{width:42px;height:42px;flex:none;border:1px solid var(--line);border-radius:12px;background:var(--input);color:var(--muted);font-size:1.3rem;display:grid;place-items:center;cursor:pointer}

@@ -363,11 +363,12 @@
    prefers-color-scheme abaixo, que so continua servindo de fallback quando
    ninguem escolheu nada ainda. */
 .play-window-shell[data-theme="light"]{
-  --bg-deep:#f8fdff;--bg-panel:#eefaff;--bg-surface:#fff;--bg-surface-2:#dff4fc;--bg-selected:#d2f1fc;
-  --line:#82c6df;--line-2:#acdceb;--text:#073d68;--text-base:#073d68;--text-secondary:#285f82;
-  --muted:#628ba2;--accent-text:#0877bd;--input:#fff;--avatar-bg:#dcedf5;--green:#078cd1;--on-button:#fff;
-  --play-glass-top:#f7fdff;--play-glass-bottom:#ccebf7;--play-rail-top:#18afe3;--play-rail-bottom:#047dac;
-  --play-canvas:#fff;--play-heading:#0752a0;--play-cyan:#08a9eb;--shadow:0 10px 28px rgb(0 69 103 / 18%);
+  color-scheme:light;
+  --bg-deep:#e6f4fa;--bg-panel:#f4fbfe;--bg-surface:#fff;--bg-surface-2:#e2f3fa;--bg-selected:#cfedf8;
+  --line:#78bdd8;--line-2:#afd8e8;--text:#123e59;--text-base:#123e59;--text-secondary:#32647c;
+  --muted:#63899c;--accent-text:#047bac;--input:#fff;--avatar-bg:#def1f8;--green:#078bc3;--on-button:#fff;
+  --play-glass-top:#fff;--play-glass-bottom:#d4eef8;--play-rail-top:#26b5df;--play-rail-bottom:#057da9;
+  --play-canvas:#fff;--play-heading:#07518a;--play-cyan:#08a6dc;--shadow:0 12px 30px rgb(26 92 122 / 18%);
 }
 .play-window-shell[data-theme="dark"]{
   --bg-deep:#07111c;--bg-panel:#0b2031;--bg-surface:#0b1b29;--bg-surface-2:#0a1926;--bg-selected:#0b3651;

@@ -1,3 +1,5 @@
+import type { PlayThemeId } from './lib/playThemes'
+
 export type Profile = {
   id: string
   username: string
@@ -11,6 +13,7 @@ export type Profile = {
   city?: string | null
   banner_color?: string | null
   banner_image_url?: string | null
+  play_tags?: string[] | null
   banner_image_position?: string | null
   app_bg_color?: string | null
   app_sidebar_color?: string | null
@@ -83,9 +86,10 @@ export type PlayProfile = {
   name_style_font: string | null
   name_style_effect: 'solid' | 'gradient' | 'neon' | 'prism' | null
   name_style_color: string | null
-  theme_preference: 'light' | 'dark' | null
+  theme_preference: PlayThemeId | null
   banner_color: string | null
   banner_image_url: string | null
+  tags: string[] | null
   updated_at: string
 }
 
