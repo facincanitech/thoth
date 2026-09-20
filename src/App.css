@@ -2017,3 +2017,19 @@ body{
 .play-role-emoji-row button.active{border-color:var(--accent-text);background:var(--bg-selected)}
 [data-theme="messenger"] .play-app-shell .play-manage-member-row .avatar-sm{width:30px;height:30px;padding:1px;border-width:2px;border-radius:7px}
 .play-role-order-row{display:flex;gap:6px;margin-top:8px}
+
+/* Card do perfil (Play) */
+.play-card-banner-preview{height:56px;border-radius:10px;background-size:cover;background-position:center;border:1px solid var(--line-2)}
+.play-profile-card{padding:0;overflow:hidden;max-width:340px;text-align:center}
+.play-profile-card-banner{height:96px;background-size:cover;background-position:center}
+.play-profile-card-avatar{width:84px!important;height:84px!important;border-radius:20px!important;margin:-42px auto 8px;border:4px solid var(--bg-surface);overflow:hidden}
+.play-profile-card h2{margin:0 12px 4px}
+.play-profile-card-status{margin:0 16px 10px!important;color:var(--text-secondary)}
+.play-profile-card-roles{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;padding:0 16px 8px}
+.play-profile-card-addrole{border:1px dashed var(--accent-text);background:none;color:var(--accent-text);cursor:pointer}
+.play-profile-card-rolelist{text-align:left;padding:4px 20px 8px}
+.play-profile-card .modal-close{margin:6px 0 14px}
+/* frase de status do amigo no cabecalho do chat: quebra em ate 3 linhas em vez de cortar */
+.header-status-phrase{white-space:normal!important;overflow:hidden;display:-webkit-box!important;-webkit-line-clamp:3;-webkit-box-orient:vertical;line-height:1.25;word-break:break-word}
+/* perfil na barra lateral: sem a caixa em volta da foto */
+.desktop-window-shell .rail-account,[data-theme="messenger"] .rail-account{background:transparent!important;border-color:transparent!important;box-shadow:none!important}

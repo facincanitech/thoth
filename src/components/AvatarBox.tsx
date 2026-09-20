@@ -20,7 +20,7 @@ export function AvatarBox({ src, id, fallbackLetter, className, style }: Props) 
 
   return (
     <div className={className} style={showImage ? style : { ...style, background: colorFromId(id), color: '#fff' }}>
-      {showImage ? <img src={src!} alt="" onError={() => setFailed(true)} /> : fallbackLetter}
+      {showImage ? <img src={src!} alt="" loading="lazy" decoding="async" onError={() => setFailed(true)} /> : fallbackLetter}
     </div>
   )
 }

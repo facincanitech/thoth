@@ -84,7 +84,9 @@ function mergePlayProfile(base: Profile, override: PlayProfile | null | undefine
     status: override.status || base.status,
     name_style_font: override.name_style_font || base.name_style_font,
     name_style_effect: override.name_style_effect || base.name_style_effect,
-    name_style_color: override.name_style_color || base.name_style_color,
+    name_style_color: override.name_style_effect ? override.name_style_color : base.name_style_color,
+    banner_color: override.banner_color || base.banner_color,
+    banner_image_url: override.banner_image_url || base.banner_image_url,
   }
 }
 
@@ -692,6 +694,45 @@ function PlayIconRail({ myGroups, selectedGroupId, onSelectGroup, onGoHome, onEx
   )
 }
 
+function PlayProfileCard({ profile, roles, userRoleIds, canAssign, onToggleRole, onClose }: {
+  profile: Profile; roles: PlayRole[]; userRoleIds: string[]; canAssign: boolean
+  onToggleRole: (roleId: string, has: boolean) => void; onClose: () => void
+}) {
+  const [editingRoles, setEditingRoles] = useState(false)
+  const myRoles = roles.filter((r) => userRoleIds.includes(r.id))
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <div className="modal-card play-profile-card" onClick={(e) => e.stopPropagation()}>
+        <div className="play-profile-card-banner" style={{ backgroundColor: profile.banner_color || '#3b6ef6', backgroundImage: profile.banner_image_url ? 'url(' + profile.banner_image_url + ')' : undefined }} />
+        <AvatarBox src={profile.avatar_url} id={profile.id} fallbackLetter={displayName(profile)[0]?.toUpperCase()} className="play-profile-card-avatar" />
+        <h2><StyledName name={displayName(profile)} font={profile.name_style_font} effect={profile.name_style_effect} color={profile.name_style_color} /></h2>
+        {profile.status && <p className="play-profile-card-status">{profile.status}</p>}
+        <div className="play-profile-card-roles">
+          {myRoles.map((r) => <span key={r.id} className="play-group-tag">{r.emoji ? r.emoji + ' ' : ''}{r.name}</span>)}
+          {canAssign && (
+            <button type="button" className="play-group-tag play-profile-card-addrole" onClick={() => setEditingRoles((v) => !v)}>{editingRoles ? 'pronto' : '+ cargo'}</button>
+          )}
+        </div>
+        {canAssign && editingRoles && (
+          <div className="play-profile-card-rolelist">
+            {roles.length === 0 && <span className="play-empty">nenhum cargo criado ainda</span>}
+            {roles.map((r) => {
+              const has = userRoleIds.includes(r.id)
+              return (
+                <label key={r.id} className="play-role-check-row">
+                  <input type="checkbox" checked={has} onChange={() => onToggleRole(r.id, has)} />
+                  {r.emoji ? r.emoji + ' ' : ''}{r.name}
+                </label>
+              )
+            })}
+          </div>
+        )}
+        <button type="button" className="modal-close" onClick={onClose}>fechar</button>
+      </div>
+    </div>
+  )
+}
+
 function ServerInfoScreen({ group, members, onClose, onConfigure, onJoin }: {
   group: PlayGroup; members?: GroupMember[]; onClose: () => void; onConfigure?: () => void; onJoin?: () => void
 }) {
@@ -788,6 +829,7 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
   const [replayEvents, setReplayEvents] = useState<ReplayEvent[] | null>(null)
   // null = sem cargo nenhum (so o basico); lista = uniao das permissoes dos meus cargos
   const [myRolePerms, setMyRolePerms] = useState<string[] | null>(null)
+  const [profileCardId, setProfileCardId] = useState<string | null>(null)
   const [pipIds, setPipIds] = useState<string[]>([])
   const [pipWin, setPipWin] = useState<Window | null>(null)
   const [fullscreenId, setFullscreenId] = useState<string | null>(null)
@@ -894,9 +936,9 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
     <div key={m.profile.id} className={'play-member-row' + (offline ? ' offline' : '')}>
       <AvatarBox src={m.profile.avatar_url} id={m.profile.id} fallbackLetter={displayName(m.profile)[0]?.toUpperCase()} className="avatar-sm" />
       <span
-        className={canAssign && m.profile.id !== me.id ? 'play-name-clickable' : undefined}
+        className="play-name-clickable"
         onContextMenu={(e) => { e.preventDefault(); openRoleQuickMenu(m.profile.id, displayName(m.profile), e.clientX, e.clientY) }}
-        onClick={(e) => openRoleQuickMenu(m.profile.id, displayName(m.profile), e.clientX, e.clientY)}
+        onClick={() => setProfileCardId(m.profile.id)}
       >
         {offline ? displayName(m.profile) : <StyledName name={displayName(m.profile)} font={m.profile.name_style_font} effect={m.profile.name_style_effect} color={m.profile.name_style_color} />}
       </span>
@@ -936,6 +978,12 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
     if (!roleList.length) { setRoleQuickMenuIds(new Set()); return }
     const { data: rm } = await supabase.from('play_role_members').select('role_id').eq('user_id', userId).in('role_id', roleList.map((r) => r.id))
     setRoleQuickMenuIds(new Set((rm || []).map((r) => r.role_id as string)))
+  }
+
+  async function toggleUserRole(userId: string, roleId: string, has: boolean) {
+    if (has) await supabase.from('play_role_members').delete().eq('role_id', roleId).eq('user_id', userId)
+    else await supabase.from('play_role_members').insert({ role_id: roleId, user_id: userId })
+    setRoleIdsByUser((prev) => ({ ...prev, [userId]: has ? (prev[userId] || []).filter((x) => x !== roleId) : [...(prev[userId] || []), roleId] }))
   }
 
   async function toggleQuickMenuRole(roleId: string, has: boolean) {
@@ -1618,9 +1666,9 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
                     <div className="play-message-body">
                       <div className="play-message-row">
                         <strong
-                          className={canAssign && m.author && m.author_id !== me.id ? 'play-name-clickable' : undefined}
+                          className="play-name-clickable"
                           onContextMenu={(e) => { if (m.author) { e.preventDefault(); openRoleQuickMenu(m.author_id, displayName(m.author), e.clientX, e.clientY) } }}
-                          onClick={(e) => { if (m.author) openRoleQuickMenu(m.author_id, displayName(m.author), e.clientX, e.clientY) }}
+                          onClick={() => { if (m.author) setProfileCardId(m.author_id) }}
                         >
                           {m.author ? (
                             <StyledName name={displayName(m.author)} font={m.author.name_style_font} effect={m.author.name_style_effect} color={m.author.name_style_color} />
@@ -1714,9 +1762,9 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
                   <div key={p.id} className="play-member-row">
                     <AvatarBox src={p.id === me.id ? myPlayProfile.avatar_url : membersById[p.id]?.avatar_url || null} id={p.id} fallbackLetter={p.name[0]?.toUpperCase()} className="avatar-sm" />
                     <span
-                      className={canAssign && p.id !== me.id ? 'play-name-clickable' : undefined}
+                      className="play-name-clickable"
                       onContextMenu={(e) => { e.preventDefault(); openRoleQuickMenu(p.id, p.name, e.clientX, e.clientY) }}
-                      onClick={(e) => openRoleQuickMenu(p.id, p.name, e.clientX, e.clientY)}
+                      onClick={() => setProfileCardId(p.id)}
                     >
                       {p.name}
                     </span>
@@ -1798,6 +1846,17 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
             <button type="button" className="modal-close" onClick={() => setSonorModal(null)}>fechar</button>
           </div>
         </div>
+      )}
+
+      {profileCardId && membersById[profileCardId] && (
+        <PlayProfileCard
+          profile={membersById[profileCardId]}
+          roles={groupRoles}
+          userRoleIds={roleIdsByUser[profileCardId] || []}
+          canAssign={canAssign && profileCardId !== me.id}
+          onToggleRole={(roleId, has) => toggleUserRole(profileCardId, roleId, has)}
+          onClose={() => setProfileCardId(null)}
+        />
       )}
 
       {roleQuickMenu && (
@@ -2548,6 +2607,10 @@ function ProfilePanel({ me, open, onClose, onSaved }: { me: Profile; open: boole
   const [effect, setEffect] = useState<'solid' | 'gradient' | 'neon' | 'prism' | null>(null)
   const [color, setColor] = useState<string | null>(null)
   const [themePref, setThemePref] = useState<'light' | 'dark'>('dark')
+  const [bannerColor, setBannerColor] = useState<string | null>(null)
+  const [bannerImage, setBannerImage] = useState<string | null>(null)
+  const [bannerUploading, setBannerUploading] = useState(false)
+  const bannerFileRef = useRef<HTMLInputElement>(null)
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [cropFile, setCropFile] = useState<File | null>(null)
@@ -2565,6 +2628,8 @@ function ProfilePanel({ me, open, onClose, onSaved }: { me: Profile; open: boole
       setEffect(p?.name_style_effect || null)
       setColor(p?.name_style_color || null)
       setThemePref(p?.theme_preference || 'dark')
+      setBannerColor(p?.banner_color || null)
+      setBannerImage(p?.banner_image_url || null)
       setLoaded(true)
     })
   }, [me.id, open])
@@ -2591,9 +2656,24 @@ function ProfilePanel({ me, open, onClose, onSaved }: { me: Profile; open: boole
       name_style_effect: effect,
       name_style_color: color,
       theme_preference: themePref,
+      banner_color: bannerColor,
+      banner_image_url: bannerImage,
     })
     setSaving(false)
     onSaved()
+  }
+
+  async function handleBannerPick(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    setBannerUploading(true)
+    try {
+      const url = await uploadImage(file, me.id, 'play-banner')
+      setBannerImage(url)
+    } finally {
+      setBannerUploading(false)
+    }
   }
 
   function handleAvatarPick(e: ChangeEvent<HTMLInputElement>) {
@@ -2634,6 +2714,18 @@ function ProfilePanel({ me, open, onClose, onSaved }: { me: Profile; open: boole
         <input value={displayNameDraft} onChange={(e) => setDisplayNameDraft(e.target.value)} />
         <label style={{ marginTop: 10 }}>Status</label>
         <input value={statusDraft} onChange={(e) => setStatusDraft(e.target.value)} placeholder="De boa" />
+
+        <label style={{ marginTop: 14 }}>Card do perfil (aparece quando clicam no seu nome)</label>
+        <div
+          className="play-card-banner-preview"
+          style={{ backgroundColor: bannerColor || '#3b6ef6', backgroundImage: bannerImage ? 'url(' + bannerImage + ')' : undefined }}
+        />
+        <div className="play-invite-code-row" style={{ marginTop: 6 }}>
+          <input type="color" value={bannerColor && bannerColor.startsWith('#') ? bannerColor : '#3b6ef6'} onChange={(ev) => setBannerColor(ev.target.value)} style={{ width: 48, flex: 'none', padding: 2 }} />
+          <button type="button" className="google-btn" style={{ width: 'auto' }} disabled={bannerUploading} onClick={() => bannerFileRef.current?.click()}>{bannerUploading ? 'Enviando...' : 'Imagem de fundo'}</button>
+          {bannerImage && <button type="button" className="google-btn" style={{ width: 'auto' }} onClick={() => setBannerImage(null)}>Remover</button>}
+        </div>
+        <input ref={bannerFileRef} type="file" accept="image/*" hidden onChange={handleBannerPick} />
 
         {loaded && (
           <>
@@ -2678,7 +2770,7 @@ function ProfilePanel({ me, open, onClose, onSaved }: { me: Profile; open: boole
                       title={pal.label}
                       className={'prism-palette' + ((color || 'rainbow') === pal.id ? ' active' : '')}
                       style={{ backgroundImage: 'linear-gradient(90deg,' + pal.colors.join(',') + ')' }}
-                      onClick={() => setColor(pal.id === 'rainbow' ? null : pal.id)}
+                      onClick={() => setColor(pal.id)}
                     />
                   ))}
                 </div>

@@ -2068,7 +2068,7 @@ export function MainPanel({ me, conversation, onBack, onConversationUpdate, bloc
             )}
             {isOrganicGroup && <span className="grupal-badge">Grupo Orgânico</span>}
             {isTauriDesktop && otherMember?.status && (
-              <span className="header-status-phrase">{otherMember.status}</span>
+              <span className="header-status-phrase" title={otherMember.status}>{otherMember.status}</span>
             )}
             {nudgeFrom && (
               <span className="nudge-indicator" title="chamou sua atenção">

@@ -84,6 +84,8 @@ export type PlayProfile = {
   name_style_effect: 'solid' | 'gradient' | 'neon' | 'prism' | null
   name_style_color: string | null
   theme_preference: 'light' | 'dark' | null
+  banner_color: string | null
+  banner_image_url: string | null
   updated_at: string
 }
 
