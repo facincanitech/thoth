@@ -11,7 +11,7 @@ import { uploadImage } from '../lib/uploadImage'
 import {
   IconArrowLeft, IconChevronDown, IconCopy, IconEdit, IconGamepad, IconGrip, IconHash, IconHeadphones,
   IconLock, IconLockOpen, IconLogout, IconMic, IconMicOff, IconMonitorShare, IconPanelLeft, IconPhoneOff, IconPlus,
-  IconSearch, IconSend, IconSettingsGear, IconTrash, IconUser, IconVideo, IconVideoOff,
+  IconAttach, IconSearch, IconSend, IconSmile, IconSettingsGear, IconTrash, IconUser, IconVideo, IconVideoOff,
 } from './icons'
 import type { Bot, PlayCategory, PlayChannel, PlayGroup, PlayMessage, PlayProfile, PlayRole, Profile } from '../types'
 
@@ -24,6 +24,16 @@ function useIsMobile() {
     return () => mq.removeEventListener('change', on)
   }, [])
   return m
+}
+
+const CHAT_EMOJIS = [
+  '😀','😁','😂','🤣','😊','😇','🙂','😉','😍','🥰','😘','😋','😜','🤪','🤩','🥳','😎','🤓','🧐','😏',
+  '😒','🙄','😬','🤔','😴','😢','😭','🥺','😤','😠','😡','😨','😱','😅','🤯','😳','🤗','🤭','💀','👻',
+  '❤️','💙','💚','💛','💜','🖤','💔','💯','🔥','✨','👍','👎','👏','🙌','🙏','🤝','👋','💪','👀','🎮',
+]
+
+function isImageMessage(content: string) {
+  return /^https?:\/\/\S+\.(png|jpe?g|gif|webp)(\?\S*)?$/i.test(content) || /^https?:\/\/\S+\/play-media-\d+$/.test(content)
 }
 
 const ROLE_EMOJIS = [
@@ -279,6 +289,12 @@ export function ThothPlay({ me, onBack }: Props) {
     }
   }
 
+  async function sendRawMessage(content: string) {
+    if (!selectedChannel) return
+    const { error } = await supabase.from('play_messages').insert({ channel_id: selectedChannel.id, author_id: me.id, content })
+    if (error) console.error('send play media failed', error)
+  }
+
   async function handleCreateGroup(name: string, description: string, isClosed: boolean, password: string) {
     setCreateError(null)
     const { data, error } = await supabase.rpc('create_play_group', {
@@ -370,6 +386,7 @@ export function ThothPlay({ me, onBack }: Props) {
           draft={draft}
           onDraftChange={handleDraftChange}
           onSend={sendMessage}
+          onSendContent={sendRawMessage}
           onSelectChannel={openChannel}
           onChannelsChange={() => fetchChannels(selectedGroup.id)}
           onCategoriesChange={() => fetchCategories(selectedGroup.id)}
@@ -558,6 +575,7 @@ type GroupViewProps = {
   draft: string
   onDraftChange: (v: string) => void
   onSend: () => void
+  onSendContent: (content: string) => void
   onSelectChannel: (c: PlayChannel) => void
   onChannelsChange: () => void
   onCategoriesChange: () => void
@@ -569,7 +587,7 @@ type GroupViewProps = {
 type GroupMember = { profile: Profile; role: string }
 type VoiceParticipantInfo = { id: string; name: string }
 
-function GroupView({ me, myPlayProfile, group, channels, categories, selectedChannel, messages, hasReplaySet, liveTyping, draft, onDraftChange, onSend, onSelectChannel, onChannelsChange, onCategoriesChange, onGroupUpdate, onLeftGroup, onExitToMessenger }: GroupViewProps) {
+function GroupView({ me, myPlayProfile, group, channels, categories, selectedChannel, messages, hasReplaySet, liveTyping, draft, onDraftChange, onSend, onSendContent, onSelectChannel, onChannelsChange, onCategoriesChange, onGroupUpdate, onLeftGroup, onExitToMessenger }: GroupViewProps) {
   const [showNewChannel, setShowNewChannel] = useState(false)
   const [mobileScreen, setMobileScreen] = useState<'channels' | 'chat' | 'members'>('channels')
   const mobileScreenRef = useRef(mobileScreen)
@@ -577,6 +595,9 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
   const [joinedVoiceChannel, setJoinedVoiceChannel] = useState<PlayChannel | null>(null)
   const [openReplayId, setOpenReplayId] = useState<string | null>(null)
   const [replayEvents, setReplayEvents] = useState<ReplayEvent[] | null>(null)
+  const [showChatEmoji, setShowChatEmoji] = useState(false)
+  const chatFileRef = useRef<HTMLInputElement>(null)
+  const [chatUploading, setChatUploading] = useState(false)
   const [showGroupInfo, setShowGroupInfo] = useState(false)
   const [showServerInfo, setShowServerInfo] = useState(false)
   const [showGroupMenu, setShowGroupMenu] = useState(false)
@@ -771,6 +792,21 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
     shell?.classList.toggle('play-focus', mobileScreen !== 'channels')
     return () => shell?.classList.remove('play-focus')
   }, [mobileScreen])
+
+  async function handleChatFilePicked(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    setChatUploading(true)
+    try {
+      const url = await uploadImage(file, me.id, 'play-media')
+      onSendContent(url)
+    } catch (err) {
+      console.error('play media upload failed', err)
+    } finally {
+      setChatUploading(false)
+    }
+  }
 
   function handleSelectChannel(c: PlayChannel) {
     setMobileScreen('chat')
@@ -1065,7 +1101,7 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
                       {openReplayId === m.id && replayEvents && replayEvents.length > 1 ? (
                         <ReplayPlayer events={replayEvents} />
                       ) : (
-                        <p>{m.content}</p>
+                        isImageMessage(m.content) ? <img className="play-message-img" src={m.content} alt="" /> : <p>{m.content}</p>
                       )}
                     </div>
                   </div>
@@ -1080,6 +1116,19 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
                 ))}
               </div>
               <div className="play-composer">
+                {showChatEmoji && (
+                  <>
+                    <div className="play-group-menu-backdrop" onClick={() => setShowChatEmoji(false)} />
+                    <div className="emoji-picker play-chat-emoji-picker">
+                      {CHAT_EMOJIS.map((em) => (
+                        <button key={em} type="button" onClick={() => { onDraftChange(draft + em); setShowChatEmoji(false) }}>{em}</button>
+                      ))}
+                    </div>
+                  </>
+                )}
+                <button type="button" className="play-composer-tool" title="Emoji" onClick={() => setShowChatEmoji((v) => !v)}><IconSmile size={20} /></button>
+                <button type="button" className="play-composer-tool" title="Enviar imagem" disabled={chatUploading} onClick={() => chatFileRef.current?.click()}><IconAttach size={20} /></button>
+                <input ref={chatFileRef} type="file" accept="image/*" hidden onChange={handleChatFilePicked} />
                 <input
                   placeholder={`Conversar no #${selectedChannel.name}`}
                   value={draft}
