@@ -490,7 +490,8 @@ export function CommunityView({ me, community, activeTab, onTabChange, onCommuni
           {onToggleSidebar && (
             <button
               type="button"
-              className="icon-btn"
+              className={`icon-btn sidebar-toggle${sidebarCollapsed ? ' active' : ''}`}
+              aria-pressed={!!sidebarCollapsed}
               title={sidebarCollapsed ? 'Mostrar lista de conversas' : 'Esconder lista de conversas'}
               onClick={onToggleSidebar}
             >

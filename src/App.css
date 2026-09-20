@@ -2365,3 +2365,6 @@ html .desktop-window-shell.desktop-web-shell{border:0;border-radius:0;box-shadow
 
 /* painel com muito conteudo: itens nao podem encolher (a foto do perfil do Play sumia depois de carregar) */
 .play-group-info-body>*{flex-shrink:0}
+
+/* botao de esconder/mostrar a barra lateral: fica "apertado" enquanto a barra esta escondida */
+.icon-btn.sidebar-toggle.active,.icon-btn.sidebar-toggle[aria-pressed="true"]{background:var(--bg-selected);color:var(--accent-text);box-shadow:inset 0 0 0 1px var(--line-2)}
