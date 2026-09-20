@@ -1900,3 +1900,11 @@ body{
 .play-composer .play-composer-tool:hover{background:var(--bg-selected);color:var(--text)}
 .play-chat-emoji-picker{bottom:calc(100% + 6px);left:8px;max-width:calc(100% - 16px);z-index:60}
 .play-message-img{display:block;max-width:min(320px,100%);max-height:320px;border-radius:8px;margin-top:4px;object-fit:cover}
+@media(max-width:760px){
+  .play-icon-rail{padding:12px 7px}
+  .play-icon-rail-group{width:44px;height:44px;box-shadow:0 0 4px rgb(19 183 241 / 35%)}
+  .play-icon-rail-group.active{outline:none;border:2px solid #6be0ff;box-shadow:0 0 5px rgb(53 199 255 / 70%)}
+  .play-icon-rail-add{box-shadow:none}
+  .play-icon-rail-profile{width:40px;height:40px}
+  .play-icon-rail-home{width:44px;height:44px}
+}
