@@ -1996,3 +1996,7 @@ body{
 [data-theme="messenger"] .rail-link[aria-current="page"] .rail-symbol,
 [data-theme="messenger"] .rail-link[aria-current="page"]:hover{color:#075d8c!important;text-shadow:none}
 [data-theme="messenger"] .header-name,[data-theme="messenger"] .header-text{color:#123d57}
+
+.prism-palette-picker{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+.prism-palette{width:64px;height:28px;border-radius:8px;border:2px solid transparent;cursor:pointer;padding:0;box-shadow:0 0 0 1px var(--line-2)}
+.prism-palette.active{border-color:var(--accent-text);box-shadow:0 0 0 2px var(--bg-panel),0 0 0 4px var(--accent-text)}

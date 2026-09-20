@@ -9,7 +9,7 @@ import { displayName } from '../lib/displayName'
 import { AvatarBox } from './AvatarBox'
 import { NotificationCenter } from './NotificationCenter'
 import { StatusView } from './StatusView'
-import { StyledName, NAME_FONTS, NAME_EFFECTS } from './StyledName'
+import { StyledName, NAME_FONTS, NAME_EFFECTS, PRISM_PALETTES } from './StyledName'
 import { readCache, writeCache } from '../lib/cache'
 import { APP_VERSION, APK_DOWNLOAD_URL, DESKTOP_DOWNLOAD_URL } from '../version'
 import { checkForUpdate } from '../lib/updateCheck'
@@ -2813,13 +2813,31 @@ export function ChatList({
               ))}
             </div>
 
-            <ColorField
-              label="Cor"
-              value={me.name_style_color}
-              onPick={(v) => setNameStyle('name_style_color', v)}
-              disableGradient={(me.name_style_effect || 'solid') !== 'gradient'}
-              disableCustom={me.name_style_effect === 'gradient'}
-            />
+            {me.name_style_effect === 'prism' ? (
+              <>
+                <label style={{ marginTop: 12 }}>Cores do prisma</label>
+                <div className="prism-palette-picker">
+                  {PRISM_PALETTES.map((pal) => (
+                    <button
+                      key={pal.id}
+                      type="button"
+                      title={pal.label}
+                      className={'prism-palette' + ((me.name_style_color || 'rainbow') === pal.id ? ' active' : '')}
+                      style={{ backgroundImage: 'linear-gradient(90deg,' + pal.colors.join(',') + ')' }}
+                      onClick={() => setNameStyle('name_style_color', pal.id === 'rainbow' ? null : pal.id)}
+                    />
+                  ))}
+                </div>
+              </>
+            ) : (
+              <ColorField
+                label="Cor"
+                value={me.name_style_color}
+                onPick={(v) => setNameStyle('name_style_color', v)}
+                disableGradient={(me.name_style_effect || 'solid') !== 'gradient'}
+                disableCustom={me.name_style_effect === 'gradient'}
+              />
+            )}
 
             <div className="appearance-separator" />
 

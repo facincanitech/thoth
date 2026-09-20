@@ -8,7 +8,7 @@ import { displayName } from '../lib/displayName'
 import { AvatarBox } from './AvatarBox'
 import { getPresenceColor } from '../lib/presence'
 import { ReplayPlayer, type ReplayEvent } from './ReplayPlayer'
-import { StyledName, NAME_FONTS, NAME_EFFECTS } from './StyledName'
+import { StyledName, NAME_FONTS, NAME_EFFECTS, PRISM_PALETTES } from './StyledName'
 import { uploadImage } from '../lib/uploadImage'
 import {
   IconArrowLeft, IconChevronDown, IconCopy, IconEdit, IconGamepad, IconGrip, IconHash, IconHeadphones,
@@ -2406,14 +2406,33 @@ function ProfilePanel({ me, open, onClose, onSaved }: { me: Profile; open: boole
                 </button>
               ))}
             </div>
-            <label style={{ marginTop: 10 }}>Cor{effect === 'prism' ? ' (fixa no efeito prisma)' : ''}</label>
-            <input
-              type="color"
-              value={color && color.startsWith('#') ? color : '#3b6ef6'}
-              onChange={(ev) => setColor(ev.target.value)}
-              disabled={effect === 'prism'}
-              style={{ width: 60, height: 34, padding: 2, marginTop: 2, opacity: effect === 'prism' ? 0.4 : 1, cursor: effect === 'prism' ? 'not-allowed' : 'pointer' }}
-            />
+            {effect === 'prism' ? (
+              <>
+                <label style={{ marginTop: 10 }}>Cores do prisma</label>
+                <div className="prism-palette-picker">
+                  {PRISM_PALETTES.map((pal) => (
+                    <button
+                      key={pal.id}
+                      type="button"
+                      title={pal.label}
+                      className={'prism-palette' + ((color || 'rainbow') === pal.id ? ' active' : '')}
+                      style={{ backgroundImage: 'linear-gradient(90deg,' + pal.colors.join(',') + ')' }}
+                      onClick={() => setColor(pal.id === 'rainbow' ? null : pal.id)}
+                    />
+                  ))}
+                </div>
+              </>
+            ) : (
+              <>
+                <label style={{ marginTop: 10 }}>Cor</label>
+                <input
+                  type="color"
+                  value={color && color.startsWith('#') ? color : '#3b6ef6'}
+                  onChange={(ev) => setColor(ev.target.value)}
+                  style={{ width: 60, height: 34, padding: 2, marginTop: 2 }}
+                />
+              </>
+            )}
 
             <label style={{ marginTop: 14 }}>Tema do Play</label>
             <div className="play-group-privacy-toggle">

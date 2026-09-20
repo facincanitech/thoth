@@ -14,8 +14,26 @@ export const NAME_EFFECTS: { id: 'solid' | 'gradient' | 'neon' | 'prism'; label:
   { id: 'solid', label: 'Sólido' },
   { id: 'gradient', label: 'Gradiente' },
   { id: 'neon', label: 'Neon' },
-  { id: 'prism', label: 'Prism', locked: true },
+  { id: 'prism', label: 'Prism' },
 ]
+
+// Paletas do efeito prisma: o id fica salvo em name_style_color (vazio = arco-iris padrao).
+export const PRISM_PALETTES: { id: string; label: string; colors: string[] }[] = [
+  { id: 'rainbow', label: 'Arco-íris', colors: ['#ff0000', '#ff9900', '#33ff00', '#00fffb', '#0066ff', '#cc00ff'] },
+  { id: 'blue', label: 'Azul', colors: ['#0a3d91', '#1e90ff', '#00d4ff', '#7fdcff'] },
+  { id: 'green', label: 'Verde', colors: ['#0b6b2e', '#22c55e', '#a3e635', '#4ade80'] },
+  { id: 'purple', label: 'Roxo', colors: ['#4c1d95', '#8b5cf6', '#d946ef', '#a78bfa'] },
+  { id: 'blue-purple', label: 'Azul e roxo', colors: ['#1d4ed8', '#38bdf8', '#8b5cf6', '#c026d3'] },
+  { id: 'fire', label: 'Fogo', colors: ['#b91c1c', '#f97316', '#facc15', '#ef4444'] },
+  { id: 'ocean', label: 'Oceano', colors: ['#0f766e', '#06b6d4', '#3b82f6', '#22d3ee'] },
+  { id: 'pink', label: 'Rosa', colors: ['#be185d', '#ec4899', '#f9a8d4', '#fb7185'] },
+]
+
+export function prismGradient(paletteId: string | null | undefined): string | null {
+  const pal = PRISM_PALETTES.find((p) => p.id === paletteId)
+  if (!pal || pal.id === 'rainbow') return null
+  return 'linear-gradient(90deg,' + [...pal.colors, pal.colors[0]].join(',') + ')'
+}
 
 type Props = {
   name: string
@@ -71,6 +89,9 @@ export function StyledName({ name, font, effect, color: rawColor, className }: P
     style.backgroundImage = color
   } else if (effect === 'solid' && color) {
     style.color = color
+  } else if (effect === 'prism') {
+    const g = prismGradient(rawColor)
+    if (g) style.backgroundImage = g
   }
 
   const effectClass = effect === 'gradient' ? ' name-effect-gradient' : effect === 'prism' ? ' name-effect-prism' : ''
