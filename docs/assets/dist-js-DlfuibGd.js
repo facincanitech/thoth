@@ -1,0 +1,1 @@
+import{t as e}from"./index-BczFzo22.js";async function t(t,n){await e(`plugin:shell|open`,{path:t,with:n})}export{t as open};
