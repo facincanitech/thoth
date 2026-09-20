@@ -1,4 +1,6 @@
 import { createPortal } from 'react-dom'
+import { openPip, closePip, updatePipTrack } from '../lib/pipBridge'
+import { openMainWindow } from '../lib/desktopWindows'
 import { isTauriDesktop } from '../lib/platform'
 import { useEffect, useRef, useState, type ChangeEvent, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent } from 'react'
 import { Room, RoomEvent, Track, createLocalScreenTracks, type RemoteParticipant, type LocalParticipant, type TrackPublication } from 'livekit-client'
@@ -11,7 +13,7 @@ import { ReplayPlayer, type ReplayEvent } from './ReplayPlayer'
 import { StyledName, NAME_FONTS, NAME_EFFECTS, PRISM_PALETTES } from './StyledName'
 import { uploadImage } from '../lib/uploadImage'
 import {
-  IconArrowLeft, IconChevronDown, IconCopy, IconEdit, IconGamepad, IconGrip, IconHash, IconHeadphones,
+  IconArrowLeft, IconChat, IconChevronDown, IconCopy, IconEdit, IconGamepad, IconGrip, IconHash, IconHeadphones,
   IconLock, IconLockOpen, IconLogout, IconMic, IconMicOff, IconMonitorShare, IconPanelLeft, IconFolder, IconMore, IconPause, IconPlay, IconFullscreen, IconShrink, IconVolume, IconVolumeOff, IconPhoneOff, IconPlus,
   IconAttach, IconSearch, IconSend, IconSmile, IconSettingsGear, IconTrash, IconUser, IconVideo, IconVideoOff,
 } from './icons'
@@ -38,6 +40,31 @@ const CHAT_EMOJIS = [
 function isImageMessage(content: string) {
   return /^https?:\/\/\S+\.(png|jpe?g|gif|webp)(\?\S*)?$/i.test(content) || /^https?:\/\/\S+\/play-media-\d+$/.test(content)
 }
+
+// Permissoes que um cargo pode dar. Dono e admin tem todas; membro sem cargo so tem o basico.
+const PLAY_PERMISSIONS: { group: string; items: { key: string; label: string }[] }[] = [
+  { group: 'Servidor', items: [
+    { key: 'manage_channels', label: 'Criar e editar canais de texto, de voz e categorias' },
+    { key: 'manage_server', label: 'Alterar nome, descrição, informações e imagem' },
+    { key: 'manage_privacy', label: 'Deixar o servidor público ou privado' },
+  ] },
+  { group: 'Bots e comandos', items: [
+    { key: 'manage_bots', label: 'Adicionar e remover bots' },
+    { key: 'use_commands', label: 'Usar comandos dos bots' },
+  ] },
+  { group: 'Membros e cargos', items: [
+    { key: 'manage_roles', label: 'Criar e editar cargos' },
+    { key: 'assign_roles', label: 'Dar e tirar cargos' },
+    { key: 'kick_members', label: 'Expulsar membros' },
+    { key: 'ban_members', label: 'Banir membros' },
+  ] },
+  { group: 'Chamada de voz', items: [
+    { key: 'voice_speak', label: 'Falar na chamada' },
+    { key: 'voice_camera', label: 'Ligar a câmera' },
+    { key: 'voice_screen', label: 'Compartilhar tela' },
+  ] },
+]
+const DEFAULT_MEMBER_PERMS = ['voice_speak', 'voice_camera', 'voice_screen', 'use_commands']
 
 const ROLE_EMOJIS = [
   '👑', '🛡️', '⭐', '🔥', '💎', '🎮', '🎤', '🎧', '🎨', '🔧',
@@ -579,8 +606,8 @@ function PlayIconRail({ myGroups, selectedGroupId, onSelectGroup, onGoHome, onEx
 
   return (
     <aside className="play-icon-rail" onContextMenu={handleContextMenu}>
-      <button type="button" className="play-icon-rail-home" title={isMobile ? 'Voltar pro Messenger' : 'Meus servidores'} onClick={isMobile ? onExit : onGoHome}>
-        {isMobile ? <IconArrowLeft size={20} /> : <IconGamepad size={20} />}
+      <button type="button" className="play-icon-rail-home" title="Voltar pro Messenger" onClick={isMobile ? onExit : isTauriDesktop ? openMainWindow : onExit}>
+        {isMobile ? <IconArrowLeft size={20} /> : <IconChat size={20} />}
       </button>
       <div className="play-icon-rail-groups">
         {folders.map((f) => {
@@ -749,7 +776,7 @@ type GroupViewProps = {
 }
 
 type GroupMember = { profile: Profile; role: string }
-type VoiceParticipantInfo = { id: string; name: string; micOn?: boolean; isScreen?: boolean; videoTrack?: Track }
+type VoiceParticipantInfo = { id: string; name: string; micOn?: boolean; isScreen?: boolean; videoTrack?: Track; cameraTrack?: Track }
 
 function GroupView({ me, myPlayProfile, group, channels, categories, selectedChannel, messages, hasReplaySet, liveTyping, draft, onDraftChange, onSend, onSendContent, onSelectChannel, onChannelsChange, onCategoriesChange, onGroupUpdate, onLeftGroup, onExitToMessenger }: GroupViewProps) {
   const [showNewChannel, setShowNewChannel] = useState(false)
@@ -759,6 +786,8 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
   const [joinedVoiceChannel, setJoinedVoiceChannel] = useState<PlayChannel | null>(null)
   const [openReplayId, setOpenReplayId] = useState<string | null>(null)
   const [replayEvents, setReplayEvents] = useState<ReplayEvent[] | null>(null)
+  // null = sem cargo nenhum (so o basico); lista = uniao das permissoes dos meus cargos
+  const [myRolePerms, setMyRolePerms] = useState<string[] | null>(null)
   const [pipIds, setPipIds] = useState<string[]>([])
   const [pipWin, setPipWin] = useState<Window | null>(null)
   const [fullscreenId, setFullscreenId] = useState<string | null>(null)
@@ -857,12 +886,16 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
   const inVoiceIds = new Set(voiceParticipants.map((p) => p.id))
   const myRole = members.find((m) => m.profile.id === me.id)?.role || null
   const membersById = Object.fromEntries(members.map((m) => [m.profile.id, m.profile]))
-  const canManage = myRole === 'owner' || myRole === 'admin'
+  const isStaff = myRole === 'owner' || myRole === 'admin'
+  const can = (perm: string) => isStaff || (myRolePerms === null ? DEFAULT_MEMBER_PERMS.includes(perm) : myRolePerms.includes(perm))
+  const canManage = can('manage_channels')
+  const canAssign = can('assign_roles')
+  const canConfigure = ['manage_server', 'manage_privacy', 'manage_bots', 'manage_roles', 'assign_roles', 'kick_members', 'ban_members'].some(can)
   const channelsByCategory = (categoryId: string) => channels.filter((c) => c.category_id === categoryId).sort((a, b) => a.position - b.position)
   const uncategorized = channels.filter((c) => !c.category_id || !categories.some((cat) => cat.id === c.category_id)).sort((a, b) => a.position - b.position)
 
   async function openRoleQuickMenu(userId: string, name: string, x: number, y: number) {
-    if (!canManage || userId === me.id) return
+    if (!canAssign || userId === me.id) return
     setRoleQuickMenu({ userId, name, x, y })
     let roleList = groupRoles
     if (!roleList.length) {
@@ -1023,7 +1056,55 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
     try { localStorage.setItem('ferus-sonor-volume', String(sonorVolume)) } catch { /* ignore */ }
   }, [sonorVolume, sonorSession?.stream_url])
 
+  useEffect(() => {
+    let cancelled = false
+    async function loadMyPerms() {
+      const { data } = await supabase
+        .from('play_role_members')
+        .select('role_id, play_roles!inner(group_id, permissions)')
+        .eq('user_id', me.id)
+        .eq('play_roles.group_id', group.id)
+      if (cancelled) return
+      const rows = (data || []) as unknown as { play_roles: { permissions: string[] } | { permissions: string[] }[] }[]
+      if (!rows.length) { setMyRolePerms(null); return }
+      const all = rows.flatMap((r) => (Array.isArray(r.play_roles) ? r.play_roles : [r.play_roles]).flatMap((x) => x.permissions || []))
+      setMyRolePerms([...new Set(all)])
+    }
+    loadMyPerms()
+    const ch = supabase
+      .channel('play-myperms:' + group.id)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'play_role_members' }, () => loadMyPerms())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'play_roles', filter: 'group_id=eq.' + group.id }, () => loadMyPerms())
+      .subscribe()
+    return () => {
+      cancelled = true
+      supabase.removeChannel(ch)
+    }
+  }, [group.id, me.id])
+
+  // id de tile pode ser "usuario" (tela ou camera principal) ou "usuario:cam" (camera junto da transmissao)
+  function trackOf(id: string): Track | undefined {
+    const base = id.replace(':cam', '')
+    const p = voiceParticipants.find((x) => x.id === base)
+    return id.endsWith(':cam') ? p?.cameraTrack : p?.videoTrack
+  }
+  function nameOf(id: string): string {
+    return voiceParticipants.find((x) => x.id === id.replace(':cam', ''))?.name || ''
+  }
+
   function togglePip(id: string) {
+    if (isTauriDesktop) {
+      if (pipIds.includes(id)) {
+        closePip(id)
+        setPipIds((prev) => prev.filter((x) => x !== id))
+        return
+      }
+      const tr = trackOf(id)
+      if (!tr) return
+      setPipIds((prev) => [...prev, id])
+      openPip(id, nameOf(id), tr, () => setPipIds((prev) => prev.filter((x) => x !== id)))
+      return
+    }
     const next = pipIds.includes(id) ? pipIds.filter((x) => x !== id) : [...pipIds, id]
     setPipIds(next)
     if (next.length === 0) { pipWin?.close(); setPipWin(null); return }
@@ -1046,7 +1127,13 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
   }
 
   useEffect(() => {
-    const live = new Set(voiceParticipants.filter((p) => p.videoTrack).map((p) => p.id))
+    const live = new Set(voiceParticipants.flatMap((p) => [p.videoTrack ? p.id : '', p.cameraTrack ? p.id + ':cam' : '']).filter(Boolean))
+    if (isTauriDesktop) {
+      for (const id of pipIds) {
+        if (!live.has(id)) closePip(id)
+        else { const tr = trackOf(id); if (tr) updatePipTrack(id, tr) }
+      }
+    }
     if (pipIds.some((id) => !live.has(id))) {
       const next = pipIds.filter((id) => live.has(id))
       setPipIds(next)
@@ -1386,6 +1473,7 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
               myRole={myRole}
               members={members}
               me={me}
+              can={can}
               channels={channels}
               categories={categories}
               open={showGroupInfo}
@@ -1433,7 +1521,7 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
                     <div className="play-message-body">
                       <div className="play-message-row">
                         <strong
-                          className={canManage && m.author && m.author_id !== me.id ? 'play-name-clickable' : undefined}
+                          className={canAssign && m.author && m.author_id !== me.id ? 'play-name-clickable' : undefined}
                           onContextMenu={(e) => { if (m.author) { e.preventDefault(); openRoleQuickMenu(m.author_id, displayName(m.author), e.clientX, e.clientY) } }}
                           onClick={(e) => { if (m.author) openRoleQuickMenu(m.author_id, displayName(m.author), e.clientX, e.clientY) }}
                         >
@@ -1496,7 +1584,7 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
 
           {joinedVoiceChannel && (
             <div className="play-voice-holder" style={{ display: selectedChannel?.id === joinedVoiceChannel.id ? 'flex' : 'none', flex: 1, minWidth: 0, flexDirection: 'column', overflow: 'hidden' }}>
-              <VoiceChannel key={joinedVoiceChannel.id} me={myPlayProfile} membersById={membersById} channel={joinedVoiceChannel} onParticipantsChange={setVoiceParticipants} onLeave={leaveVoice} pipIds={pipIds} maximizedId={maximizedId} onFullscreen={setFullscreenId} onTogglePip={togglePip} onToggleMaximize={(id) => setMaximizedId((cur) => (cur === id ? null : id))} onMediaMenu={(id, x, y) => setMediaMenu({ id, x, y, fromGrid: true })} />
+              <VoiceChannel key={joinedVoiceChannel.id} allow={{ speak: can('voice_speak'), camera: can('voice_camera'), screen: can('voice_screen') }} me={myPlayProfile} membersById={membersById} channel={joinedVoiceChannel} onParticipantsChange={setVoiceParticipants} onLeave={leaveVoice} pipIds={pipIds} maximizedId={maximizedId} onFullscreen={setFullscreenId} onTogglePip={togglePip} onToggleMaximize={(id) => setMaximizedId((cur) => (cur === id ? null : id))} onMediaMenu={(id, x, y) => setMediaMenu({ id, x, y, fromGrid: true })} />
             </div>
           )}
 
@@ -1514,7 +1602,7 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
                   <div key={m.profile.id} className="play-member-row">
                     <AvatarBox src={m.profile.avatar_url} id={m.profile.id} fallbackLetter={displayName(m.profile)[0]?.toUpperCase()} className="avatar-sm" />
                     <span
-                      className={canManage && m.profile.id !== me.id ? 'play-name-clickable' : undefined}
+                      className={canAssign && m.profile.id !== me.id ? 'play-name-clickable' : undefined}
                       onContextMenu={(e) => { e.preventDefault(); openRoleQuickMenu(m.profile.id, displayName(m.profile), e.clientX, e.clientY) }}
                       onClick={(e) => openRoleQuickMenu(m.profile.id, displayName(m.profile), e.clientX, e.clientY)}
                     >
@@ -1530,7 +1618,7 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
                   <div key={m.profile.id} className="play-member-row offline">
                     <AvatarBox src={m.profile.avatar_url} id={m.profile.id} fallbackLetter={displayName(m.profile)[0]?.toUpperCase()} className="avatar-sm" />
                     <span
-                      className={canManage && m.profile.id !== me.id ? 'play-name-clickable' : undefined}
+                      className={canAssign && m.profile.id !== me.id ? 'play-name-clickable' : undefined}
                       onContextMenu={(e) => { e.preventDefault(); openRoleQuickMenu(m.profile.id, displayName(m.profile), e.clientX, e.clientY) }}
                       onClick={(e) => openRoleQuickMenu(m.profile.id, displayName(m.profile), e.clientX, e.clientY)}
                     >
@@ -1546,7 +1634,7 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
                   <div key={p.id} className="play-member-row">
                     <AvatarBox src={p.id === me.id ? myPlayProfile.avatar_url : membersById[p.id]?.avatar_url || null} id={p.id} fallbackLetter={p.name[0]?.toUpperCase()} className="avatar-sm" />
                     <span
-                      className={canManage && p.id !== me.id ? 'play-name-clickable' : undefined}
+                      className={canAssign && p.id !== me.id ? 'play-name-clickable' : undefined}
                       onContextMenu={(e) => { e.preventDefault(); openRoleQuickMenu(p.id, p.name, e.clientX, e.clientY) }}
                       onClick={(e) => openRoleQuickMenu(p.id, p.name, e.clientX, e.clientY)}
                     >
@@ -1556,7 +1644,7 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
                     {p.videoTrack && !(p.id === me.id && p.isScreen) && (
                       <div className="play-mini-stream">
                         <StreamView track={p.videoTrack} muted className="play-mini-stream-video" />
-                        <button type="button" className="play-mini-stream-menu" title="Opções" onClick={(e) => { const r = e.currentTarget.getBoundingClientRect(); setMediaMenu({ id: p.id, x: r.left, y: r.bottom + 4, fromGrid: false }) }}><IconMore size={16} /></button>
+                        <button type="button" className="play-mini-stream-menu" title="Opções" onClick={(e) => { const r = e.currentTarget.getBoundingClientRect(); setMediaMenu({ id: p.id, x: Math.max(8, Math.min(r.left, window.innerWidth - 220)), y: Math.max(8, Math.min(r.bottom + 4, window.innerHeight - 140)), fromGrid: false }) }}><IconMore size={16} /></button>
                       </div>
                     )}
                   </div>
@@ -1570,7 +1658,7 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
       {mediaMenu && (
         <>
           <div className="play-group-menu-backdrop" onClick={() => setMediaMenu(null)} onContextMenu={(e) => { e.preventDefault(); setMediaMenu(null) }} />
-          <div className="play-group-menu" style={{ position: 'fixed', top: mediaMenu.y, left: mediaMenu.x, minWidth: 190 }}>
+          <div className="play-group-menu" style={{ position: 'fixed', top: Math.max(8, Math.min(mediaMenu.y, window.innerHeight - 150)), left: Math.max(8, Math.min(mediaMenu.x, window.innerWidth - 210)), minWidth: 190 }}>
             <button type="button" onClick={() => { const id = mediaMenu.id; setMediaMenu(null); togglePip(id) }}>
               <IconMonitorShare size={15} /> {pipIds.includes(mediaMenu.id) ? 'Sair do picture in picture' : 'Picture in picture'}
             </button>
@@ -1585,22 +1673,18 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
           </div>
         </>
       )}
-      {fullscreenId && voiceParticipants.find((p) => p.id === fullscreenId)?.videoTrack && (
-        <FullscreenOverlay
-          name={voiceParticipants.find((p) => p.id === fullscreenId)!.name}
-          track={voiceParticipants.find((p) => p.id === fullscreenId)!.videoTrack!}
-          onClose={() => setFullscreenId(null)}
-        />
+      {fullscreenId && trackOf(fullscreenId) && (
+        <FullscreenOverlay name={nameOf(fullscreenId)} track={trackOf(fullscreenId)!} onClose={() => setFullscreenId(null)} />
       )}
       {pipWin && !pipWin.closed && createPortal(
         <div style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
           {pipIds.map((id) => {
-            const pp = voiceParticipants.find((x) => x.id === id)
-            if (!pp?.videoTrack) return null
+            const tr = trackOf(id)
+            if (!tr) return null
             return (
               <div key={id} style={{ position: 'relative', height: 270, flex: 'none', background: '#000' }}>
-                <StreamView track={pp.videoTrack} muted style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
-                <span style={{ position: 'absolute', left: 8, top: 6, color: '#fff', font: '600 12px sans-serif', textShadow: '0 1px 3px #000' }}>{pp.name}</span>
+                <StreamView track={tr} muted style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                <span style={{ position: 'absolute', left: 8, top: 6, color: '#fff', font: '600 12px sans-serif', textShadow: '0 1px 3px #000' }}>{nameOf(id)}</span>
               </div>
             )
           })}
@@ -1660,7 +1744,7 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
           group={group}
           members={members}
           onClose={() => setShowServerInfo(false)}
-          onConfigure={canManage ? () => { setShowServerInfo(false); setShowGroupInfo(true) } : undefined}
+          onConfigure={canConfigure ? () => { setShowServerInfo(false); setShowGroupInfo(true) } : undefined}
         />
       )}
 
@@ -1736,12 +1820,21 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
   )
 }
 
-function GroupInfoPanel({ group, myRole, members, me, channels, categories, open, onClose, onUpdate }: {
-  group: PlayGroup; myRole: string | null; members: GroupMember[]; me: Profile; channels: PlayChannel[]; categories: PlayCategory[]
+function GroupInfoPanel({ group, myRole, members, me, can, channels, categories, open, onClose, onUpdate }: {
+  group: PlayGroup; myRole: string | null; members: GroupMember[]; me: Profile; can: (perm: string) => boolean; channels: PlayChannel[]; categories: PlayCategory[]
   open: boolean; onClose: () => void; onUpdate: (patch: Partial<PlayGroup>) => void
 }) {
-  const canManage = myRole === 'owner' || myRole === 'admin'
   const isOwner = myRole === 'owner'
+  const canGeral = can('manage_server')
+  const canPrivacy = can('manage_privacy')
+  const canKick = can('kick_members')
+  const canBan = can('ban_members')
+  const canMembersTab = canKick || canBan
+  const canManageRoles = can('manage_roles')
+  const canAssignRoles = can('assign_roles')
+  const canRolesTab = canManageRoles || canAssignRoles
+  const canBotsTab = can('manage_bots')
+  const hasTabs = canGeral || canPrivacy || canMembersTab || canRolesTab || canBotsTab
   const [tab, setTab] = useState<'geral' | 'membros' | 'cargos' | 'bots'>('geral')
   const [name, setName] = useState(group.name)
   const [description, setDescription] = useState(group.description || '')
@@ -1766,6 +1859,7 @@ function GroupInfoPanel({ group, myRole, members, me, channels, categories, open
   const [showRoleEmojiPicker, setShowRoleEmojiPicker] = useState(false)
   const [rosterRoleId, setRosterRoleId] = useState<string | null>(null)
   const [rosterAdding, setRosterAdding] = useState(false)
+  const [roleEdit, setRoleEdit] = useState<{ id: string; name: string; emoji: string; permissions: string[] } | null>(null)
   const [botCatalog, setBotCatalog] = useState<Bot[]>([])
   const [installedBotIds, setInstalledBotIds] = useState<Set<string>>(new Set())
 
@@ -1776,7 +1870,7 @@ function GroupInfoPanel({ group, myRole, members, me, channels, categories, open
   }, [group.id, open])
 
   useEffect(() => {
-    if (!open || tab !== 'membros' || !canManage) return
+    if (!open || tab !== 'membros' || !canBan) return
     let cancelled = false
     async function loadBans() {
       const { data: rows } = await supabase.from('play_group_bans').select('user_id').eq('group_id', group.id)
@@ -1789,7 +1883,7 @@ function GroupInfoPanel({ group, myRole, members, me, channels, categories, open
     }
     loadBans()
     return () => { cancelled = true }
-  }, [open, tab, canManage, group.id])
+  }, [open, tab, canBan, group.id])
 
   async function loadRoles() {
     const { data: roleRows } = await supabase.from('play_roles').select('*').eq('group_id', group.id).order('position', { ascending: true })
@@ -1814,12 +1908,12 @@ function GroupInfoPanel({ group, myRole, members, me, channels, categories, open
   }
 
   useEffect(() => {
-    if (!open || tab !== 'cargos' || !canManage) return
+    if (!open || tab !== 'cargos' || !canRolesTab) return
     loadRoles()
-  }, [open, tab, canManage, group.id])
+  }, [open, tab, canRolesTab, group.id])
 
   useEffect(() => {
-    if (!open || tab !== 'bots' || !canManage) return
+    if (!open || tab !== 'bots' || !canBotsTab) return
     let cancelled = false
     async function loadBots() {
       const [{ data: catalog }, { data: installed }] = await Promise.all([
@@ -1832,7 +1926,7 @@ function GroupInfoPanel({ group, myRole, members, me, channels, categories, open
     }
     loadBots()
     return () => { cancelled = true }
-  }, [open, tab, canManage, group.id])
+  }, [open, tab, canBotsTab, group.id])
 
   async function setupBotPanel(bot: Bot) {
     const cfg = bot.slug === 'sonor'
@@ -1900,6 +1994,13 @@ function GroupInfoPanel({ group, myRole, members, me, channels, categories, open
     await supabase.from('play_roles').insert({ group_id: group.id, name: newRoleName.trim(), emoji: newRoleEmoji.trim() || null, position: roles.length })
     setNewRoleName('')
     setNewRoleEmoji('')
+    loadRoles()
+  }
+
+  async function saveRoleEdit() {
+    if (!roleEdit || !roleEdit.name.trim()) return
+    await supabase.from('play_roles').update({ name: roleEdit.name.trim(), emoji: roleEdit.emoji || null, permissions: roleEdit.permissions }).eq('id', roleEdit.id)
+    setRoleEdit(null)
     loadRoles()
   }
 
@@ -2020,30 +2121,31 @@ function GroupInfoPanel({ group, myRole, members, me, channels, categories, open
         <strong>Sobre o servidor</strong>
       </div>
 
-      {canManage && (
+      {hasTabs && (
         <div className="play-group-info-tabs">
           <button type="button" className={tab === 'geral' ? 'active' : ''} onClick={() => setTab('geral')}>Geral</button>
-          <button type="button" className={tab === 'membros' ? 'active' : ''} onClick={() => setTab('membros')}>Membros</button>
-          <button type="button" className={tab === 'cargos' ? 'active' : ''} onClick={() => setTab('cargos')}>Cargos</button>
-          <button type="button" className={tab === 'bots' ? 'active' : ''} onClick={() => setTab('bots')}>Bots</button>
+          {canMembersTab && <button type="button" className={tab === 'membros' ? 'active' : ''} onClick={() => setTab('membros')}>Membros</button>}
+          {canRolesTab && <button type="button" className={tab === 'cargos' ? 'active' : ''} onClick={() => setTab('cargos')}>Cargos</button>}
+          {canBotsTab && <button type="button" className={tab === 'bots' ? 'active' : ''} onClick={() => setTab('bots')}>Bots</button>}
         </div>
       )}
 
-      {(tab === 'geral' || !canManage) && (
+      {(tab === 'geral' || !hasTabs) && (
         <div className="play-group-info-body">
           <div className="play-group-info-avatar">
-            {isOwner ? (
+            {canGeral ? (
               <button type="button" onClick={() => fileRef.current?.click()} style={{ border: 0, padding: 0, cursor: 'pointer', background: 'none' }} disabled={uploading}>
                 <AvatarBox src={group.image_url} id={group.id} fallbackLetter={group.name[0]?.toUpperCase()} className="play-group-avatar" />
               </button>
             ) : (
               <AvatarBox src={group.image_url} id={group.id} fallbackLetter={group.name[0]?.toUpperCase()} className="play-group-avatar" />
             )}
-            {isOwner && <input ref={fileRef} type="file" accept="image/*" hidden onChange={handleImagePick} />}
+            {canGeral && <input ref={fileRef} type="file" accept="image/*" hidden onChange={handleImagePick} />}
             {uploading && <span className="play-empty">enviando...</span>}
           </div>
-          {isOwner ? (
+          {canGeral || canPrivacy ? (
             <>
+              {canGeral && (<>
               <label>Nome</label>
               <input value={name} onChange={(e) => setName(e.target.value)} />
               <label style={{ marginTop: 10 }}>Descrição</label>
@@ -2064,7 +2166,9 @@ function GroupInfoPanel({ group, myRole, members, me, channels, categories, open
               <button type="button" className="google-btn" style={{ marginTop: 10 }} disabled={saving || !name.trim()} onClick={save}>
                 {saving ? 'Salvando...' : 'Salvar'}
               </button>
+              </>)}
 
+              {canPrivacy && (<>
               <label style={{ marginTop: 16 }}>Privacidade</label>
               <div className="play-group-privacy-toggle">
                 <button type="button" className={!group.is_closed ? 'active' : ''} disabled={privacySaving} onClick={() => togglePrivacy(false)}>
@@ -2080,6 +2184,7 @@ function GroupInfoPanel({ group, myRole, members, me, channels, categories, open
                   <button type="button" className="google-btn" style={{ width: 'auto' }} disabled={privacySaving} onClick={confirmClose}>Confirmar</button>
                 </div>
               )}
+              </>)}
             </>
           ) : (
             <>
@@ -2110,7 +2215,7 @@ function GroupInfoPanel({ group, myRole, members, me, channels, categories, open
         </div>
       )}
 
-      {tab === 'membros' && canManage && (
+      {tab === 'membros' && canMembersTab && (
         <div className="play-group-info-body">
           <div className="play-member-search">
             <IconSearch size={14} />
@@ -2123,8 +2228,8 @@ function GroupInfoPanel({ group, myRole, members, me, channels, categories, open
               <span className="play-manage-member-role">{m.role}</span>
               {m.role === 'member' && m.profile.id !== me.id && (
                 <div className="play-manage-member-actions">
-                  <button type="button" onClick={() => kickMember(m.profile.id)} title="Remover"><IconLogout size={14} /></button>
-                  <button type="button" className="danger" onClick={() => banMember(m.profile.id)} title="Banir"><IconTrash size={14} /></button>
+                  {canKick && <button type="button" onClick={() => kickMember(m.profile.id)} title="Remover"><IconLogout size={14} /></button>}
+                  {canBan && <button type="button" className="danger" onClick={() => banMember(m.profile.id)} title="Banir"><IconTrash size={14} /></button>}
                 </div>
               )}
             </div>
@@ -2145,9 +2250,9 @@ function GroupInfoPanel({ group, myRole, members, me, channels, categories, open
         </div>
       )}
 
-      {tab === 'cargos' && canManage && (
+      {tab === 'cargos' && canRolesTab && (
         <div className="play-group-info-body">
-          {roles.length < 10 && (
+          {canManageRoles && roles.length < 10 && (
             <div className="play-invite-code-row" style={{ marginBottom: 12, position: 'relative' }}>
               <button type="button" className="play-role-emoji-btn" onClick={() => setShowRoleEmojiPicker((v) => !v)}>
                 {newRoleEmoji || '🙂'}
@@ -2183,6 +2288,12 @@ function GroupInfoPanel({ group, myRole, members, me, channels, categories, open
                       Listar membros ({memberIds.size})
                     </button>
 
+                    {canManageRoles && (
+                      <button type="button" className="play-role-list-btn" style={{ marginTop: 8 }} onClick={() => setRoleEdit({ id: role.id, name: role.name, emoji: role.emoji || '', permissions: [...(role.permissions || [])] })}>
+                        Configurar cargo
+                      </button>
+                    )}
+
                     <label style={{ marginTop: 14 }}>Canais visíveis (nenhum marcado = visível pra todo mundo)</label>
                     {categories.map((cat) => (
                       <div key={cat.id}>
@@ -2196,12 +2307,50 @@ function GroupInfoPanel({ group, myRole, members, me, channels, categories, open
                       </div>
                     ))}
 
-                    <button type="button" className="settings-danger-btn" style={{ marginTop: 18 }} onClick={() => deleteRole(role.id)}>Excluir cargo</button>
+                    {canManageRoles && <button type="button" className="settings-danger-btn" style={{ marginTop: 18 }} onClick={() => deleteRole(role.id)}>Excluir cargo</button>}
                   </div>
                 )}
               </div>
             )
           })}
+
+          {roleEdit && (
+            <div className="modal-backdrop" onClick={() => setRoleEdit(null)}>
+              <div className="modal-card play-channel-modal" onClick={(e) => e.stopPropagation()} style={{ maxHeight: '86vh', overflowY: 'auto' }}>
+                <h2>Configurar cargo</h2>
+                <label className="play-channel-modal-label">Nome e ícone</label>
+                <div className="play-invite-code-row" style={{ marginBottom: 6 }}>
+                  <input placeholder="Nome do cargo" value={roleEdit.name} onChange={(e) => setRoleEdit({ ...roleEdit, name: e.target.value })} />
+                </div>
+                <div className="play-role-emoji-row">
+                  <button type="button" className={roleEdit.emoji === '' ? 'active' : ''} onClick={() => setRoleEdit({ ...roleEdit, emoji: '' })}>sem</button>
+                  {ROLE_EMOJIS.map((em) => (
+                    <button key={em} type="button" className={roleEdit.emoji === em ? 'active' : ''} onClick={() => setRoleEdit({ ...roleEdit, emoji: em })}>{em}</button>
+                  ))}
+                </div>
+                <label className="play-channel-modal-label" style={{ marginTop: 14 }}>O que este cargo pode fazer</label>
+                {PLAY_PERMISSIONS.map((grp) => (
+                  <div key={grp.group}>
+                    <span className="play-role-cat-label">{grp.group}</span>
+                    {grp.items.map((it) => (
+                      <label key={it.key} className="play-role-check-row">
+                        <input
+                          type="checkbox"
+                          checked={roleEdit.permissions.includes(it.key)}
+                          onChange={() => setRoleEdit({ ...roleEdit, permissions: roleEdit.permissions.includes(it.key) ? roleEdit.permissions.filter((x) => x !== it.key) : [...roleEdit.permissions, it.key] })}
+                        />
+                        {it.label}
+                      </label>
+                    ))}
+                  </div>
+                ))}
+                <div className="play-channel-modal-actions">
+                  <button type="button" className="modal-close" onClick={() => setRoleEdit(null)}>Cancelar</button>
+                  <button type="button" className="google-btn" style={{ width: 'auto' }} disabled={!roleEdit.name.trim()} onClick={saveRoleEdit}>Salvar</button>
+                </div>
+              </div>
+            </div>
+          )}
 
           {rosterRoleId && (() => {
             const role = roles.find((r) => r.id === rosterRoleId)
@@ -2252,7 +2401,7 @@ function GroupInfoPanel({ group, myRole, members, me, channels, categories, open
         </div>
       )}
 
-      {tab === 'bots' && canManage && (
+      {tab === 'bots' && canBotsTab && (
         <div className="play-group-info-body">
           {botCatalog.length === 0 && <p className="play-empty">nenhum bot disponível no catálogo ainda</p>}
           {botCatalog.map((bot) => {
@@ -2528,6 +2677,7 @@ type ParticipantTile = {
   micOn: boolean
   isScreen: boolean
   videoTrack?: Track
+  cameraTrack?: Track
 }
 
 function fmtElapsed(ms: number) {
@@ -2676,7 +2826,8 @@ function VoiceTile({ p, avatarUrl, startedAt, maximized, inPip, screenAudio, onF
   )
 }
 
-function VoiceChannel({ me, membersById, channel, onParticipantsChange, onLeave, pipIds, maximizedId, onFullscreen, onTogglePip, onToggleMaximize, onMediaMenu }: {
+function VoiceChannel({ allow, me, membersById, channel, onParticipantsChange, onLeave, pipIds, maximizedId, onFullscreen, onTogglePip, onToggleMaximize, onMediaMenu }: {
+  allow: { speak: boolean; camera: boolean; screen: boolean }
   me: Profile; membersById: Record<string, Profile>; channel: PlayChannel; onParticipantsChange: (p: VoiceParticipantInfo[]) => void; onLeave: () => void
   pipIds: string[]; maximizedId: string | null; onFullscreen: (id: string) => void; onTogglePip: (id: string) => void; onToggleMaximize: (id: string) => void
   onMediaMenu: (id: string, x: number, y: number) => void
@@ -2717,10 +2868,11 @@ function VoiceChannel({ me, membersById, channel, onParticipantsChange, onLeave,
         micOn: p.isMicrophoneEnabled,
         isScreen: !!screenPub,
         videoTrack: videoPub?.track,
+        cameraTrack: screenPub ? camPub?.track : undefined,
       }
     })
     setParticipants(tiles)
-    onParticipantsChange(tiles.map((t) => ({ id: t.id, name: t.name, micOn: t.micOn, isScreen: t.isScreen, videoTrack: t.videoTrack })))
+    onParticipantsChange(tiles.map((t) => ({ id: t.id, name: t.name, micOn: t.micOn, isScreen: t.isScreen, videoTrack: t.videoTrack, cameraTrack: t.cameraTrack })))
   }
 
   useEffect(() => {
@@ -2764,7 +2916,8 @@ function VoiceChannel({ me, membersById, channel, onParticipantsChange, onLeave,
         const { token, url } = await fetchLiveKitToken(channel.id)
         if (cancelled) return
         await room.connect(url, token)
-        await room.localParticipant.setMicrophoneEnabled(true)
+        if (allow.speak) await room.localParticipant.setMicrophoneEnabled(true)
+        else setMicEnabled(false)
         if (cancelled) { room.disconnect(); return }
         setConnected(true)
         syncParticipants(room)
@@ -2869,15 +3022,15 @@ function VoiceChannel({ me, membersById, channel, onParticipantsChange, onLeave,
       {connected && (
         <>
           <div className={'play-voice-grid' + (maximizedId ? ' has-max' : '')}>
-            {participants.map((p) => (
+            {participants.flatMap((p0) => (p0.cameraTrack ? [p0, { ...p0, id: p0.id + ':cam', isScreen: false, videoTrack: p0.cameraTrack, cameraTrack: undefined }] : [p0])).map((p) => (
               <VoiceTile
                 key={p.id}
                 p={p}
-                avatarUrl={(p.isLocal ? me.avatar_url : membersById[p.id]?.avatar_url) || null}
-                startedAt={shareStart.current[p.id]}
+                avatarUrl={(p.isLocal ? me.avatar_url : membersById[p.id.replace(':cam', '')]?.avatar_url) || null}
+                startedAt={shareStart.current[p.id.replace(':cam', '')]}
                 maximized={maximizedId === p.id}
                 inPip={pipIds.includes(p.id)}
-                screenAudio={screenAudio[p.id]}
+                screenAudio={screenAudio[p.id.replace(':cam', '')]}
                 onFullscreen={onFullscreen}
                 onTogglePip={onTogglePip}
                 onToggleMaximize={onToggleMaximize}
@@ -2886,17 +3039,17 @@ function VoiceChannel({ me, membersById, channel, onParticipantsChange, onLeave,
             ))}
           </div>
           <div className="play-voice-controls">
-            <button type="button" className={'icon-btn' + (micEnabled ? ' active' : '')} onClick={toggleMic} title={micEnabled ? 'Mutar' : 'Ativar microfone'}>
+            <button type="button" className={'icon-btn' + (micEnabled ? ' active' : '')} onClick={toggleMic} disabled={!allow.speak} title={!allow.speak ? 'Seu cargo não pode falar na chamada' : micEnabled ? 'Mutar' : 'Ativar microfone'}>
               {micEnabled ? <IconMic size={20} /> : <IconMicOff size={20} />}
             </button>
             <button type="button" className={'icon-btn' + (headphoneMode ? ' active' : '')} onClick={toggleHeadphoneMode} title={headphoneMode ? 'Modo fone ligado (sem cancelamento de eco)' : 'Modo fone: use com fone, evita o som do PC ficar abafado'}>
               <IconHeadphones size={20} />
             </button>
-            <button type="button" className={'icon-btn' + (cameraEnabled ? ' active' : '')} onClick={toggleCamera} title={cameraEnabled ? 'Desligar câmera' : 'Ligar câmera'}>
+            <button type="button" className={'icon-btn' + (cameraEnabled ? ' active' : '')} onClick={toggleCamera} disabled={!allow.camera} title={!allow.camera ? 'Seu cargo não pode ligar a câmera' : cameraEnabled ? 'Desligar câmera' : 'Ligar câmera'}>
               {cameraEnabled ? <IconVideo size={20} /> : <IconVideoOff size={20} />}
             </button>
             <span className="play-share-wrap">
-              <button type="button" className={'icon-btn' + (screenEnabled ? ' active' : '')} onClick={() => setShareMenuOpen((v) => !v)} title="Compartilhar tela">
+              <button type="button" className={'icon-btn' + (screenEnabled ? ' active' : '')} onClick={() => setShareMenuOpen((v) => !v)} disabled={!allow.screen} title={allow.screen ? 'Compartilhar tela' : 'Seu cargo não pode compartilhar tela'}>
                 <IconMonitorShare size={20} />
               </button>
               {shareMenuOpen && (

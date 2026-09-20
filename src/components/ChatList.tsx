@@ -846,8 +846,17 @@ export function ChatList({
         { event: 'INSERT', schema: 'public', table: 'messages' },
         (payload) => {
           loadConversations()
-          const row = payload.new as { author_id?: string }
-          if (row.author_id && row.author_id !== me.id) playMessageSound()
+          const row = payload.new as { author_id?: string; conversation_id?: string }
+          if (!row.author_id || row.author_id === me.id) return
+          if (row.conversation_id && row.conversation_id === selectedIdRef.current) return
+          if (isTauriDesktop && row.conversation_id) {
+            import('@tauri-apps/api/webviewWindow').then(async ({ WebviewWindow }) => {
+              const w = await WebviewWindow.getByLabel('chat-' + row.conversation_id)
+              if (!w) playMessageSound()
+            }).catch(() => playMessageSound())
+            return
+          }
+          playMessageSound()
         },
       )
       .on(
@@ -1187,6 +1196,8 @@ export function ChatList({
   }
 
   const [pastedLoginCode, setPastedLoginCode] = useState('')
+  const selectedIdRef = useRef<string | null>(null)
+  selectedIdRef.current = selected?.id ?? null
   const longPressFiredRef = useRef(false)
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 

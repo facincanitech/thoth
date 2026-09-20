@@ -205,10 +205,14 @@ pub fn run() {
       // chat continuam fechando normal (nao entram nessa lista).
       #[cfg(desktop)]
       if let tauri::RunEvent::WindowEvent { label, event: tauri::WindowEvent::CloseRequested { api, .. }, .. } = event {
-        if label == "main" || label == "thoth-play" {
+        if label == "main" || label == "thoth-play" || label == "thoth-call" {
           api.prevent_close();
           if let Some(window) = tauri::Manager::get_webview_window(app_handle, &label) {
             let _ = window.hide();
+          }
+          // fechar a janela de chamada desliga a chamada (a janela em si fica viva escondida)
+          if label == "thoth-call" {
+            let _ = tauri::Emitter::emit(app_handle, "call-hangup", ());
           }
         }
       }

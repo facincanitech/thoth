@@ -36,10 +36,12 @@ type Session = {
 
 type Props = {
   me: Profile | null
+  onActiveChange?: (active: boolean) => void
 }
 
 export type CallOverlayHandle = {
   startCall: (req: OutgoingCallRequest) => void
+  hangup: () => void
 }
 
 const RING_TIMEOUT_MS = 60000
@@ -51,7 +53,7 @@ function formatDuration(ms: number): string {
   return `${m}:${s.toString().padStart(2, '0')}`
 }
 
-export const CallOverlay = forwardRef<CallOverlayHandle, Props>(function CallOverlay({ me }, ref) {
+export const CallOverlay = forwardRef<CallOverlayHandle, Props>(function CallOverlay({ me, onActiveChange }, ref) {
   const [session, setSession] = useState<Session | null>(null)
   const [muted, setMuted] = useState(false)
   const [cameraOff, setCameraOff] = useState(false)
@@ -75,6 +77,11 @@ export const CallOverlay = forwardRef<CallOverlayHandle, Props>(function CallOve
   useEffect(() => {
     sessionRef.current = session
   }, [session])
+
+  const isActive = !!session
+  useEffect(() => {
+    onActiveChange?.(isActive)
+  }, [isActive])
 
   useEffect(() => {
     if (session?.status !== 'connected') return
@@ -405,6 +412,12 @@ export const CallOverlay = forwardRef<CallOverlayHandle, Props>(function CallOve
     startCall: (req: OutgoingCallRequest) => {
       if (sessionRef.current) return
       startOutgoingCall(req)
+    },
+    hangup: () => {
+      const cur = sessionRef.current
+      if (!cur) return
+      if (cur.direction === 'incoming' && cur.status === 'ringing') declineIncomingCall()
+      else endCall()
     },
   }))
 

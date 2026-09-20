@@ -419,3 +419,5 @@
 .play-window-shell .play-icon-rail-groups{padding-top:4px}
 .play-window-shell .play-icon-rail-groups,.play-window-shell .play-icon-rail{scrollbar-width:none}
 .play-window-shell .play-icon-rail-groups::-webkit-scrollbar{display:none}
+/* Play desktop: moldura das fotos nas listas de gerenciar (membros/banidos/cargos) menor */
+.play-window-shell .play-manage-member-row .avatar-sm,.play-window-shell .play-role-check-row .avatar-sm{width:30px!important;height:30px!important;padding:1px!important;border:2px solid #8dd2e8!important;border-radius:6px!important}

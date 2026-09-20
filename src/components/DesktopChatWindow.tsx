@@ -1,10 +1,9 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
 import { MainPanel } from './MainPanel'
-import { CallOverlay, type CallOverlayHandle } from './CallOverlay'
 import { DesktopTitleBar } from './DesktopChrome'
-import { currentWindow } from '../lib/desktopWindows'
+import { currentWindow, requestCall } from '../lib/desktopWindows'
 import type { Conversation, Profile } from '../types'
 
 type Props = {
@@ -16,7 +15,6 @@ export function DesktopChatWindow({ conversationId }: Props) {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [conversation, setConversation] = useState<Conversation | null>(null)
   const [blockedIds, setBlockedIds] = useState<Set<string>>(new Set())
-  const callOverlayRef = useRef<CallOverlayHandle>(null)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session))
@@ -62,13 +60,12 @@ export function DesktopChatWindow({ conversationId }: Props) {
             onConversationUpdate={(patch) => setConversation((c) => (c ? { ...c, ...patch } : c))}
             blockedIds={blockedIds}
             onOpenCommunity={() => { /* comunidade a partir de uma janela de chat solta ainda nao tem tratamento dedicado */ }}
-            onStartCall={(peer, kind) => callOverlayRef.current?.startCall({ peer, kind, conversationId })}
+            onStartCall={(peer, kind) => requestCall({ peer, kind, conversationId })}
           />
         ) : (
           <div style={{ padding: 24 }}>carregando...</div>
         )}
       </div>
-      {profile && <CallOverlay ref={callOverlayRef} me={profile} />}
     </div>
   )
 }

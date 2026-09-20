@@ -117,6 +117,7 @@ export type PlayRole = {
   group_id: string
   name: string
   emoji: string | null
+  permissions: string[]
   position: number
   created_at: string
 }

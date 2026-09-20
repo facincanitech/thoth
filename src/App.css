@@ -2000,3 +2000,19 @@ body{
 .prism-palette-picker{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
 .prism-palette{width:64px;height:28px;border-radius:8px;border:2px solid transparent;cursor:pointer;padding:0;box-shadow:0 0 0 1px var(--line-2)}
 .prism-palette.active{border-color:var(--accent-text);box-shadow:0 0 0 2px var(--bg-panel),0 0 0 4px var(--accent-text)}
+
+/* Janela de chamada do desktop */
+.desktop-call-shell{position:relative;background:#0b1620}
+.desktop-call-app{position:relative;flex:1;min-height:0;background:#0b1620}
+.desktop-call-shell .call-overlay{position:absolute;inset:0}
+
+/* Janelinha de PiP do desktop */
+.pip-window{position:fixed;inset:0;background:#000;overflow:hidden}
+.pip-window video{width:100%;height:100%;object-fit:contain;display:block}
+.pip-window-bar{position:absolute;left:0;right:0;top:0;display:flex;align-items:center;justify-content:space-between;padding:6px 8px;color:#fff;font:600 12px sans-serif;background:linear-gradient(rgb(0 0 0 / 65%),transparent);opacity:0;transition:opacity .15s}
+.pip-window:hover .pip-window-bar{opacity:1}
+.pip-window-bar button{border:0;background:rgb(0 0 0 / 45%);color:#fff;width:22px;height:22px;border-radius:5px;cursor:pointer}
+.play-role-emoji-row{display:flex;flex-wrap:wrap;gap:4px}
+.play-role-emoji-row button{min-width:34px;height:34px;border:1px solid var(--line-2);border-radius:8px;background:var(--bg-surface-2);color:var(--text);cursor:pointer;font-size:16px}
+.play-role-emoji-row button.active{border-color:var(--accent-text);background:var(--bg-selected)}
+[data-theme="messenger"] .play-app-shell .play-manage-member-row .avatar-sm{width:30px;height:30px;padding:1px;border-width:2px;border-radius:7px}

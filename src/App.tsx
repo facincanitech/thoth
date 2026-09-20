@@ -19,7 +19,7 @@ import { registerPushNotifications, setCurrentConversationId, clearAllNotificati
 import { promptDisableBatteryOptimization, promptFullScreenIntentPermission } from './lib/batteryOpt'
 import { readCache, writeCache } from './lib/cache'
 import { isTauriDesktop } from './lib/platform'
-import { openChatWindow, openPlayWindow } from './lib/desktopWindows'
+import { ensureCallWindow, openChatWindow, openPlayWindow, requestCall } from './lib/desktopWindows'
 import { DesktopTitleBar } from './components/DesktopChrome'
 import './App.css'
 
@@ -183,6 +183,11 @@ function App() {
   const [accountOpen, setAccountOpen] = useState(false)
   const [accountResetKey, setAccountResetKey] = useState(0)
   const callOverlayRef = useRef<CallOverlayHandle>(null)
+
+  // Desktop: as chamadas vivem numa janela propria (escondida ate tocar/ligar)
+  useEffect(() => {
+    if (isTauriDesktop && profile?.id) ensureCallWindow()
+  }, [profile?.id])
   const [groupsRestoreView, setGroupsRestoreView] = useState<GroupsView | null>(null)
 
   function leaveGroupsPanel(fromView: GroupsView) {
@@ -635,7 +640,10 @@ function App() {
         selected={selected}
         onSelect={(c) => {
           if (isTauriDesktop) {
-            if (c) openChatWindow(c.id, c.name || 'Conversa')
+            if (c) {
+              openChatWindow(c.id, c.name || 'Conversa')
+              setNudgers((prev) => prev.filter((n) => n.conversationId !== c.id))
+            }
             return
           }
           setSelectedCommunity(null)
@@ -695,7 +703,12 @@ function App() {
           }}
           onConversationUpdate={(patch) => setSelected((c) => (c ? { ...c, ...patch } : c))}
           onOpenCommunity={(c) => { setSelected(null); setCommunityTab('home'); setSelectedCommunity(c) }}
-          onStartCall={(peer, kind) => selected && callOverlayRef.current?.startCall({ peer, kind, conversationId: selected.id })}
+          onStartCall={(peer, kind) => {
+            if (!selected) return
+            const req = { peer, kind, conversationId: selected.id }
+            if (isTauriDesktop) requestCall(req)
+            else callOverlayRef.current?.startCall(req)
+          }}
           sidebarCollapsed={sidebarCollapsed}
           onToggleSidebar={() => setSidebarCollapsed((v) => !v)}
         />
@@ -703,7 +716,7 @@ function App() {
       </>
       )}
       {authOpen && <AuthModal onClose={() => setAuthOpen(false)} />}
-      <CallOverlay ref={callOverlayRef} me={profile} />
+      {!isTauriDesktop && <CallOverlay ref={callOverlayRef} me={profile} />}
     </div>
   )
 

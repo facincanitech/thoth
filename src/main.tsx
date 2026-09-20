@@ -4,6 +4,8 @@ import './index.css'
 import App from './App.tsx'
 import { DesktopChatWindow } from './components/DesktopChatWindow.tsx'
 import { DesktopPlayWindow } from './components/DesktopPlayWindow.tsx'
+import { DesktopCallWindow } from './components/DesktopCallWindow.tsx'
+import { DesktopPipWindow } from './components/DesktopPipWindow.tsx'
 import { isTauriDesktop } from './lib/platform.ts'
 
 // Sem o menu nativo do navegador (voltar/imprimir/traduzir...) em nenhuma janela - so nos
@@ -15,6 +17,8 @@ document.addEventListener('contextmenu', (e) => {
 const searchParams = isTauriDesktop ? new URLSearchParams(window.location.search) : null
 const tauriChatId = searchParams?.get('tauriChat') ?? null
 const isTauriPlay = searchParams?.get('tauriPlay') === '1'
+const isTauriCall = searchParams?.get('tauriCall') === '1'
+const isTauriPip = searchParams?.get('tauriPip') === '1'
 
 async function boot() {
   // ThothChat Messenger (versao desktop) tem visual proprio e fixo, sem sistema
@@ -26,7 +30,7 @@ async function boot() {
 
   createRoot(document.getElementById('root')!).render(
     <StrictMode>
-      {isTauriPlay ? <DesktopPlayWindow /> : tauriChatId ? <DesktopChatWindow conversationId={tauriChatId} /> : <App />}
+      {isTauriPip ? <DesktopPipWindow /> : isTauriCall ? <DesktopCallWindow /> : isTauriPlay ? <DesktopPlayWindow /> : tauriChatId ? <DesktopChatWindow conversationId={tauriChatId} /> : <App />}
     </StrictMode>,
   )
 }
