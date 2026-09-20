@@ -204,8 +204,8 @@ type Props = {
   communityTab: 'home' | 'info' | 'members' | 'settings'
   onCommunityTabChange: (tab: 'home' | 'info' | 'members' | 'settings') => void
   onCommunityBack: () => void
-  theme: 'dark' | 'light' | 'contrast' | 'frutiger' | 'messenger'
-  onThemeChange: (theme: 'dark' | 'light' | 'contrast' | 'frutiger' | 'messenger') => void
+  theme: 'dark' | 'light' | 'contrast' | 'frutiger' | 'messenger' | 'cyberpunk'
+  onThemeChange: (theme: 'dark' | 'light' | 'contrast' | 'frutiger' | 'messenger' | 'cyberpunk') => void
   statusOpen: boolean
   onStatusOpenChange: (open: boolean) => void
   onOpenStatus: () => void
@@ -2882,6 +2882,13 @@ export function ChatList({
                     onClick={() => onThemeChange('contrast')}
                   >
                     Alto contraste
+                  </button>
+                  <button
+                    type="button"
+                    className={`theme-option theme-option-cyberpunk${theme === 'cyberpunk' ? ' active' : ''}`}
+                    onClick={() => onThemeChange('cyberpunk')}
+                  >
+                    Cyberpunk
                   </button>
                 </div>
             </>

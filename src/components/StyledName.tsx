@@ -67,7 +67,7 @@ function readable(color: string, lightUi: boolean): string {
 
 function themeIsLight(el: Element | null): boolean {
   const theme = el?.closest('[data-theme]')?.getAttribute('data-theme')
-  if (theme === 'dark' || theme === 'contrast') return false
+  if (theme === 'dark' || theme === 'contrast' || theme === 'cyberpunk') return false
   if (theme) return true
   return isTauriDesktop
 }

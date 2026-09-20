@@ -73,6 +73,19 @@
 }
 [data-theme="contrast"] .in .bubble{border:1px solid #fff}
 [data-theme="contrast"] .out .bubble{border:1px solid #fff}
+
+/* Cyberpunk e um tema adicional: os temas existentes permanecem intocados. */
+[data-theme="cyberpunk"]{
+  color-scheme:dark;
+  --bg:#070813;--panel:#0c0d1d;--panel2:#12142a;--line:#25305a;--text:#f4f7ff;
+  --text-base:#f4f7ff;--muted:#8993b5;--bubble:#311653;--hover:#151936;--input:#0b1024;
+  --bg-deep:#050710;--bg-panel:#0b0d1c;--bg-surface:#101329;--bg-surface-2:#151936;
+  --bg-selected:#182b4d;--line-2:#2a3865;--muted-2:#6f7da6;--text-secondary:#bec8e8;
+  --accent-text:#20e7ff;--avatar-bg:#182345;--accent-dim-bg:#102d47;--danger-bg:#45132e;
+  --danger:#ff4f9a;--scrollbar:#355286;--green:#00e6c7;--green2:#00a993;
+  --rail-bg:#09091a;--rail-icon:#9aa8d2;--shadow:0 14px 42px rgb(0 0 0 / 45%);
+  --cyber-cyan:#20e7ff;--cyber-pink:#ff3cac;--cyber-yellow:#f5ed48;
+}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 button,input,textarea,select{font:inherit}
 button{-webkit-tap-highlight-color:transparent}
@@ -2069,6 +2082,78 @@ body{
 .play-role-emoji-row button{min-width:34px;height:34px;border:1px solid var(--line-2);border-radius:8px;background:var(--bg-surface-2);color:var(--text);cursor:pointer;font-size:16px}
 .play-role-emoji-row button.active{border-color:var(--accent-text);background:var(--bg-selected)}
 [data-theme="messenger"] .play-app-shell .play-manage-member-row .avatar-sm{width:30px;height:30px;padding:1px;border-width:2px;border-radius:7px}
+
+/* ================================================================
+   CYBERPUNK — tema opcional do Messenger
+   Isolado por data-theme para nao alterar Frutiger, Escuro ou Retro.
+   ================================================================ */
+[data-theme="cyberpunk"] body{
+  background:
+    linear-gradient(rgb(32 231 255 / 3%) 1px,transparent 1px),
+    linear-gradient(90deg,rgb(32 231 255 / 3%) 1px,transparent 1px),
+    radial-gradient(circle at 75% 0,rgb(84 25 145 / 24%),transparent 42%),#050710;
+  background-size:34px 34px,34px 34px,auto;
+}
+[data-theme="cyberpunk"] .app{background:transparent}
+[data-theme="cyberpunk"] .rail{
+  background:linear-gradient(180deg,#09091a,#070813);border-right:1px solid #1de3f0;
+  box-shadow:5px 0 24px rgb(11 214 234 / 8%);
+}
+[data-theme="cyberpunk"] .rail-brand{color:var(--cyber-cyan)}
+[data-theme="cyberpunk"] .brand-image{filter:drop-shadow(0 0 7px rgb(32 231 255 / 65%))}
+[data-theme="cyberpunk"] .rail-wordmark{color:#fff;text-shadow:0 0 8px var(--cyber-cyan)}
+[data-theme="cyberpunk"] .rail-link{color:#95a4cf;border:1px solid transparent;border-radius:5px}
+[data-theme="cyberpunk"] .rail-link:hover{color:#fff;background:#111a35;border-color:#263c6a}
+[data-theme="cyberpunk"] .rail-link[aria-current="page"]{
+  color:#061019;background:linear-gradient(135deg,var(--cyber-cyan),#65f7de);border-color:#8cfff0;
+  box-shadow:0 0 18px rgb(32 231 255 / 32%);text-shadow:none;
+}
+[data-theme="cyberpunk"] .chats{background:linear-gradient(180deg,#0b0e1e,#080a16);border-right-color:#26325b}
+[data-theme="cyberpunk"] .top{
+  background:linear-gradient(135deg,#15102c,#0b172d);border-bottom:1px solid #2b3b6c;
+  box-shadow:inset 0 -1px rgb(32 231 255 / 7%);
+}
+[data-theme="cyberpunk"] .brand{color:#fff;text-transform:uppercase;letter-spacing:.06em;text-shadow:0 0 12px rgb(32 231 255 / 35%)}
+[data-theme="cyberpunk"] .brand-caption{color:#7f8db5}
+[data-theme="cyberpunk"] .search{background:#080d20;border-color:#263966;border-radius:3px}
+[data-theme="cyberpunk"] .search:focus-within{border-color:var(--cyber-cyan);box-shadow:0 0 0 2px rgb(32 231 255 / 12%),0 0 18px rgb(32 231 255 / 10%)}
+[data-theme="cyberpunk"] .filter-tab,[data-theme="cyberpunk"] .filter-more-btn{border-radius:3px;border-color:#29365e;background:#11152b}
+[data-theme="cyberpunk"] .filter-tab.active,[data-theme="cyberpunk"] .filter-more-btn.active{color:#051017;background:var(--cyber-cyan);border-color:var(--cyber-cyan);box-shadow:0 0 12px rgb(32 231 255 / 28%)}
+[data-theme="cyberpunk"] .chat{border-radius:3px;border-color:transparent}
+[data-theme="cyberpunk"] .chat:hover{background:#11162d;border-color:#27345d}
+[data-theme="cyberpunk"] .chat.selected{background:linear-gradient(90deg,#112a43,#171735);border-color:#176179}
+[data-theme="cyberpunk"] .chat.selected::before{width:3px;background:var(--cyber-cyan);box-shadow:0 0 9px var(--cyber-cyan)}
+[data-theme="cyberpunk"] .photo,[data-theme="cyberpunk"] .header-photo,[data-theme="cyberpunk"] .avatar-sm{
+  border-color:#24627c;border-radius:5px;background:#111b34;box-shadow:0 0 0 1px #10182d,0 0 9px rgb(32 231 255 / 14%);
+}
+[data-theme="cyberpunk"] .chat-header{background:linear-gradient(135deg,#10142b,#111c35);border-bottom:1px solid #2a3a67}
+[data-theme="cyberpunk"] .header-name{color:#fff}
+[data-theme="cyberpunk"] .header-actions .icon-btn:hover{color:#061019;background:var(--cyber-cyan);box-shadow:0 0 14px rgb(32 231 255 / 28%)}
+[data-theme="cyberpunk"] .messages{
+  background:
+    linear-gradient(rgb(32 231 255 / 2.5%) 1px,transparent 1px),
+    linear-gradient(90deg,rgb(32 231 255 / 2.5%) 1px,transparent 1px),#070a16;
+  background-size:28px 28px;
+}
+[data-theme="cyberpunk"] .bubble{border:1px solid #283866;border-radius:9px 9px 9px 3px;box-shadow:0 5px 18px rgb(0 0 0 / 20%)}
+[data-theme="cyberpunk"] .in .bubble{background:linear-gradient(135deg,#11172e,#131a35)}
+[data-theme="cyberpunk"] .out .bubble{background:linear-gradient(135deg,#38205b,#261342);border-color:#853b9e;box-shadow:0 5px 20px rgb(255 60 172 / 9%)}
+[data-theme="cyberpunk"] .composer{background:linear-gradient(180deg,#0c1022,#080b17);border-top-color:#26345e}
+[data-theme="cyberpunk"] .composer-icons{background:#10152b;border:1px solid #27365f;border-radius:4px}
+[data-theme="cyberpunk"] .compose-btn:hover,[data-theme="cyberpunk"] .compose-btn.active{color:#061019;background:var(--cyber-cyan)}
+[data-theme="cyberpunk"] .input{background:#080d1d;border-color:#2b3e6b;border-radius:4px;box-shadow:inset 0 1px 5px #0008}
+[data-theme="cyberpunk"] .input:focus-within{border-color:var(--cyber-cyan);box-shadow:inset 0 1px 5px #0008,0 0 14px rgb(32 231 255 / 12%)}
+[data-theme="cyberpunk"] .send,[data-theme="cyberpunk"] .send-text{color:#061019;background:linear-gradient(135deg,var(--cyber-cyan),#42f2cb);border-radius:4px;box-shadow:0 0 15px rgb(32 231 255 / 25%)}
+[data-theme="cyberpunk"] .modal-card,[data-theme="cyberpunk"] .profile-popup,[data-theme="cyberpunk"] .filter-popup,[data-theme="cyberpunk"] .request-menu,[data-theme="cyberpunk"] .emoji-picker{background:#0d1021;border-color:#35436e;box-shadow:0 18px 60px #000b,0 0 25px rgb(32 231 255 / 7%)}
+[data-theme="cyberpunk"] .theme-option-cyberpunk{color:var(--cyber-cyan);border-color:#237589;background:linear-gradient(135deg,#0b1930,#20113b)}
+[data-theme="cyberpunk"] .theme-option-cyberpunk.active{color:#061019;background:linear-gradient(135deg,var(--cyber-cyan),#59f4d4);border-color:#9bfff2;box-shadow:0 0 14px rgb(32 231 255 / 30%)}
+[data-theme="cyberpunk"] .presence-dot.online{background:var(--cyber-cyan);box-shadow:0 0 8px var(--cyber-cyan)}
+[data-theme="cyberpunk"] .nudge-indicator{color:var(--cyber-yellow);text-shadow:0 0 8px var(--cyber-yellow)}
+
+@media(max-width:760px){
+  [data-theme="cyberpunk"] .rail{border-right:0;border-top:1px solid #1de3f0;box-shadow:0 -5px 22px rgb(11 214 234 / 8%)}
+  [data-theme="cyberpunk"] .top{background:linear-gradient(135deg,#15102c,#0b172d)}
+}
 .play-role-order-row{display:flex;gap:6px;margin-top:8px}
 
 /* Card do perfil (Play) */

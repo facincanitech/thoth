@@ -2742,20 +2742,7 @@ function ProfilePanel({ me, open, onClose, onSaved }: { me: Profile; open: boole
       </div>
       <div className="play-group-info-body">
         <p style={{ color: 'var(--muted)', fontSize: 12 }}>Esse perfil é só do Thoth Play - editar aqui não muda seu perfil no resto do Thoth Messenger.</p>
-        <button type="button" className="play-group-info-avatar" onClick={() => fileRef.current?.click()} style={{ border: 0, cursor: 'pointer' }}>
-          <AvatarBox src={avatarUrl} id={me.id} fallbackLetter={(displayNameDraft || '?')[0]?.toUpperCase()} className="play-group-avatar" />
-        </button>
-        <input ref={fileRef} type="file" accept="image/*" hidden onChange={handleAvatarPick} />
-        {uploading && <p className="play-empty">enviando foto...</p>}
-        <label>Nome de exibição</label>
-        <input value={displayNameDraft} onChange={(e) => setDisplayNameDraft(e.target.value)} />
-        <label style={{ marginTop: 10 }}>Status</label>
-        <input value={statusDraft} onChange={(e) => setStatusDraft(e.target.value)} placeholder="De boa" />
-
-        <label style={{ marginTop: 14 }}>Características (até 4)</label>
-        <TagEditor tags={profileTags} onChange={setProfileTags} />
-
-        <label style={{ marginTop: 14 }}>Card do perfil (aparece quando clicam no seu nome)</label>
+        <label>Card do perfil (aparece quando clicam no seu nome)</label>
         <div
           className="play-card-banner-preview"
           style={{ backgroundColor: bannerColor || '#3b6ef6', backgroundImage: bannerImage ? 'url(' + bannerImage + ')' : undefined }}
@@ -2766,6 +2753,18 @@ function ProfilePanel({ me, open, onClose, onSaved }: { me: Profile; open: boole
           {bannerImage && <button type="button" className="google-btn" style={{ width: 'auto' }} onClick={() => setBannerImage(null)}>Remover</button>}
         </div>
         <input ref={bannerFileRef} type="file" accept="image/*" hidden onChange={handleBannerPick} />
+
+        <label style={{ marginTop: 14 }}>Foto</label>
+        <button type="button" className="play-group-info-avatar" onClick={() => fileRef.current?.click()} style={{ border: 0, cursor: 'pointer' }}>
+          <AvatarBox src={avatarUrl} id={me.id} fallbackLetter={(displayNameDraft || '?')[0]?.toUpperCase()} className="play-group-avatar" />
+        </button>
+        <input ref={fileRef} type="file" accept="image/*" hidden onChange={handleAvatarPick} />
+        {uploading && <p className="play-empty">enviando foto...</p>}
+        <label>Nome de exibição</label>
+        <input value={displayNameDraft} onChange={(e) => setDisplayNameDraft(e.target.value)} />
+        <label style={{ marginTop: 10 }}>Status</label>
+        <input value={statusDraft} onChange={(e) => setStatusDraft(e.target.value)} placeholder="De boa" />
+
 
         {loaded && (
           <>
@@ -2826,6 +2825,9 @@ function ProfilePanel({ me, open, onClose, onSaved }: { me: Profile; open: boole
                 />
               </>
             )}
+
+            <label style={{ marginTop: 14 }}>Características (até 4)</label>
+            <TagEditor tags={profileTags} onChange={setProfileTags} />
 
             <label style={{ marginTop: 14 }}>Tema do Play</label>
             <div className="play-theme-picker">

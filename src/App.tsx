@@ -24,7 +24,7 @@ import { ensureCallWindow, openChatWindow, openPlayWindow, requestCall } from '.
 import { DesktopTitleBar } from './components/DesktopChrome'
 import './App.css'
 
-type Theme = 'dark' | 'light' | 'contrast' | 'frutiger' | 'messenger'
+type Theme = 'dark' | 'light' | 'contrast' | 'frutiger' | 'messenger' | 'cyberpunk'
 
 function App() {
   useEffect(() => {
@@ -41,7 +41,7 @@ function App() {
       }
       const saved = localStorage.getItem('ferus-theme')
       if (saved === 'frutiger') return 'messenger' // tema Frutiger antigo foi removido
-      if (saved === 'dark' || saved === 'light' || saved === 'contrast' || saved === 'frutiger' || saved === 'messenger') return saved
+      if (saved === 'dark' || saved === 'light' || saved === 'contrast' || saved === 'frutiger' || saved === 'messenger' || saved === 'cyberpunk') return saved
     } catch {
       // ignore
     }

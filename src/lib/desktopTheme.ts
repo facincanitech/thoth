@@ -4,12 +4,12 @@ import skinUrl from '../../thothchat-messenger/thothmessenger.css?url'
 // (Escuro, Retro, Alto contraste) usam o CSS normal do app + desktopBasic.css (so a moldura da janela).
 // Personalizacao livre de cores/fundo nao existe: so estes temas padronizados.
 const THEME_KEY = 'ferus-theme'
-type ThemeId = 'messenger' | 'dark' | 'light' | 'contrast'
+type ThemeId = 'messenger' | 'dark' | 'light' | 'contrast' | 'cyberpunk'
 
 export function readStoredDesktopTheme(): ThemeId {
   try {
     const saved = localStorage.getItem(THEME_KEY)
-    if (saved === 'dark' || saved === 'light' || saved === 'contrast') return saved
+    if (saved === 'dark' || saved === 'light' || saved === 'contrast' || saved === 'cyberpunk') return saved
   } catch {
     // ignore
   }
@@ -40,9 +40,9 @@ function setSkin(on: boolean): Promise<void> {
 // e o Frutiger do desktop e o skin em si (nao usa data-theme).
 export function applyDesktopTheme(theme: string): Promise<void> {
   const root = document.documentElement
-  if (theme === 'light' || theme === 'contrast') root.dataset.theme = theme
+  if (theme === 'light' || theme === 'contrast' || theme === 'cyberpunk') root.dataset.theme = theme
   else delete root.dataset.theme
-  return setSkin(theme !== 'dark' && theme !== 'light' && theme !== 'contrast')
+  return setSkin(theme !== 'dark' && theme !== 'light' && theme !== 'contrast' && theme !== 'cyberpunk')
 }
 
 // Janelas secundarias (conversa) seguem o tema escolhido na janela principal.
