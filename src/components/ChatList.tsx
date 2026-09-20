@@ -2911,7 +2911,7 @@ export function ChatList({
 
             <label style={{ marginTop: 10 }}>Sobre o app</label>
             <a
-              href="https://github.com/facincanitech/thothchat/releases/latest"
+              href="https://github.com/facincanitech/thoth/releases/latest"
               target="_blank"
               rel="noreferrer"
               className="google-btn"

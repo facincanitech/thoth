@@ -3,7 +3,7 @@ export type UpdateInfo = { available: boolean; version?: string }
 export async function checkForUpdate(currentVersion: string): Promise<UpdateInfo> {
   try {
     const res = await fetch(
-      `https://facincanitech.github.io/thothchat/version.json?t=${Date.now()}`,
+      `https://facincanitech.github.io/thoth/version.json?t=${Date.now()}`,
       { cache: 'no-store' },
     )
     if (!res.ok) return { available: false }

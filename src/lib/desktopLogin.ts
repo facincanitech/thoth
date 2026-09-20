@@ -1,6 +1,6 @@
 import { supabase } from './supabase'
 
-const FALLBACK_REDIRECT = 'https://facincanitech.github.io/thothchat/desktop-login.html'
+const FALLBACK_REDIRECT = 'https://facincanitech.github.io/thoth/desktop-login.html'
 
 // Login Google do desktop: tenta o retorno por servidor local (sem pop-up do navegador
 // e sem depender do protocolo thoth:// estar registrado); se o servidor local nao

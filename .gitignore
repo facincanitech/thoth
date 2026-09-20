@@ -47,3 +47,12 @@ src-tauri/gen/
 *.njsproj
 *.sln
 *.sw?
+
+# Material local (mockups, rascunhos, saidas de teste, site em edicao pelo gpt) - nao vai pro repo
+mockups/
+mvp/
+outputs/
+envio-testers/
+store-assets/
+thoth_site/
+desktop-msn/
