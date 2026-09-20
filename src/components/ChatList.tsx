@@ -2798,7 +2798,7 @@ export function ChatList({
                     className={`theme-option${theme === 'messenger' ? ' active' : ''}`}
                     onClick={() => onThemeChange('messenger')}
                   >
-                    Messenger
+                    Frutiger Aero
                   </button>
                   <button
                     type="button"
@@ -2813,13 +2813,6 @@ export function ChatList({
                     onClick={() => onThemeChange('light')}
                   >
                     Retro
-                  </button>
-                  <button
-                    type="button"
-                    className={`theme-option${theme === 'frutiger' ? ' active' : ''}`}
-                    onClick={() => onThemeChange('frutiger')}
-                  >
-                    Frutiger Aero
                   </button>
                   <button
                     type="button"

@@ -39,6 +39,7 @@ function App() {
         return 'messenger'
       }
       const saved = localStorage.getItem('ferus-theme')
+      if (saved === 'frutiger') return 'messenger' // tema Frutiger antigo foi removido
       if (saved === 'dark' || saved === 'light' || saved === 'contrast' || saved === 'frutiger' || saved === 'messenger') return saved
     } catch {
       // ignore

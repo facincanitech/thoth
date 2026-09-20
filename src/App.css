@@ -1499,7 +1499,7 @@ body{
 
 /* Play tem tema proprio (claro/escuro, escolhido no perfil) - independente
    do tema geral do app (que pode estar em frutiger/contraste/etc). */
-.play-app-shell{position:relative;flex:1;min-width:0;min-height:0;display:flex;overflow:hidden;background:var(--bg-deep)}
+.play-app-shell{color:var(--text);position:relative;flex:1;min-width:0;min-height:0;display:flex;overflow:hidden;background:var(--bg-deep)}
 .play-app-shell[data-theme="light"]{
   --bg-deep:#d8ebf7;--bg-panel:#fff;--bg-surface:#fff;--bg-surface-2:#ffffff;--bg-selected:#eef8ff;
   --line:#c7dced;--line-2:#c7dced;--muted:#5c7688;--text:#1c2733;--text-secondary:#3f5b6d;
@@ -1825,3 +1825,57 @@ body{
 [data-theme="messenger"] .msn-empty{padding:10px 8px;font-size:12px;color:#728894}
 [data-theme="messenger"] .msn-category-menu-btn{margin-left:auto;border:0;background:none;color:#728894;display:flex}
 [data-theme="messenger"] .msn-new-category-btn{margin:8px;padding:8px;border:1px dashed #88b3c7;background:none;color:#4b7286;border-radius:6px;width:calc(100% - 16px)}
+
+/* --- Messenger (web/APK): presenca pela moldura da foto (igual ao desktop), seta visivel, listra na barra --- */
+[data-theme="messenger"] .presence-dot{display:none}
+[data-theme="messenger"] .photo,[data-theme="messenger"] .header-photo,[data-theme="messenger"] .avatar-sm{
+  overflow:hidden;padding:2px;border:3px solid #42acd2;border-radius:8px;background:linear-gradient(145deg,#f1feff,#6dd3ec 43%,#0788ba);
+  box-shadow:inset 0 2px 2px #ffffffe6,inset 0 -2px 4px #06537847,0 2px 5px #0e4d693d;
+}
+[data-theme="messenger"] .photo img,[data-theme="messenger"] .header-photo img,[data-theme="messenger"] .avatar-sm img{border-radius:4px}
+[data-theme="messenger"] .photo:has(+ .presence-dot.online),[data-theme="messenger"] .header-photo:has(+ .presence-dot.online),
+[data-theme="messenger"] .avatar-sm:has(+ .presence-dot.online),[data-theme="messenger"] .msn-contact-avatar:has(+ .presence-dot.online){
+  border-color:#73b923;background:linear-gradient(145deg,#f7ffd8,#a9dd49 42%,#4c990f);
+}
+[data-theme="messenger"] .photo:has(+ .presence-dot.afk),[data-theme="messenger"] .header-photo:has(+ .presence-dot.afk),
+[data-theme="messenger"] .avatar-sm:has(+ .presence-dot.afk),[data-theme="messenger"] .msn-contact-avatar:has(+ .presence-dot.afk){
+  border-color:#e0a020;background:linear-gradient(145deg,#fff9d6,#f0c355 42%,#c98d0c);
+}
+[data-theme="messenger"] .photo:has(+ .presence-dot.offline),[data-theme="messenger"] .header-photo:has(+ .presence-dot.offline),
+[data-theme="messenger"] .avatar-sm:has(+ .presence-dot.offline),[data-theme="messenger"] .msn-contact-avatar:has(+ .presence-dot.offline){
+  border-color:#fff;background:linear-gradient(145deg,#fff,#eef4f6 48%,#cbd9df);
+}
+[data-theme="messenger"] .photo:has(+ .presence-dot.offline) img,[data-theme="messenger"] .header-photo:has(+ .presence-dot.offline) img,
+[data-theme="messenger"] .avatar-sm:has(+ .presence-dot.offline) img,[data-theme="messenger"] .msn-contact-avatar:has(+ .presence-dot.offline) img{opacity:.5}
+[data-theme="messenger"] .back-mobile,[data-theme="messenger"] .chat-header .icon-btn{color:#1f4d68}
+[data-theme="messenger"] .rail{overflow:hidden}
+[data-theme="messenger"] .rail:after{
+  content:"";position:absolute;top:-20%;left:30%;width:44%;height:150%;
+  background:linear-gradient(100deg,transparent 40%,rgb(255 255 255 / 30%) 48%,transparent 58%);
+  transform:rotate(8deg);pointer-events:none;
+}
+[data-theme="messenger"] .rail-item{z-index:1}
+
+.play-icon-rail-group .play-group-avatar,.play-icon-rail-profile .play-group-avatar{width:100%;height:100%;border-radius:8px}
+@media(max-width:760px){
+  .play-icon-rail{
+    position:relative;border-right:1px solid #087eb0;
+    background:linear-gradient(90deg,rgb(49 201 255 / 15%),transparent 12%,transparent 88%,rgb(0 0 0 / 22%)),linear-gradient(180deg,#075e91,#04263d);
+  }
+  .play-icon-rail:after{
+    content:"";position:absolute;top:-10%;left:-10%;width:120%;height:14%;pointer-events:none;
+    background:linear-gradient(100deg,transparent 40%,rgb(255 255 255 / 18%) 48%,transparent 58%);
+  }
+  .play-icon-rail>*{position:relative;z-index:1}
+  .play-icon-rail-home{border:1px solid rgb(255 255 255 / 30%);background:rgb(255 255 255 / 12%);color:#fff;border-radius:10px}
+  .play-icon-rail-group{
+    width:46px;height:46px;padding:3px;border:1px solid #18baf4;border-radius:12px;color:#fff;
+    background:linear-gradient(#174d70,#092a42);box-shadow:inset 0 0 0 2px #0c3650,0 0 9px rgb(19 183 241 / 32%);
+  }
+  .play-icon-rail-group.active{outline:2px solid #35c7ff;outline-offset:2px}
+  .play-icon-rail-add{background:rgb(255 255 255 / 8%);border:1px dashed rgb(255 255 255 / 45%);box-shadow:none}
+  .play-icon-rail-profile{width:40px;height:40px}
+  .play-group-view,.play-group-main{min-height:0}
+  .play-channel-sidebar-wrap{display:flex;flex-direction:column}
+  .play-channel-sidebar{flex:1;height:auto}
+}

@@ -24,7 +24,7 @@ type Props = {
 
 export function StyledName({ name, font, effect, color, className }: Props) {
   const fontDef = NAME_FONTS.find((f) => f.id === font)
-  const style: React.CSSProperties = fontDef && fontDef.id !== 'default' ? { fontFamily: fontDef.family } : {}
+  const style: React.CSSProperties = fontDef && fontDef.id !== 'default' ? { fontFamily: fontDef.family, ...(fontDef.id === 'pixel' ? { fontSize: '0.7em' } : {}) } : {}
 
   if (effect === 'neon' && color) {
     style.color = color
