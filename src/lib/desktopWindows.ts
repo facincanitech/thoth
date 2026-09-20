@@ -14,11 +14,21 @@ export async function openChatWindow(conversationId: string, title: string) {
     await existing.setFocus()
     return
   }
+  // Abre do lado direito da tela (a lista de contatos fica na esquerda); cada conversa nova
+  // desce/desloca um pouco pra nao ficar uma em cima da outra.
+  const width = 760
+  const height = 640
+  const openChats = (await WebviewWindow.getAll()).filter((w) => w.label.startsWith('chat-')).length
+  const cascade = (openChats % 6) * 28
+  const x = Math.max(0, window.screen.availWidth - width - 12 - cascade)
+  const y = Math.max(0, Math.round((window.screen.availHeight - height) / 2) + cascade - 40)
   new WebviewWindow(label, {
     url: `index.html?tauriChat=${encodeURIComponent(conversationId)}`,
     title: `${title} — Conversa`,
-    width: 760,
-    height: 640,
+    width,
+    height,
+    x,
+    y,
     minWidth: 520,
     minHeight: 420,
     decorations: false,

@@ -2047,6 +2047,7 @@ function GroupInfoPanel({ group, myRole, members, me, can, channels, categories,
   const [tags, setTags] = useState<string[]>(group.tags || [])
   const [error, setError] = useState<string | null>(null)
   const [bannerUploading, setBannerUploading] = useState(false)
+  const [showCustomize, setShowCustomize] = useState(false)
   const bannerFileRef = useRef<HTMLInputElement>(null)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [uploading, setUploading] = useState(false)
@@ -2350,69 +2351,78 @@ function GroupInfoPanel({ group, myRole, members, me, can, channels, categories,
 
       {(tab === 'geral' || !hasTabs) && (
         <div className="play-group-info-body">
-          <div
-            className="profile-banner-preview"
-            style={{
-              display: 'block', width: '100%', minWidth: '100%', height: 188, minHeight: 188, boxSizing: 'border-box',
-              ...(group.banner_image_url
-                ? { backgroundImage: 'url(' + group.banner_image_url + ')', backgroundPosition: '50% 50%', backgroundSize: 'cover' }
-                : { background: group.banner_color || 'var(--green)' }),
-            }}
-          >
-            <div
-              className="profile-banner-preview-avatar"
-              style={canGeral ? { pointerEvents: 'auto', cursor: 'pointer' } : undefined}
-              title={canGeral ? 'Trocar imagem do servidor' : undefined}
-              onClick={canGeral ? () => fileRef.current?.click() : undefined}
-            >
-              {group.image_url ? <img src={group.image_url} alt="" /> : <span style={{ fontWeight: 700 }}>{group.name[0]?.toUpperCase()}</span>}
-            </div>
+          <div className="play-group-info-avatar">
+            {canGeral ? (
+              <button type="button" onClick={() => fileRef.current?.click()} style={{ border: 0, padding: 0, cursor: 'pointer', background: 'none' }} disabled={uploading}>
+                <AvatarBox src={group.image_url} id={group.id} fallbackLetter={group.name[0]?.toUpperCase()} className="play-group-avatar" />
+              </button>
+            ) : (
+              <AvatarBox src={group.image_url} id={group.id} fallbackLetter={group.name[0]?.toUpperCase()} className="play-group-avatar" />
+            )}
+            {canGeral && <input ref={fileRef} type="file" accept="image/*" hidden onChange={handleImagePick} />}
+            {uploading && <span className="play-empty">enviando...</span>}
           </div>
-          {canGeral && <input ref={fileRef} type="file" accept="image/*" hidden onChange={handleImagePick} />}
-          {uploading && <span className="play-empty">enviando...</span>}
           {canGeral || canPrivacy ? (
             <>
               {canGeral && (<>
-              <label style={{ marginTop: 12 }}>Imagem ou GIF (banner)</label>
-              <input ref={bannerFileRef} type="file" accept="image/*" hidden onChange={handleBannerPick} />
-              <button type="button" className="google-btn" disabled={bannerUploading} onClick={() => bannerFileRef.current?.click()}>
-                {bannerUploading ? 'enviando...' : group.banner_image_url ? 'Trocar imagem' : 'Escolher imagem'}
-              </button>
-              {group.banner_image_url && (
-                <button type="button" className="google-btn" style={{ marginTop: 6 }} onClick={() => saveGroup({ banner_image_url: null })}>Remover imagem</button>
-              )}
-              <label style={{ marginTop: 12 }}>Cor de fundo (banner)</label>
-              <div className="banner-color-picker">
-                <button type="button" className={'banner-color-swatch banner-color-reset' + (!group.banner_color && !group.banner_image_url ? ' active' : '')} onClick={() => saveGroup({ banner_color: null, banner_image_url: null })} title="Padrão">
-                  <IconMinusCircle size={14} />
-                </button>
-                {BANNER_COLORS.map((c) => (
-                  <button
-                    key={c}
-                    type="button"
-                    className={'banner-color-swatch' + (!group.banner_image_url && group.banner_color === c ? ' active' : '')}
-                    style={{ background: c }}
-                    onClick={() => saveGroup({ banner_color: c, banner_image_url: null })}
-                  />
-                ))}
-                <input
-                  type="color"
-                  className="banner-color-swatch banner-color-custom"
-                  value={group.banner_color && group.banner_color.startsWith('#') ? group.banner_color : '#5865f2'}
-                  onChange={() => {}}
-                  onBlur={(ev) => saveGroup({ banner_color: ev.target.value, banner_image_url: null })}
-                />
-              </div>
-
-              <div className="appearance-separator" />
-
-              <label style={{ marginTop: 14 }}>Nome</label>
+              <label>Nome</label>
               <input value={name} onChange={(e) => setName(e.target.value)} onBlur={() => { if (name.trim() && name.trim() !== group.name) saveGroup({ name: name.trim() }); else setName(group.name) }} onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()} />
               <label style={{ marginTop: 10 }}>Descrição</label>
               <input value={description} onChange={(e) => setDescription(e.target.value)} onBlur={() => { const d = description.trim() || null; if (d !== (group.description || null)) saveGroup({ description: d }) }} onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()} placeholder="Sem descrição" />
               <label style={{ marginTop: 10 }}>Características (até 4)</label>
               <TagEditor tags={tags} onChange={(next) => { setTags(next); saveGroup({ tags: next }) }} />
               {error && <p className="auth-error">{error}</p>}
+
+              <button type="button" className={'play-customize-toggle' + (showCustomize ? ' open' : '')} aria-expanded={showCustomize} onClick={() => setShowCustomize((v) => !v)}>
+                Personalizar banner do servidor <span aria-hidden="true" style={{ display: 'inline-flex', transform: showCustomize ? 'rotate(180deg)' : undefined }}><IconChevronDown size={16} /></span>
+              </button>
+              {showCustomize && (
+                <div className="play-customize-body">
+                  <div
+                    className="profile-banner-preview"
+                    style={{
+                      display: 'block', width: '100%', minWidth: '100%', height: 188, minHeight: 188, boxSizing: 'border-box',
+                      ...(group.banner_image_url
+                        ? { backgroundImage: 'url(' + group.banner_image_url + ')', backgroundPosition: '50% 50%', backgroundSize: 'cover' }
+                        : { background: group.banner_color || 'var(--green)' }),
+                    }}
+                  >
+                    <div className="profile-banner-preview-avatar">
+                      {group.image_url ? <img src={group.image_url} alt="" /> : <span style={{ fontWeight: 700 }}>{group.name[0]?.toUpperCase()}</span>}
+                    </div>
+                  </div>
+                  <label style={{ marginTop: 12 }}>Imagem ou GIF</label>
+                  <input ref={bannerFileRef} type="file" accept="image/*" hidden onChange={handleBannerPick} />
+                  <button type="button" className="google-btn" disabled={bannerUploading} onClick={() => bannerFileRef.current?.click()}>
+                    {bannerUploading ? 'enviando...' : group.banner_image_url ? 'Trocar imagem' : 'Escolher imagem'}
+                  </button>
+                  {group.banner_image_url && (
+                    <button type="button" className="google-btn" style={{ marginTop: 6 }} onClick={() => saveGroup({ banner_image_url: null })}>Remover imagem</button>
+                  )}
+                  <label style={{ marginTop: 12 }}>Cor de fundo (banner)</label>
+                  <div className="banner-color-picker">
+                    <button type="button" className={'banner-color-swatch banner-color-reset' + (!group.banner_color && !group.banner_image_url ? ' active' : '')} onClick={() => saveGroup({ banner_color: null, banner_image_url: null })} title="Padrão">
+                      <IconMinusCircle size={14} />
+                    </button>
+                    {BANNER_COLORS.map((c) => (
+                      <button
+                        key={c}
+                        type="button"
+                        className={'banner-color-swatch' + (!group.banner_image_url && group.banner_color === c ? ' active' : '')}
+                        style={{ background: c }}
+                        onClick={() => saveGroup({ banner_color: c, banner_image_url: null })}
+                      />
+                    ))}
+                    <input
+                      type="color"
+                      className="banner-color-swatch banner-color-custom"
+                      value={group.banner_color && group.banner_color.startsWith('#') ? group.banner_color : '#5865f2'}
+                      onChange={() => {}}
+                      onBlur={(ev) => saveGroup({ banner_color: ev.target.value, banner_image_url: null })}
+                    />
+                  </div>
+                </div>
+              )}
               </>)}
 
               {canPrivacy && (<>
