@@ -38,7 +38,7 @@ pub fn run() {
   {
     builder = builder.plugin(tauri_plugin_single_instance::init(|app, argv, _cwd| {
       use tauri::{Emitter, Manager};
-      if let Some(url) = argv.iter().find(|a| a.starts_with("ferus://")) {
+      if let Some(url) = argv.iter().find(|a| a.starts_with("thoth://") || a.starts_with("ferus://")) {
         let _ = app.emit("deep-link", url.clone());
       }
       if let Some(window) = app.get_webview_window("main") {

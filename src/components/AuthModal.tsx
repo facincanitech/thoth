@@ -16,7 +16,7 @@ export function AuthModal({ onClose }: Props) {
       // Google bloqueia login OAuth dentro de uma webview embutida - abre no
       // navegador padrao do sistema. O retorno passa por uma pagina https (ja
       // liberada no Supabase, mesma origem do login web) que so entao tenta abrir
-      // o app via deep link ferus://callback - navegar direto pra um protocolo
+      // o app via deep link thoth://callback - navegar direto pra um protocolo
       // customizado a partir do navegador deixava a aba "pensando" pra sempre.
       const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
         provider: 'google',
@@ -30,7 +30,7 @@ export function AuthModal({ onClose }: Props) {
       return
     }
     const redirectTo = Capacitor.isNativePlatform()
-      ? 'ferus://callback'
+      ? 'thoth://callback'
       : `${window.location.origin}${import.meta.env.BASE_URL}`
     const { error: oauthError } = await supabase.auth.signInWithOAuth({
       provider: 'google',

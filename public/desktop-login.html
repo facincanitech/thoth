@@ -15,6 +15,7 @@
   <h1>Login realizado!</h1>
   <p>Se o ThothChat Messenger não abrir sozinho, clique no botão abaixo.</p>
   <a id="open-link" href="#">Abrir o ThothChat Messenger</a>
+  <a id="old-link" href="#" style="font-size:12px;background:none;border:0;text-decoration:underline;padding:0">Estou com uma versão antiga do app</a>
   <p style="font-size:13px;margin-top:8px">O app não abriu? Copie o código abaixo e cole na tela de login do app ("Colar código").</p>
   <button id="copy-code" style="padding:9px 18px;border-radius:6px;border:1px solid #06537d;background:#fff;color:#075d8c;font-weight:600;cursor:pointer">Copiar código de login</button>
   <span id="copy-status" style="font-size:12px;min-height:16px"></span>
@@ -24,8 +25,9 @@
     // pra cá em vez de pra ferus://callback porque navegar pra um protocolo custom
     // a partir do navegador do sistema (sem essa pagina https no meio) deixava a
     // aba "pensando" pra sempre em varios navegadores.
-    var target = 'ferus://callback' + window.location.hash
+    var target = 'thoth://callback' + window.location.hash
     document.getElementById('open-link').href = target
+    document.getElementById('old-link').href = 'ferus://callback' + window.location.hash
     // navegacao automatica via script (sem gesto real do usuario) e ignorada por
     // alguns navegadores pra protocolo customizado - o botao acima e o caminho
     // garantido, isso aqui e so uma tentativa a mais.

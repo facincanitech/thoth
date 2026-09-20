@@ -1680,7 +1680,7 @@ export function ChatList({
   async function switchAccount() {
     await supabase.auth.signOut()
     const redirectTo = Capacitor.isNativePlatform()
-      ? 'ferus://callback'
+      ? 'thoth://callback'
       : `${window.location.origin}${import.meta.env.BASE_URL}`
     await supabase.auth.signInWithOAuth({
       provider: 'google',
