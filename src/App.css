@@ -1879,3 +1879,5 @@ body{
   .play-channel-sidebar-wrap{display:flex;flex-direction:column}
   .play-channel-sidebar{flex:1;height:auto}
 }
+.play-topbar-back{display:none}
+@media(max-width:760px){.play-topbar-back{display:inline-flex}}

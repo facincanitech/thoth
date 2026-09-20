@@ -297,6 +297,15 @@ export function ThothPlay({ me, onBack }: Props) {
     if (data) openGroup(data as PlayGroup)
   }
 
+  // Servidor aberto da lista de "abertos": entra de verdade (vira membro e aparece na
+  // barra lateral) antes de abrir - sem ser membro a RLS esconde canais e mensagens.
+  async function joinOpenGroup(g: PlayGroup) {
+    const { data, error } = await supabase.rpc('join_play_group', { p_invite_code: g.invite_code, p_password: null })
+    if (error) { console.error('join open group failed', error); return }
+    await loadGroups()
+    openGroup((data as PlayGroup) || g)
+  }
+
   async function handleJoinGroup() {
     setJoinError(null)
     const { data, error } = await supabase.rpc('join_play_group', { p_invite_code: joinCode.trim(), p_password: joinPassword || null })
@@ -399,7 +408,7 @@ export function ThothPlay({ me, onBack }: Props) {
                 {browseGroups.length === 0 && <p className="play-empty">nenhum servidor aberto no momento</p>}
                 <div className="play-group-grid">
                   {browseGroups.map((g) => (
-                    <button key={g.id} type="button" className="play-group-card" onClick={() => openGroup(g)}>
+                    <button key={g.id} type="button" className="play-group-card" onClick={() => joinOpenGroup(g)}>
                       <AvatarBox src={g.image_url} id={g.id} fallbackLetter={g.name[0]?.toUpperCase()} className="play-group-avatar" />
                       <span className="play-group-name">{g.name}</span>
                       <IconLockOpen size={13} />
@@ -785,6 +794,7 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
     <main className="play-group-view">
       <div className="play-group-main">
         <header className="play-group-topbar">
+          <button type="button" className="icon-btn play-topbar-back" onClick={() => window.dispatchEvent(new CustomEvent('play-back-button', { detail: { handled: false } }))} title="Voltar aos servidores"><IconArrowLeft size={20} /></button>
           <button type="button" className="play-group-topbar-avatar-btn" onClick={() => setShowGroupInfo(true)} title="Sobre o servidor">
             <AvatarBox src={group.image_url} id={group.id} fallbackLetter={group.name[0]?.toUpperCase()} className="play-group-avatar" />
           </button>
