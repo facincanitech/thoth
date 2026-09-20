@@ -137,7 +137,7 @@ function App() {
     return () => document.removeEventListener('visibilitychange', onVisibility)
   }, [])
 
-  const navStateRef = useRef({ panelOpen: false, accountOpen: false, groupsOpen: false, statusOpen: false, selectedCommunity: false, selected: false })
+  const navStateRef = useRef({ playOpen: false, panelOpen: false, accountOpen: false, groupsOpen: false, statusOpen: false, selectedCommunity: false, selected: false })
 
   const [session, setSession] = useState<Session | null | undefined>(undefined)
   const [profile, setProfile] = useState<Profile | null>(() => {
@@ -214,13 +214,17 @@ function App() {
   }, [selected?.id])
 
   useEffect(() => {
-    navStateRef.current = { panelOpen, accountOpen, groupsOpen, statusOpen, selectedCommunity: !!selectedCommunity, selected: !!selected }
-  }, [panelOpen, accountOpen, groupsOpen, statusOpen, selectedCommunity, selected])
+    navStateRef.current = { playOpen, panelOpen, accountOpen, groupsOpen, statusOpen, selectedCommunity: !!selectedCommunity, selected: !!selected }
+  }, [playOpen, panelOpen, accountOpen, groupsOpen, statusOpen, selectedCommunity, selected])
 
   useEffect(() => {
     const listenerPromise = CapacitorApp.addListener('backButton', () => {
       const s = navStateRef.current
-      if (s.panelOpen) setPanelOpen(false)
+      if (s.playOpen) {
+        const detail = { handled: false }
+        window.dispatchEvent(new CustomEvent('play-back-button', { detail }))
+        if (!detail.handled) setPlayOpen(false)
+      } else if (s.panelOpen) setPanelOpen(false)
       else if (s.accountOpen) setAccountOpen(false)
       else if (s.groupsOpen) setGroupsOpen(false)
       else if (s.statusOpen) setStatusOpen(false)
@@ -615,7 +619,7 @@ function App() {
   const isGroupContext = selected?.type === 'group' || !!selectedCommunity
 
   const appTree = (
-    <div className={`app${selected || selectedCommunity ? ' chat-open' : ''}${anyPanelOpen ? ' panel-open' : ''}${sidebarCollapsed && isGroupContext ? ' sidebar-collapsed' : ''}`}>
+    <div className={`app${selected || selectedCommunity ? ' chat-open' : ''}${anyPanelOpen ? ' panel-open' : ''}${playOpen ? ' play-open' : ''}${sidebarCollapsed && isGroupContext ? ' sidebar-collapsed' : ''}`}>
       {(!isTauriDesktop || profile) && <Rail
         me={profile}
         onRequireAuth={() => requireAuth(() => {})}

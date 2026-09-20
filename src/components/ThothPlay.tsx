@@ -10,10 +10,21 @@ import { StyledName, NAME_FONTS, NAME_EFFECTS } from './StyledName'
 import { uploadImage } from '../lib/uploadImage'
 import {
   IconArrowLeft, IconChevronDown, IconCopy, IconEdit, IconGamepad, IconGrip, IconHash, IconHeadphones,
-  IconLock, IconLockOpen, IconLogout, IconMic, IconMicOff, IconMonitorShare, IconPhoneOff, IconPlus,
+  IconLock, IconLockOpen, IconLogout, IconMic, IconMicOff, IconMonitorShare, IconPanelLeft, IconPhoneOff, IconPlus,
   IconSearch, IconSend, IconSettingsGear, IconTrash, IconUser, IconVideo, IconVideoOff,
 } from './icons'
 import type { Bot, PlayCategory, PlayChannel, PlayGroup, PlayMessage, PlayProfile, PlayRole, Profile } from '../types'
+
+function useIsMobile() {
+  const [m, setM] = useState(() => window.matchMedia('(max-width: 760px)').matches)
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 760px)')
+    const on = () => setM(mq.matches)
+    mq.addEventListener('change', on)
+    return () => mq.removeEventListener('change', on)
+  }, [])
+  return m
+}
 
 const ROLE_EMOJIS = [
   '👑', '🛡️', '⭐', '🔥', '💎', '🎮', '🎤', '🎧', '🎨', '🔧',
@@ -305,6 +316,21 @@ export function ThothPlay({ me, onBack }: Props) {
     setSelectedChannel(null)
   }
 
+  const selectedGroupIdRef = useRef<string | null>(null)
+  selectedGroupIdRef.current = selectedGroup?.id ?? null
+  useEffect(() => {
+    function onBackButton(e: Event) {
+      const detail = (e as CustomEvent<{ handled: boolean }>).detail
+      if (detail.handled) return
+      if (selectedGroupIdRef.current) {
+        goHome()
+        detail.handled = true
+      }
+    }
+    window.addEventListener('play-back-button', onBackButton)
+    return () => window.removeEventListener('play-back-button', onBackButton)
+  }, [])
+
   return (
     <div className="play-app-shell" data-theme={playTheme}>
       <PlayIconRail
@@ -312,6 +338,7 @@ export function ThothPlay({ me, onBack }: Props) {
         selectedGroupId={selectedGroup?.id ?? null}
         onSelectGroup={openGroup}
         onGoHome={goHome}
+        onExit={onBack}
         me={me}
         myPlayProfile={myPlayProfile}
         onOpenProfile={() => setShowProfile(true)}
@@ -404,19 +431,21 @@ export function ThothPlay({ me, onBack }: Props) {
   )
 }
 
-function PlayIconRail({ myGroups, selectedGroupId, onSelectGroup, onGoHome, me, myPlayProfile, onOpenProfile }: {
+function PlayIconRail({ myGroups, selectedGroupId, onSelectGroup, onGoHome, onExit, me, myPlayProfile, onOpenProfile }: {
   myGroups: PlayGroup[]
   selectedGroupId: string | null
   onSelectGroup: (g: PlayGroup) => void
   onGoHome: () => void
+  onExit: () => void
   me: Profile
   myPlayProfile: Profile
   onOpenProfile: () => void
 }) {
+  const isMobile = useIsMobile()
   return (
     <aside className="play-icon-rail">
-      <button type="button" className="play-icon-rail-home" title="Meus servidores" onClick={onGoHome}>
-        <IconGamepad size={20} />
+      <button type="button" className="play-icon-rail-home" title={isMobile ? 'Voltar pro Messenger' : 'Meus servidores'} onClick={isMobile ? onExit : onGoHome}>
+        {isMobile ? <IconArrowLeft size={20} /> : <IconGamepad size={20} />}
       </button>
       <div className="play-icon-rail-groups">
         {myGroups.map((g) => (
@@ -503,6 +532,9 @@ type VoiceParticipantInfo = { id: string; name: string }
 
 function GroupView({ me, myPlayProfile, group, channels, categories, selectedChannel, messages, hasReplaySet, liveTyping, draft, onDraftChange, onSend, onSelectChannel, onChannelsChange, onCategoriesChange, onGroupUpdate, onLeftGroup, onExitToMessenger }: GroupViewProps) {
   const [showNewChannel, setShowNewChannel] = useState(false)
+  const [mobileScreen, setMobileScreen] = useState<'channels' | 'chat' | 'members'>('channels')
+  const mobileScreenRef = useRef(mobileScreen)
+  mobileScreenRef.current = mobileScreen
   const [joinedVoiceChannel, setJoinedVoiceChannel] = useState<PlayChannel | null>(null)
   const [openReplayId, setOpenReplayId] = useState<string | null>(null)
   const [replayEvents, setReplayEvents] = useState<ReplayEvent[] | null>(null)
@@ -679,7 +711,23 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
     onChannelsChange()
   }
 
+  useEffect(() => {
+    setMobileScreen('channels')
+  }, [group.id])
+
+  useEffect(() => {
+    function onBackButton(e: Event) {
+      const detail = (e as CustomEvent<{ handled: boolean }>).detail
+      if (detail.handled) return
+      if (mobileScreenRef.current === 'members') { setMobileScreen('chat'); detail.handled = true }
+      else if (mobileScreenRef.current === 'chat') { setMobileScreen('channels'); detail.handled = true }
+    }
+    window.addEventListener('play-back-button', onBackButton)
+    return () => window.removeEventListener('play-back-button', onBackButton)
+  }, [])
+
   function handleSelectChannel(c: PlayChannel) {
+    setMobileScreen('chat')
     onSelectChannel(c)
     if (c.kind === 'voice' && joinedVoiceChannel?.id !== c.id) {
       setJoinedVoiceChannel(c)
@@ -794,7 +842,12 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
           </div>
         )}
 
-        <div className="play-group-body">
+        <div className={`play-group-body mobile-screen-${mobileScreen}`}>
+          <div className="play-mobile-bar">
+            <button type="button" className="icon-btn" onClick={() => setMobileScreen(mobileScreen === 'members' ? 'chat' : 'channels')} title="Voltar"><IconArrowLeft size={20} /></button>
+            <strong>{mobileScreen === 'members' ? 'Membros' : selectedChannel?.name || ''}</strong>
+            <button type="button" className={`icon-btn${mobileScreen === 'members' ? ' active' : ''}`} onClick={() => setMobileScreen(mobileScreen === 'members' ? 'chat' : 'members')} title="Mostrar/esconder membros"><IconPanelLeft size={20} /></button>
+          </div>
           <div className="play-channel-sidebar-wrap" ref={sidebarWrapRef} style={sidebarWidth ? { width: sidebarWidth } : undefined}>
             <aside
               className="play-channel-sidebar"
@@ -999,7 +1052,7 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
           )}
 
           {joinedVoiceChannel && (
-            <div style={{ display: selectedChannel?.id === joinedVoiceChannel.id ? 'flex' : 'none', flex: 1, minWidth: 0, flexDirection: 'column', overflow: 'hidden' }}>
+            <div className="play-voice-holder" style={{ display: selectedChannel?.id === joinedVoiceChannel.id ? 'flex' : 'none', flex: 1, minWidth: 0, flexDirection: 'column', overflow: 'hidden' }}>
               <VoiceChannel key={joinedVoiceChannel.id} me={myPlayProfile} membersById={membersById} channel={joinedVoiceChannel} onParticipantsChange={setVoiceParticipants} onLeave={leaveVoice} />
             </div>
           )}

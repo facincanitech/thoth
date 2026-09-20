@@ -138,7 +138,7 @@ export function Rail({ me, onRequireAuth, onNewConversation, onOpenAccount, onOp
       <button type="button" className="rail-item rail-link" title="Comunidades" onClick={handleCommunitiesClick}
         aria-current={activeSection === 'communities' ? 'page' : undefined}>
         <span className="rail-symbol"><IconHeart /></span>
-        <span className="rail-label">Comunidades</span>
+        <span className="rail-label rail-label-full">Comunidades</span><span className="rail-label rail-label-short">Comun.</span>
       </button>
       <button type="button" className="rail-item rail-link" title="Thoth Play" onClick={handlePlayClick}
         aria-current={activeSection === 'play' ? 'page' : undefined}>

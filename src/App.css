@@ -1708,3 +1708,44 @@ body{
 .play-bot-switch.on{background:var(--green)}
 .play-bot-switch.on .play-bot-switch-knob{left:18px}
 
+
+/* --- Play: ajustes de espacamento, painel fechado e layout mobile --- */
+.play-mobile-bar{display:none}
+.play-icon-rail{gap:11px}
+.play-icon-rail-groups{gap:11px}
+.play-icon-rail-home{margin-bottom:10px}
+.play-message{gap:14px}
+.play-message-body p{margin-top:4px}
+.play-channel-sidebar-wrap .new-conv-panel:not(.open),.play-profile-panel:not(.open){visibility:hidden;pointer-events:none}
+.rail-label-short{display:none}
+[data-theme="light"] .compose-btn,[data-theme="frutiger"] .compose-btn{color:#1f4d68}
+[data-theme="light"] .header-actions .icon-btn,[data-theme="frutiger"] .header-actions .icon-btn,
+[data-theme="light"] .nudge-btn,[data-theme="frutiger"] .nudge-btn{color:#1f4d68}
+@media(max-width:760px){
+  .rail-label-full{display:none}
+  .rail-label-short{display:inline}
+  .app.play-open>.rail{display:none}
+  .play-icon-rail{width:60px;padding:12px 4px;gap:12px;overflow-x:hidden}
+  .play-icon-rail-groups{align-items:center;overflow-x:hidden}
+  .play-icon-rail-home,.play-icon-rail-group{margin-left:auto;margin-right:auto}
+  .play-home{overflow-x:hidden}
+  .play-home-header{justify-content:center}
+  .play-home-actions{justify-content:center;flex-wrap:wrap;padding:0 16px 16px}
+  .play-group-section{padding:0 14px 20px}
+  .play-group-grid{grid-template-columns:repeat(auto-fill,minmax(112px,1fr))}
+  .play-group-body{flex-direction:column}
+  .play-mobile-bar{display:flex;align-items:center;gap:8px;padding:6px 8px;border-bottom:1px solid var(--line);flex-shrink:0}
+  .play-mobile-bar strong{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center}
+  .play-group-body.mobile-screen-channels>.play-mobile-bar{display:none}
+  .play-group-body.mobile-screen-channels>*:not(.play-channel-sidebar-wrap){display:none!important}
+  .play-group-body.mobile-screen-chat>.play-channel-sidebar-wrap,
+  .play-group-body.mobile-screen-chat>.play-member-sidebar{display:none!important}
+  .play-group-body.mobile-screen-members>*:not(.play-member-sidebar):not(.play-mobile-bar){display:none!important}
+  .play-channel-sidebar-wrap{width:100%!important;flex:1;min-height:0}
+  .play-channel-sidebar{width:100%!important}
+  .play-sidebar-resize-handle{display:none}
+  .play-member-sidebar{width:100%!important;margin:0!important;flex:1}
+  .play-group-topbar{padding:8px 12px}
+}
+.desktop-window-shell .rail-label-full{display:inline!important}
+.desktop-window-shell .rail-label-short{display:none!important}

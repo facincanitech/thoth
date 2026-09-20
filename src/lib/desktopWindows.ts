@@ -29,17 +29,22 @@ export async function openPlayWindow() {
   const label = 'thoth-play'
   const existing = await WebviewWindow.getByLabel(label)
   if (existing) {
-    await existing.unminimize()
-    await existing.show()
-    await existing.setFocus()
-    return
+    try {
+      await existing.unminimize()
+      await existing.show()
+      await existing.setFocus()
+      return
+    } catch {
+      // janela escondida ficou num estado ruim - recria do zero em vez de ficar sem abrir
+      await existing.destroy().catch(() => {})
+    }
   }
   new WebviewWindow(label, {
     url: 'index.html?tauriPlay=1',
     title: 'Thoth Play',
     width: 1200,
     height: 820,
-    minWidth: 760,
+    minWidth: 800,
     minHeight: 480,
     decorations: false,
   })
