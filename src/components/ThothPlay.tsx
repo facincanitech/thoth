@@ -299,7 +299,10 @@ export function ThothPlay({ me, onBack }: Props) {
 
   // Servidor aberto da lista de "abertos": entra de verdade (vira membro e aparece na
   // barra lateral) antes de abrir - sem ser membro a RLS esconde canais e mensagens.
+  const [previewGroup, setPreviewGroup] = useState<PlayGroup | null>(null)
+
   async function joinOpenGroup(g: PlayGroup) {
+    setPreviewGroup(null)
     const { data, error } = await supabase.rpc('join_play_group', { p_invite_code: g.invite_code, p_password: null })
     if (error) { console.error('join open group failed', error); return }
     await loadGroups()
@@ -408,7 +411,7 @@ export function ThothPlay({ me, onBack }: Props) {
                 {browseGroups.length === 0 && <p className="play-empty">nenhum servidor aberto no momento</p>}
                 <div className="play-group-grid">
                   {browseGroups.map((g) => (
-                    <button key={g.id} type="button" className="play-group-card" onClick={() => joinOpenGroup(g)}>
+                    <button key={g.id} type="button" className="play-group-card" onClick={() => setPreviewGroup(g)}>
                       <AvatarBox src={g.image_url} id={g.id} fallbackLetter={g.name[0]?.toUpperCase()} className="play-group-avatar" />
                       <span className="play-group-name">{g.name}</span>
                       <IconLockOpen size={13} />
@@ -419,6 +422,7 @@ export function ThothPlay({ me, onBack }: Props) {
             </>
           )}
 
+          {previewGroup && <ServerInfoScreen group={previewGroup} onClose={() => setPreviewGroup(null)} onJoin={() => joinOpenGroup(previewGroup)} />}
           {showCreate && <CreateGroupModal onClose={() => setShowCreate(false)} onCreate={handleCreateGroup} error={createError} />}
           {showJoin && (
             <div className="modal-backdrop" onClick={() => setShowJoin(false)}>
@@ -477,6 +481,32 @@ function PlayIconRail({ myGroups, selectedGroupId, onSelectGroup, onGoHome, onEx
         <AvatarBox src={myPlayProfile.avatar_url} id={me.id} fallbackLetter={displayName(myPlayProfile)[0]?.toUpperCase()} className="play-group-avatar" />
       </button>
     </aside>
+  )
+}
+
+function ServerInfoScreen({ group, members, onClose, onConfigure, onJoin }: {
+  group: PlayGroup; members?: GroupMember[]; onClose: () => void; onConfigure?: () => void; onJoin?: () => void
+}) {
+  const online = members ? members.filter((m) => getPresenceColor(m.profile.last_seen_at, m.profile.is_idle) !== 'offline').length : null
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <div className="modal-card play-server-info" onClick={(e) => e.stopPropagation()}>
+        <AvatarBox src={group.image_url} id={group.id} fallbackLetter={group.name[0]?.toUpperCase()} className="play-group-avatar play-server-info-avatar" />
+        <h2>{group.name}</h2>
+        {group.description && <p className="play-server-info-desc">{group.description}</p>}
+        {members && (
+          <div className="play-server-info-counts"><span>{online} online</span><span>{members.length} {members.length === 1 ? 'membro' : 'membros'}</span></div>
+        )}
+        {group.tags?.length > 0 && (
+          <div className="play-group-tags" style={{ justifyContent: 'center' }}>
+            {group.tags.map((t) => <span key={t} className="play-group-tag">{t}</span>)}
+          </div>
+        )}
+        {onJoin && <button type="button" className="google-btn" style={{ marginTop: 16 }} onClick={onJoin}>Entrar</button>}
+        {onConfigure && <button type="button" className="google-btn" style={{ marginTop: 16 }} onClick={onConfigure}>Configurar</button>}
+        <button type="button" className="modal-close" onClick={onClose}>fechar</button>
+      </div>
+    </div>
   )
 }
 
@@ -548,6 +578,7 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
   const [openReplayId, setOpenReplayId] = useState<string | null>(null)
   const [replayEvents, setReplayEvents] = useState<ReplayEvent[] | null>(null)
   const [showGroupInfo, setShowGroupInfo] = useState(false)
+  const [showServerInfo, setShowServerInfo] = useState(false)
   const [showGroupMenu, setShowGroupMenu] = useState(false)
   const [showInvite, setShowInvite] = useState(false)
   const [sidebarWidth, setSidebarWidth] = useState<number | null>(() => {
@@ -735,6 +766,12 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
     return () => window.removeEventListener('play-back-button', onBackButton)
   }, [])
 
+  useEffect(() => {
+    const shell = document.querySelector('.play-app-shell')
+    shell?.classList.toggle('play-focus', mobileScreen !== 'channels')
+    return () => shell?.classList.remove('play-focus')
+  }, [mobileScreen])
+
   function handleSelectChannel(c: PlayChannel) {
     setMobileScreen('chat')
     onSelectChannel(c)
@@ -794,13 +831,12 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
     <main className="play-group-view">
       <div className="play-group-main">
         <header className="play-group-topbar">
-          <button type="button" className="icon-btn play-topbar-back" onClick={() => window.dispatchEvent(new CustomEvent('play-back-button', { detail: { handled: false } }))} title="Voltar aos servidores"><IconArrowLeft size={20} /></button>
-          <button type="button" className="play-group-topbar-avatar-btn" onClick={() => setShowGroupInfo(true)} title="Sobre o servidor">
+          <button type="button" className="play-group-topbar-avatar-btn" onClick={() => setShowServerInfo(true)} title="Sobre o servidor">
             <AvatarBox src={group.image_url} id={group.id} fallbackLetter={group.name[0]?.toUpperCase()} className="play-group-avatar" />
           </button>
           <div className="play-group-topbar-copy">
             <div className="play-group-topbar-title">
-              <button type="button" className="play-group-topbar-name-btn" onClick={() => setShowGroupInfo(true)} title="Sobre o servidor">
+              <button type="button" className="play-group-topbar-name-btn" onClick={() => setShowServerInfo(true)} title="Sobre o servidor">
                 <strong>{group.name}</strong>
               </button>
               <div className="play-group-menu-wrap">
@@ -1145,6 +1181,15 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
             })}
           </div>
         </>
+      )}
+
+      {showServerInfo && (
+        <ServerInfoScreen
+          group={group}
+          members={members}
+          onClose={() => setShowServerInfo(false)}
+          onConfigure={canManage ? () => { setShowServerInfo(false); setShowGroupInfo(true) } : undefined}
+        />
       )}
 
       {showNewChannel && (

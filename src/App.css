@@ -1879,5 +1879,12 @@ body{
   .play-channel-sidebar-wrap{display:flex;flex-direction:column}
   .play-channel-sidebar{flex:1;height:auto}
 }
-.play-topbar-back{display:none}
-@media(max-width:760px){.play-topbar-back{display:inline-flex}}
+.play-server-info{max-width:380px}
+.play-server-info-avatar{width:96px!important;height:96px!important;border-radius:22px!important;margin:0 auto 10px}
+.play-server-info-desc{color:var(--text-secondary);margin:4px 0 10px!important;font-size:.9rem!important}
+.play-server-info-counts{display:flex;justify-content:center;gap:16px;font-size:13px;color:var(--muted);margin-bottom:10px}
+@media(max-width:760px){
+  .play-topbar-back{display:none!important}
+  .play-app-shell.play-focus .play-icon-rail,.play-app-shell.play-focus .play-group-topbar{display:none}
+  .play-text-channel-header{display:none}
+}
