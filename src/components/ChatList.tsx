@@ -2852,13 +2852,7 @@ export function ChatList({
 
             <div className="appearance-separator" />
 
-            {isTauriDesktop ? (
-              <>
-                <label style={{ marginTop: 14 }}>Tema</label>
-                <span className="invite-code">A versão desktop tem um tema próprio (ainda não é possível trocar por aqui) — mais opções chegam depois.</span>
-              </>
-            ) : (
-              <>
+            <>
                 <label style={{ marginTop: 14 }}>Tema</label>
                 <div className="theme-picker">
                   <button
@@ -2890,8 +2884,7 @@ export function ChatList({
                     Alto contraste
                   </button>
                 </div>
-              </>
-            )}
+            </>
           </div>
         )}
 

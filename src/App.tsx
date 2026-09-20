@@ -19,6 +19,7 @@ import { registerPushNotifications, setCurrentConversationId, clearAllNotificati
 import { promptDisableBatteryOptimization, promptFullScreenIntentPermission } from './lib/batteryOpt'
 import { readCache, writeCache } from './lib/cache'
 import { isTauriDesktop } from './lib/platform'
+import { applyDesktopTheme } from './lib/desktopTheme'
 import { ensureCallWindow, openChatWindow, openPlayWindow, requestCall } from './lib/desktopWindows'
 import { DesktopTitleBar } from './components/DesktopChrome'
 import './App.css'
@@ -52,7 +53,11 @@ function App() {
     // ThothChat Messenger (desktop/Tauri) tem visual proprio e fixo, sem sistema de
     // tema - o CSS dele (thothchat-messenger/thothmessenger.css) e carregado em main.tsx antes
     // do app montar e nao depende de data-theme nenhum. Nao mexe nisso aqui.
-    if (isTauriDesktop) return
+    if (isTauriDesktop) {
+      applyDesktopTheme(theme)
+      try { localStorage.setItem('ferus-theme', theme) } catch { /* ignore */ }
+      return
+    }
     if (theme === 'dark') delete document.documentElement.dataset.theme
     else document.documentElement.dataset.theme = theme
     try {

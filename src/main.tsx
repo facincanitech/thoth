@@ -7,6 +7,8 @@ import { DesktopPlayWindow } from './components/DesktopPlayWindow.tsx'
 import { DesktopCallWindow } from './components/DesktopCallWindow.tsx'
 import { DesktopPipWindow } from './components/DesktopPipWindow.tsx'
 import { isTauriDesktop } from './lib/platform.ts'
+import { applyDesktopTheme, followDesktopTheme, readStoredDesktopTheme } from './lib/desktopTheme.ts'
+import './desktopBasic.css'
 
 // Sem o menu nativo do navegador (voltar/imprimir/traduzir...) em nenhuma janela - so nos
 // campos de texto, pra poder colar. Os menus proprios do app continuam funcionando.
@@ -25,7 +27,12 @@ async function boot() {
   // de tema - o CSS dele fica isolado em thothchat-messenger/thothmessenger.css, carregado
   // so quando o app roda dentro do Tauri. Nunca usa data-theme nem Frutiger/Retro.
   if (isTauriDesktop) {
-    await import('../thothchat-messenger/thothmessenger.css')
+    // Play/chamada/PiP mantem o skin sempre; janela principal e conversas seguem o tema escolhido.
+    if (isTauriPlay || isTauriCall || isTauriPip) await import('../thothchat-messenger/thothmessenger.css')
+    else {
+      await applyDesktopTheme(readStoredDesktopTheme())
+      followDesktopTheme()
+    }
   }
 
   createRoot(document.getElementById('root')!).render(
