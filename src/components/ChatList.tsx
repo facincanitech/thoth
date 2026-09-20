@@ -1185,6 +1185,7 @@ export function ChatList({
     )
   }
 
+  const [pastedLoginCode, setPastedLoginCode] = useState('')
   const longPressFiredRef = useRef(false)
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -1759,6 +1760,13 @@ export function ChatList({
           : (friendsView === 'add' ? 'Adicionar amigo' : 'Amigos')
 
   if (isTauriDesktop && !me) {
+    async function handlePasteLogin() {
+      const raw = pastedLoginCode.trim()
+      const params = new URLSearchParams(raw.includes('#') ? raw.slice(raw.indexOf('#') + 1) : raw)
+      const access_token = params.get('access_token')
+      const refresh_token = params.get('refresh_token')
+      if (access_token && refresh_token) await supabase.auth.setSession({ access_token, refresh_token })
+    }
     async function handleDesktopGoogleLogin() {
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
@@ -1775,6 +1783,14 @@ export function ChatList({
         <button type="button" className="msn-login-google" onClick={handleDesktopGoogleLogin}>
           Entrar com Google
         </button>
+        <div className="msn-login-paste">
+          <input
+            placeholder="Colar código de login do navegador"
+            value={pastedLoginCode}
+            onChange={(e) => setPastedLoginCode(e.target.value)}
+          />
+          <button type="button" disabled={!pastedLoginCode.trim()} onClick={handlePasteLogin}>Entrar</button>
+        </div>
       </section>
     )
   }
