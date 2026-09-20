@@ -2691,6 +2691,10 @@ function VoiceChannel({ me, membersById, channel, onParticipantsChange, onLeave,
   const [participants, setParticipants] = useState<ParticipantTile[]>([])
   const [screenAudio, setScreenAudio] = useState<Record<string, HTMLMediaElement>>({})
   const shareStart = useRef<Record<string, number>>({})
+  // Modo fone: liga o microfone SEM cancelamento de eco/supressao/ganho automatico. No Windows
+  // essas funcoes colocam o dispositivo em modo "comunicacao" e deixam o som dos outros apps
+  // abafado; com fone (sem retorno do alto-falante pro mic) nao precisam.
+  const [headphoneMode, setHeadphoneMode] = useState(() => localStorage.getItem('play-headphone-mode') === '1')
   const [shareMenuOpen, setShareMenuOpen] = useState(false)
   const [shareQuality, setShareQuality] = useState<'480' | '720'>('720')
   const [shareLimit, setShareLimit] = useState<10 | 20 | 30>(30)
@@ -2721,7 +2725,11 @@ function VoiceChannel({ me, membersById, channel, onParticipantsChange, onLeave,
 
   useEffect(() => {
     let cancelled = false
-    const room = new Room()
+    const room = new Room({
+      audioCaptureDefaults: headphoneMode
+        ? { echoCancellation: false, noiseSuppression: false, autoGainControl: false }
+        : undefined,
+    })
     roomRef.current = room
 
     room
@@ -2783,6 +2791,16 @@ function VoiceChannel({ me, membersById, channel, onParticipantsChange, onLeave,
     await room.localParticipant.setMicrophoneEnabled(next)
     setMicEnabled(next)
     syncParticipants(room)
+  }
+
+  async function toggleHeadphoneMode() {
+    const next = !headphoneMode
+    setHeadphoneMode(next)
+    try { localStorage.setItem('play-headphone-mode', next ? '1' : '0') } catch { /* ignore */ }
+    const track = roomRef.current?.localParticipant.getTrackPublication(Track.Source.Microphone)?.audioTrack
+    await track?.restartTrack(next
+      ? { echoCancellation: false, noiseSuppression: false, autoGainControl: false }
+      : { echoCancellation: true, noiseSuppression: true, autoGainControl: true }).catch(() => {})
   }
 
   async function toggleCamera() {
@@ -2870,6 +2888,9 @@ function VoiceChannel({ me, membersById, channel, onParticipantsChange, onLeave,
           <div className="play-voice-controls">
             <button type="button" className={'icon-btn' + (micEnabled ? ' active' : '')} onClick={toggleMic} title={micEnabled ? 'Mutar' : 'Ativar microfone'}>
               {micEnabled ? <IconMic size={20} /> : <IconMicOff size={20} />}
+            </button>
+            <button type="button" className={'icon-btn' + (headphoneMode ? ' active' : '')} onClick={toggleHeadphoneMode} title={headphoneMode ? 'Modo fone ligado (sem cancelamento de eco)' : 'Modo fone: use com fone, evita o som do PC ficar abafado'}>
+              <IconHeadphones size={20} />
             </button>
             <button type="button" className={'icon-btn' + (cameraEnabled ? ' active' : '')} onClick={toggleCamera} title={cameraEnabled ? 'Desligar câmera' : 'Ligar câmera'}>
               {cameraEnabled ? <IconVideo size={20} /> : <IconVideoOff size={20} />}
