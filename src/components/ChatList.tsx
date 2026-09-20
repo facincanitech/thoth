@@ -1185,6 +1185,9 @@ export function ChatList({
     )
   }
 
+  const longPressFiredRef = useRef(false)
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
   function handleContextMenu(e: React.MouseEvent, conv: ConvWithLabel) {
     e.preventDefault()
     const rect = e.currentTarget.getBoundingClientRect()
@@ -1802,8 +1805,33 @@ export function ChatList({
     const contactRow = (
       id: string, label: string, avatarUrl: string | null | undefined, unreadCount: number, onClick: () => void,
       presence?: { lastSeenAt: string | null; isIdle: boolean },
+      conv?: ConvWithLabel,
     ) => (
-      <button key={id} type="button" data-chat-id={id} className={`msn-contact${dragChatId === id ? ' dragging' : ''}`} onClick={onClick}>
+      <button
+        key={id}
+        type="button"
+        data-chat-id={id}
+        className={`msn-contact${dragChatId === id ? ' dragging' : ''}`}
+        onClick={(e) => {
+          if (longPressFiredRef.current) { longPressFiredRef.current = false; e.preventDefault(); return }
+          onClick()
+        }}
+        onContextMenu={conv ? (e) => handleContextMenu(e, conv) : undefined}
+        onTouchStart={conv ? (e) => {
+          const t = e.touches[0]
+          const target = e.currentTarget
+          longPressFiredRef.current = false
+          if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current)
+          longPressTimerRef.current = setTimeout(() => {
+            longPressFiredRef.current = true
+            const rect = target.getBoundingClientRect()
+            const y = t.clientY + 230 > window.innerHeight ? Math.max(8, t.clientY - 230) : t.clientY
+            setContextMenu({ conv, x: rect.left + 12, y })
+          }, 500)
+        } : undefined}
+        onTouchMove={() => { if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current) }}
+        onTouchEnd={() => { if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current) }}
+      >
         <span
           className="msn-contact-grip"
           onClick={(e) => e.stopPropagation()}
@@ -1852,16 +1880,16 @@ export function ChatList({
     const dmPresence = (c: ConvWithLabel) => (c.otherId ? { lastSeenAt: c.otherLastSeenAt, isIdle: c.otherIsIdle } : undefined)
 
     const sectionContent = (key: string) => {
-      if (key === 'favoritos') return favoriteConvs.filter((c) => matches(c.label)).map((c) => contactRow(c.id, c.label, c.avatarUrl, c.unreadCount, () => onSelect(c), dmPresence(c)))
+      if (key === 'favoritos') return favoriteConvs.filter((c) => matches(c.label)).map((c) => contactRow(c.id, c.label, c.avatarUrl, c.unreadCount, () => onSelect(c), dmPresence(c), c))
       if (key === 'conversas') {
         if (regularConvs.length === 0) return <p className="msn-empty">nenhuma conversa ainda</p>
-        return regularConvs.filter((c) => matches(c.label)).map((c) => contactRow(c.id, c.label, c.avatarUrl, c.unreadCount, () => onSelect(c), dmPresence(c)))
+        return regularConvs.filter((c) => matches(c.label)).map((c) => contactRow(c.id, c.label, c.avatarUrl, c.unreadCount, () => onSelect(c), dmPresence(c), c))
       }
-      if (key === 'grupos') return groupConvs.filter((c) => matches(c.label)).map((c) => contactRow(c.id, c.label, c.avatarUrl, c.unreadCount, () => onSelect(c)))
+      if (key === 'grupos') return groupConvs.filter((c) => matches(c.label)).map((c) => contactRow(c.id, c.label, c.avatarUrl, c.unreadCount, () => onSelect(c), undefined, c))
       if (key === 'comunidades') return sortedCommunities.filter((c) => matches(c.name || '')).map((c) => contactRow(c.id, c.name || '', c.image_url, 0, () => onSelectCommunity(c)))
       const items = categoryConvs(key).filter((c) => matches(c.label))
       if (items.length === 0) return <p className="msn-empty">nenhum contato nessa categoria ainda</p>
-      return items.map((c) => contactRow(c.id, c.label, c.avatarUrl, c.unreadCount, () => onSelect(c), dmPresence(c)))
+      return items.map((c) => contactRow(c.id, c.label, c.avatarUrl, c.unreadCount, () => onSelect(c), dmPresence(c), c))
     }
 
     desktopContactsSurface = (
