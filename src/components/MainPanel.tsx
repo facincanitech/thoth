@@ -2700,7 +2700,7 @@ export function MainPanel({ me, conversation, onBack, onConversationUpdate, bloc
           >
             <IconMic size={20} />
           </button>
-          <button
+          {isTauriDesktop && <button
             type="button"
             className={`compose-btn${nudgeFlash ? ' active' : ''}`}
             title="Chamar atenção"
@@ -2711,8 +2711,8 @@ export function MainPanel({ me, conversation, onBack, onConversationUpdate, bloc
             }}
           >
             <IconNudge size={20} />
-          </button>
-          <button ref={winkBtnRef} type="button" className={`compose-btn${showWinks ? ' active' : ''}`} title="Mandar um wink" onClick={() => setShowWinks((v) => !v)}><IconHeart size={20} /></button>
+          </button>}
+          {isTauriDesktop && <button ref={winkBtnRef} type="button" className={`compose-btn${showWinks ? ' active' : ''}`} title="Mandar um wink" onClick={() => setShowWinks((v) => !v)}><IconHeart size={20} /></button>}
           <input ref={docInputRef} type="file" hidden onChange={handleAttachFilePicked} />
           <input ref={mediaInputRef} type="file" accept="image/*,video/*" hidden onChange={handleAttachFilePicked} />
           <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" hidden onChange={handleAttachFilePicked} />
@@ -2720,6 +2720,7 @@ export function MainPanel({ me, conversation, onBack, onConversationUpdate, bloc
           <audio ref={sonorAudioRef} hidden onError={handleSonorAudioError} onPlaying={handleSonorAudioPlaying} />
         </div>
         <div className="composer-input-row">
+          {!isTauriDesktop && <button ref={winkBtnRef} type="button" className={`compose-btn${showWinks ? ' active' : ''}`} title="Mandar um wink" onClick={() => setShowWinks((v) => !v)}><IconHeart size={20} /></button>}
           <div className="input">
             <textarea
               ref={composerTextareaRef}
