@@ -409,3 +409,13 @@
 .msn-login-paste input{flex:1;min-width:0;height:30px;padding:0 8px;border:1px solid #88b3c7;background:#fff;color:#123d57}
 .msn-login-paste button{height:30px;padding:0 12px;border:1px solid #0574b2;background:linear-gradient(#29bdf1,#087dcc);color:#fff;cursor:pointer}
 .msn-login-paste button:disabled{opacity:.5;cursor:default}
+
+/* Play desktop: foto de quem esta na voz (lista de canais) sumia por causa da borda/padding genericos do avatar */
+.play-window-shell .play-channel-voice-member{padding-left:30px}
+.play-window-shell .play-channel-voice-member .avatar-sm{width:28px!important;height:28px!important;padding:1px!important;border:2px solid #8dd2e8!important;border-radius:6px!important;background:linear-gradient(#f6fdff,#9edcf0)!important}
+.play-window-shell .play-channel-voice-member .avatar-sm img{border-radius:4px}
+/* espaco entre o botao do Play e o primeiro servidor (a moldura do selecionado encostava) */
+.play-window-shell .play-icon-rail-home{margin-bottom:18px}
+.play-window-shell .play-icon-rail-groups{padding-top:4px}
+.play-window-shell .play-icon-rail-groups,.play-window-shell .play-icon-rail{scrollbar-width:none}
+.play-window-shell .play-icon-rail-groups::-webkit-scrollbar{display:none}

@@ -1,5 +1,7 @@
+import { createPortal } from 'react-dom'
+import { isTauriDesktop } from '../lib/platform'
 import { useEffect, useRef, useState, type ChangeEvent, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent } from 'react'
-import { Room, RoomEvent, Track, type RemoteParticipant, type LocalParticipant, type TrackPublication } from 'livekit-client'
+import { Room, RoomEvent, Track, createLocalScreenTracks, type RemoteParticipant, type LocalParticipant, type TrackPublication } from 'livekit-client'
 import { supabase } from '../lib/supabase'
 import { fetchLiveKitToken } from '../lib/livekit'
 import { displayName } from '../lib/displayName'
@@ -10,7 +12,7 @@ import { StyledName, NAME_FONTS, NAME_EFFECTS } from './StyledName'
 import { uploadImage } from '../lib/uploadImage'
 import {
   IconArrowLeft, IconChevronDown, IconCopy, IconEdit, IconGamepad, IconGrip, IconHash, IconHeadphones,
-  IconLock, IconLockOpen, IconLogout, IconMic, IconMicOff, IconMonitorShare, IconPanelLeft, IconPhoneOff, IconPlus,
+  IconLock, IconLockOpen, IconLogout, IconMic, IconMicOff, IconMonitorShare, IconPanelLeft, IconFolder, IconMore, IconPause, IconPlay, IconFullscreen, IconShrink, IconVolume, IconVolumeOff, IconPhoneOff, IconPlus,
   IconAttach, IconSearch, IconSend, IconSmile, IconSettingsGear, IconTrash, IconUser, IconVideo, IconVideoOff,
 } from './icons'
 import { fetchRandomStation, searchPublicStations, isHlsStream, type RadioStation } from '../lib/sonor'
@@ -361,7 +363,11 @@ export function ThothPlay({ me, onBack }: Props) {
   }, [])
 
   return (
-    <div className="play-app-shell" data-theme={playTheme}>
+    <div
+      className="play-app-shell"
+      data-theme={playTheme}
+      onContextMenu={(e) => { if (!(e.target as HTMLElement).closest('input, textarea')) e.preventDefault() }}
+    >
       <PlayIconRail
         myGroups={myGroups}
         selectedGroupId={selectedGroup?.id ?? null}
@@ -462,6 +468,10 @@ export function ThothPlay({ me, onBack }: Props) {
   )
 }
 
+type PlayFolder = { id: string; name: string; position: number }
+
+type RailMenuTarget = { type: 'rail' } | { type: 'group'; id: string } | { type: 'folder'; id: string }
+
 function PlayIconRail({ myGroups, selectedGroupId, onSelectGroup, onGoHome, onExit, me, myPlayProfile, onOpenProfile }: {
   myGroups: PlayGroup[]
   selectedGroupId: string | null
@@ -473,23 +483,120 @@ function PlayIconRail({ myGroups, selectedGroupId, onSelectGroup, onGoHome, onEx
   onOpenProfile: () => void
 }) {
   const isMobile = useIsMobile()
+  const [folders, setFolders] = useState<PlayFolder[]>([])
+  const [folderGroups, setFolderGroups] = useState<Record<string, string[]>>({})
+  const [openFolders, setOpenFolders] = useState<Record<string, boolean>>(() => {
+    try { return JSON.parse(localStorage.getItem('play-open-folders') || '{}') } catch { return {} }
+  })
+  const [menu, setMenu] = useState<{ x: number; y: number; target: RailMenuTarget } | null>(null)
+  const [nameModal, setNameModal] = useState<{ mode: 'create' | 'rename'; folderId?: string; groupId?: string; value: string } | null>(null)
+
+  async function loadFolders() {
+    const { data: fs } = await supabase.from('play_folders').select('*').eq('user_id', me.id).order('position', { ascending: true })
+    const list = (fs || []) as PlayFolder[]
+    setFolders(list)
+    if (!list.length) { setFolderGroups({}); return }
+    const { data: fg } = await supabase.from('play_folder_groups').select('folder_id, group_id').in('folder_id', list.map((f) => f.id))
+    const map: Record<string, string[]> = {}
+    for (const r of fg || []) {
+      const fid = r.folder_id as string
+      map[fid] = [...(map[fid] || []), r.group_id as string]
+    }
+    setFolderGroups(map)
+  }
+
+  useEffect(() => {
+    loadFolders()
+  }, [me.id])
+
+  async function moveGroupToFolder(groupId: string, folderId: string | null) {
+    const ids = folders.map((f) => f.id)
+    if (ids.length) await supabase.from('play_folder_groups').delete().eq('group_id', groupId).in('folder_id', ids)
+    if (folderId) await supabase.from('play_folder_groups').insert({ folder_id: folderId, group_id: groupId })
+    await loadFolders()
+  }
+
+  async function saveFolderName() {
+    if (!nameModal || !nameModal.value.trim()) return
+    if (nameModal.mode === 'create') {
+      const { data } = await supabase.from('play_folders').insert({ user_id: me.id, name: nameModal.value.trim(), position: folders.length }).select().single()
+      if (data && nameModal.groupId) await supabase.from('play_folder_groups').insert({ folder_id: (data as PlayFolder).id, group_id: nameModal.groupId })
+    } else if (nameModal.folderId) {
+      await supabase.from('play_folders').update({ name: nameModal.value.trim() }).eq('id', nameModal.folderId)
+    }
+    setNameModal(null)
+    await loadFolders()
+  }
+
+  async function deleteFolder(id: string) {
+    if (!confirm('Excluir esta pasta? Os servidores voltam pra barra.')) return
+    await supabase.from('play_folders').delete().eq('id', id)
+    await loadFolders()
+  }
+
+  function toggleFolder(id: string) {
+    setOpenFolders((prev) => {
+      const next = { ...prev, [id]: !prev[id] }
+      try { localStorage.setItem('play-open-folders', JSON.stringify(next)) } catch { /* ignore */ }
+      return next
+    })
+  }
+
+  const inFolder = new Set(Object.values(folderGroups).flat())
+  const ungrouped = myGroups.filter((g) => !inFolder.has(g.id))
+
+  function groupButton(g: PlayGroup) {
+    return (
+      <button
+        key={g.id}
+        type="button"
+        data-group-id={g.id}
+        className={'play-icon-rail-group' + (selectedGroupId === g.id ? ' active' : '')}
+        title={g.name}
+        onClick={() => onSelectGroup(g)}
+      >
+        <AvatarBox src={g.image_url} id={g.id} fallbackLetter={g.name[0]?.toUpperCase()} className="play-group-avatar" />
+      </button>
+    )
+  }
+
+  function handleContextMenu(e: React.MouseEvent) {
+    e.preventDefault()
+    const el = e.target as HTMLElement
+    const groupEl = el.closest('[data-group-id]') as HTMLElement | null
+    const folderEl = el.closest('[data-folder-id]') as HTMLElement | null
+    const target: RailMenuTarget = groupEl
+      ? { type: 'group', id: groupEl.dataset.groupId! }
+      : folderEl
+        ? { type: 'folder', id: folderEl.dataset.folderId! }
+        : { type: 'rail' }
+    setMenu({ x: e.clientX, y: e.clientY, target })
+  }
+
+  const menuGroupFolderId = menu?.target.type === 'group'
+    ? Object.entries(folderGroups).find(([, ids]) => ids.includes((menu.target as { id: string }).id))?.[0] || null
+    : null
+
   return (
-    <aside className="play-icon-rail">
+    <aside className="play-icon-rail" onContextMenu={handleContextMenu}>
       <button type="button" className="play-icon-rail-home" title={isMobile ? 'Voltar pro Messenger' : 'Meus servidores'} onClick={isMobile ? onExit : onGoHome}>
         {isMobile ? <IconArrowLeft size={20} /> : <IconGamepad size={20} />}
       </button>
       <div className="play-icon-rail-groups">
-        {myGroups.map((g) => (
-          <button
-            key={g.id}
-            type="button"
-            className={`play-icon-rail-group${selectedGroupId === g.id ? ' active' : ''}`}
-            title={g.name}
-            onClick={() => onSelectGroup(g)}
-          >
-            <AvatarBox src={g.image_url} id={g.id} fallbackLetter={g.name[0]?.toUpperCase()} className="play-group-avatar" />
-          </button>
-        ))}
+        {folders.map((f) => {
+          const groups = myGroups.filter((g) => (folderGroups[f.id] || []).includes(g.id))
+          const open = !!openFolders[f.id]
+          return (
+            <div key={f.id} className="play-icon-rail-folder">
+              <button type="button" data-folder-id={f.id} className={'play-icon-rail-group play-icon-rail-folder-btn' + (open ? ' open' : '')} title={f.name} onClick={() => toggleFolder(f.id)}>
+                <IconFolder size={20} />
+                <span className="play-icon-rail-folder-count">{groups.length}</span>
+              </button>
+              {open && <div className="play-icon-rail-folder-children">{groups.map(groupButton)}</div>}
+            </div>
+          )
+        })}
+        {ungrouped.map(groupButton)}
         <button type="button" className="play-icon-rail-group play-icon-rail-add" title="Entrar ou criar servidor" onClick={onGoHome}>
           <IconPlus size={18} />
         </button>
@@ -498,6 +605,62 @@ function PlayIconRail({ myGroups, selectedGroupId, onSelectGroup, onGoHome, onEx
       <button type="button" className="play-icon-rail-group play-icon-rail-profile" title="Perfil" onClick={onOpenProfile}>
         <AvatarBox src={myPlayProfile.avatar_url} id={me.id} fallbackLetter={displayName(myPlayProfile)[0]?.toUpperCase()} className="play-group-avatar" />
       </button>
+
+      {menu && (
+        <>
+          <div className="play-group-menu-backdrop" onClick={() => setMenu(null)} onContextMenu={(e) => { e.preventDefault(); setMenu(null) }} />
+          <div className="play-group-menu" style={{ position: 'fixed', top: menu.y, left: menu.x, minWidth: 210 }}>
+            {menu.target.type === 'rail' && (
+              <button type="button" onClick={() => { setMenu(null); setNameModal({ mode: 'create', value: '' }) }}><IconFolder size={15} /> Criar pasta</button>
+            )}
+            {menu.target.type === 'group' && (
+              <>
+                {folders.filter((f) => f.id !== menuGroupFolderId).map((f) => (
+                  <button key={f.id} type="button" onClick={() => { const gid = (menu.target as { id: string }).id; setMenu(null); moveGroupToFolder(gid, f.id) }}>
+                    <IconFolder size={15} /> Mover para {f.name}
+                  </button>
+                ))}
+                <button type="button" onClick={() => { const gid = (menu.target as { id: string }).id; setMenu(null); setNameModal({ mode: 'create', groupId: gid, value: '' }) }}>
+                  <IconPlus size={15} /> Nova pasta com este servidor
+                </button>
+                {menuGroupFolderId && (
+                  <button type="button" onClick={() => { const gid = (menu.target as { id: string }).id; setMenu(null); moveGroupToFolder(gid, null) }}>
+                    <IconArrowLeft size={15} /> Tirar da pasta
+                  </button>
+                )}
+              </>
+            )}
+            {menu.target.type === 'folder' && (
+              <>
+                <button type="button" onClick={() => { const fid = (menu.target as { id: string }).id; const f = folders.find((x) => x.id === fid); setMenu(null); setNameModal({ mode: 'rename', folderId: fid, value: f?.name || '' }) }}>
+                  <IconEdit size={15} /> Renomear pasta
+                </button>
+                <button type="button" className="danger" onClick={() => { const fid = (menu.target as { id: string }).id; setMenu(null); deleteFolder(fid) }}>
+                  <IconTrash size={15} /> Excluir pasta
+                </button>
+              </>
+            )}
+          </div>
+        </>
+      )}
+
+      {nameModal && (
+        <div className="modal-backdrop" onClick={() => setNameModal(null)}>
+          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+            <h2>{nameModal.mode === 'create' ? 'Criar pasta' : 'Renomear pasta'}</h2>
+            <input
+              autoFocus
+              maxLength={24}
+              placeholder="Nome da pasta"
+              value={nameModal.value}
+              onChange={(e) => setNameModal({ ...nameModal, value: e.target.value })}
+              onKeyDown={(e) => { if (e.key === 'Enter') saveFolderName() }}
+            />
+            <button type="button" className="google-btn" style={{ marginTop: 10 }} disabled={!nameModal.value.trim()} onClick={saveFolderName}>Salvar</button>
+            <button type="button" className="modal-close" onClick={() => setNameModal(null)}>cancelar</button>
+          </div>
+        </div>
+      )}
     </aside>
   )
 }
@@ -586,7 +749,7 @@ type GroupViewProps = {
 }
 
 type GroupMember = { profile: Profile; role: string }
-type VoiceParticipantInfo = { id: string; name: string }
+type VoiceParticipantInfo = { id: string; name: string; micOn?: boolean; isScreen?: boolean; videoTrack?: Track }
 
 function GroupView({ me, myPlayProfile, group, channels, categories, selectedChannel, messages, hasReplaySet, liveTyping, draft, onDraftChange, onSend, onSendContent, onSelectChannel, onChannelsChange, onCategoriesChange, onGroupUpdate, onLeftGroup, onExitToMessenger }: GroupViewProps) {
   const [showNewChannel, setShowNewChannel] = useState(false)
@@ -596,6 +759,11 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
   const [joinedVoiceChannel, setJoinedVoiceChannel] = useState<PlayChannel | null>(null)
   const [openReplayId, setOpenReplayId] = useState<string | null>(null)
   const [replayEvents, setReplayEvents] = useState<ReplayEvent[] | null>(null)
+  const [pipIds, setPipIds] = useState<string[]>([])
+  const [pipWin, setPipWin] = useState<Window | null>(null)
+  const [fullscreenId, setFullscreenId] = useState<string | null>(null)
+  const [maximizedId, setMaximizedId] = useState<string | null>(null)
+  const [mediaMenu, setMediaMenu] = useState<{ id: string; x: number; y: number; fromGrid: boolean } | null>(null)
   const [sonorSession, setSonorSession] = useState<PlaySonorSession | null>(null)
   const [sonorModal, setSonorModal] = useState<null | 'search' | 'favs'>(null)
   const [sonorQuery, setSonorQuery] = useState('')
@@ -854,6 +1022,39 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
     if (sonorAudioRef.current) sonorAudioRef.current.volume = sonorVolume
     try { localStorage.setItem('ferus-sonor-volume', String(sonorVolume)) } catch { /* ignore */ }
   }, [sonorVolume, sonorSession?.stream_url])
+
+  function togglePip(id: string) {
+    const next = pipIds.includes(id) ? pipIds.filter((x) => x !== id) : [...pipIds, id]
+    setPipIds(next)
+    if (next.length === 0) { pipWin?.close(); setPipWin(null); return }
+    const dpip = (window as unknown as { documentPictureInPicture?: { requestWindow: (o: { width: number; height: number }) => Promise<Window> } }).documentPictureInPicture
+    if (dpip) {
+      const height = 270 * next.length
+      if (!pipWin || pipWin.closed) {
+        dpip.requestWindow({ width: 480, height }).then((w) => {
+          w.document.body.style.cssText = 'margin:0;background:#000;display:flex;flex-direction:column;overflow:hidden'
+          w.addEventListener('pagehide', () => { setPipIds([]); setPipWin(null) })
+          setPipWin(w)
+        }).catch(() => setPipIds([]))
+      } else {
+        try { pipWin.resizeTo(480, height) } catch { /* ignore */ }
+      }
+    } else {
+      const el = document.querySelector('video[data-stream-id="' + id + '"]') as (HTMLVideoElement & { requestPictureInPicture?: () => Promise<unknown> }) | null
+      el?.requestPictureInPicture?.()
+    }
+  }
+
+  useEffect(() => {
+    const live = new Set(voiceParticipants.filter((p) => p.videoTrack).map((p) => p.id))
+    if (pipIds.some((id) => !live.has(id))) {
+      const next = pipIds.filter((id) => live.has(id))
+      setPipIds(next)
+      if (next.length === 0) { pipWin?.close(); setPipWin(null) }
+    }
+    if (fullscreenId && !live.has(fullscreenId)) setFullscreenId(null)
+    if (maximizedId && !live.has(maximizedId)) setMaximizedId(null)
+  }, [voiceParticipants])
 
   async function postBot(slug: string, channelId: string, text: string) {
     const { error } = await supabase.rpc('post_play_bot_message', { p_channel_id: channelId, p_bot_slug: slug, p_content: text })
@@ -1295,7 +1496,7 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
 
           {joinedVoiceChannel && (
             <div className="play-voice-holder" style={{ display: selectedChannel?.id === joinedVoiceChannel.id ? 'flex' : 'none', flex: 1, minWidth: 0, flexDirection: 'column', overflow: 'hidden' }}>
-              <VoiceChannel key={joinedVoiceChannel.id} me={myPlayProfile} membersById={membersById} channel={joinedVoiceChannel} onParticipantsChange={setVoiceParticipants} onLeave={leaveVoice} />
+              <VoiceChannel key={joinedVoiceChannel.id} me={myPlayProfile} membersById={membersById} channel={joinedVoiceChannel} onParticipantsChange={setVoiceParticipants} onLeave={leaveVoice} pipIds={pipIds} maximizedId={maximizedId} onFullscreen={setFullscreenId} onTogglePip={togglePip} onToggleMaximize={(id) => setMaximizedId((cur) => (cur === id ? null : id))} onMediaMenu={(id, x, y) => setMediaMenu({ id, x, y, fromGrid: true })} />
             </div>
           )}
 
@@ -1352,6 +1553,12 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
                       {p.name}
                     </span>
                     <IconHeadphones size={14} />
+                    {p.videoTrack && !(p.id === me.id && p.isScreen) && (
+                      <div className="play-mini-stream">
+                        <StreamView track={p.videoTrack} muted className="play-mini-stream-video" />
+                        <button type="button" className="play-mini-stream-menu" title="Opções" onClick={(e) => { const r = e.currentTarget.getBoundingClientRect(); setMediaMenu({ id: p.id, x: r.left, y: r.bottom + 4, fromGrid: false }) }}><IconMore size={16} /></button>
+                      </div>
+                    )}
                   </div>
                 ))}
               </>
@@ -1360,6 +1567,46 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
         </div>
       </div>
 
+      {mediaMenu && (
+        <>
+          <div className="play-group-menu-backdrop" onClick={() => setMediaMenu(null)} onContextMenu={(e) => { e.preventDefault(); setMediaMenu(null) }} />
+          <div className="play-group-menu" style={{ position: 'fixed', top: mediaMenu.y, left: mediaMenu.x, minWidth: 190 }}>
+            <button type="button" onClick={() => { const id = mediaMenu.id; setMediaMenu(null); togglePip(id) }}>
+              <IconMonitorShare size={15} /> {pipIds.includes(mediaMenu.id) ? 'Sair do picture in picture' : 'Picture in picture'}
+            </button>
+            <button type="button" onClick={() => { const id = mediaMenu.id; setMediaMenu(null); setFullscreenId(id) }}>
+              <IconFullscreen size={15} /> Tela cheia
+            </button>
+            {mediaMenu.fromGrid && (
+              <button type="button" onClick={() => { const id = mediaMenu.id; setMediaMenu(null); setMaximizedId((cur) => (cur === id ? null : id)) }}>
+                {maximizedId === mediaMenu.id ? <IconShrink size={15} /> : <IconFullscreen size={15} />} {maximizedId === mediaMenu.id ? 'Restaurar' : 'Maximizar'}
+              </button>
+            )}
+          </div>
+        </>
+      )}
+      {fullscreenId && voiceParticipants.find((p) => p.id === fullscreenId)?.videoTrack && (
+        <FullscreenOverlay
+          name={voiceParticipants.find((p) => p.id === fullscreenId)!.name}
+          track={voiceParticipants.find((p) => p.id === fullscreenId)!.videoTrack!}
+          onClose={() => setFullscreenId(null)}
+        />
+      )}
+      {pipWin && !pipWin.closed && createPortal(
+        <div style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
+          {pipIds.map((id) => {
+            const pp = voiceParticipants.find((x) => x.id === id)
+            if (!pp?.videoTrack) return null
+            return (
+              <div key={id} style={{ position: 'relative', height: 270, flex: 'none', background: '#000' }}>
+                <StreamView track={pp.videoTrack} muted style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                <span style={{ position: 'absolute', left: 8, top: 6, color: '#fff', font: '600 12px sans-serif', textShadow: '0 1px 3px #000' }}>{pp.name}</span>
+              </div>
+            )
+          })}
+        </div>,
+        pipWin.document.body,
+      )}
       <audio ref={sonorAudioRef} hidden />
       {sonorSession && (
         <div className="play-sonor-bar">
@@ -2260,10 +2507,161 @@ type ParticipantTile = {
   name: string
   isLocal: boolean
   micOn: boolean
+  isScreen: boolean
   videoTrack?: Track
 }
 
-function VoiceChannel({ me, membersById, channel, onParticipantsChange, onLeave }: { me: Profile; membersById: Record<string, Profile>; channel: PlayChannel; onParticipantsChange: (p: VoiceParticipantInfo[]) => void; onLeave: () => void }) {
+function fmtElapsed(ms: number) {
+  const t = Math.max(0, Math.floor(ms / 1000))
+  const h = Math.floor(t / 3600)
+  const mm = String(Math.floor((t % 3600) / 60)).padStart(2, '0')
+  const ss = String(t % 60).padStart(2, '0')
+  return h > 0 ? h + ':' + mm + ':' + ss : mm + ':' + ss
+}
+
+function StreamView({ track, muted, videoRef, className, style, streamId }: {
+  track: Track; muted?: boolean; videoRef?: { current: HTMLVideoElement | null }; className?: string; style?: React.CSSProperties; streamId?: string
+}) {
+  const elRef = useRef<HTMLVideoElement | null>(null)
+  useEffect(() => {
+    const el = elRef.current
+    if (!el) return
+    track.attach(el)
+    return () => { track.detach(el) }
+  }, [track])
+  return (
+    <video
+      ref={(el) => { elRef.current = el; if (videoRef) videoRef.current = el }}
+      data-stream-id={streamId}
+      autoPlay
+      playsInline
+      muted={muted}
+      className={className}
+      style={style}
+    />
+  )
+}
+
+// Tela cheia propria (janela sem borda + video), em vez do fullscreen nativo do
+// navegador que engasgava/duplicava a imagem. Botao quadradinho no canto volta.
+function FullscreenOverlay({ name, track, onClose }: { name: string; track: Track; onClose: () => void }) {
+  const [showUi, setShowUi] = useState(true)
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  function poke() {
+    setShowUi(true)
+    if (timerRef.current) clearTimeout(timerRef.current)
+    timerRef.current = setTimeout(() => setShowUi(false), 2500)
+  }
+  useEffect(() => {
+    poke()
+    const winPromise = isTauriDesktop
+      ? import('../lib/desktopWindows').then(async ({ currentWindow }) => {
+          const w = currentWindow()
+          await w.setFullscreen(true).catch(() => {})
+          return w
+        })
+      : null
+    function onKey(e: KeyboardEvent) { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', onKey)
+    return () => {
+      window.removeEventListener('keydown', onKey)
+      if (timerRef.current) clearTimeout(timerRef.current)
+      winPromise?.then((w) => w.setFullscreen(false).catch(() => {}))
+    }
+  }, [])
+  return createPortal(
+    <div className="play-fullscreen" onMouseMove={poke} onContextMenu={(e) => e.preventDefault()}>
+      <StreamView track={track} muted className="play-fullscreen-video" />
+      <span className={'play-fullscreen-name' + (showUi ? ' show' : '')}>{name}</span>
+      <button type="button" className={'play-fullscreen-exit' + (showUi ? ' show' : '')} onClick={onClose} title="Sair da tela cheia"><IconShrink size={20} /></button>
+    </div>,
+    document.body,
+  )
+}
+
+function VoiceTile({ p, avatarUrl, startedAt, maximized, inPip, screenAudio, onFullscreen, onToggleMaximize, onMediaMenu }: {
+  p: ParticipantTile; avatarUrl: string | null; startedAt?: number; maximized: boolean; inPip: boolean; screenAudio?: HTMLMediaElement
+  onFullscreen: (id: string) => void; onTogglePip: (id: string) => void; onToggleMaximize: (id: string) => void
+  onMediaMenu: (id: string, x: number, y: number) => void
+}) {
+  const videoElRef = useRef<HTMLVideoElement | null>(null)
+  const [paused, setPaused] = useState(false)
+  const [showOwnPreview, setShowOwnPreview] = useState(false)
+  const [volume, setVolume] = useState(1)
+  const [now, setNow] = useState(Date.now())
+  const ownScreen = p.isLocal && p.isScreen
+
+  useEffect(() => {
+    if (!p.isScreen) return
+    const t = setInterval(() => setNow(Date.now()), 1000)
+    return () => clearInterval(t)
+  }, [p.isScreen])
+
+  useEffect(() => {
+    if (screenAudio) screenAudio.volume = volume
+  }, [volume, screenAudio])
+
+  function togglePause() {
+    const el = videoElRef.current
+    if (!el) return
+    if (el.paused) { el.play().catch(() => {}); screenAudio?.play().catch(() => {}); setPaused(false) }
+    else { el.pause(); screenAudio?.pause(); setPaused(true) }
+  }
+
+  const showVideo = !!p.videoTrack && (!ownScreen || showOwnPreview)
+
+  return (
+    <div className={'play-voice-tile' + (maximized ? ' maximized' : '')}>
+      <div className="play-voice-tile-head">
+        {p.micOn ? <IconMic size={13} /> : <IconMicOff size={13} />}
+        <span>{p.name}{p.isLocal ? ' (você)' : ''}</span>
+        {p.isScreen && <em>transmitindo</em>}
+        {inPip && <em>PiP</em>}
+      </div>
+      <div
+        className="play-voice-tile-stage"
+        onClick={() => { if (showVideo && !ownScreen) onToggleMaximize(p.id) }}
+        onContextMenu={(e) => { e.preventDefault(); if (showVideo && !ownScreen) onMediaMenu(p.id, e.clientX, e.clientY) }}
+      >
+        {showVideo ? (
+          <StreamView track={p.videoTrack!} muted={p.isLocal} videoRef={videoElRef} streamId={p.id} />
+        ) : ownScreen ? (
+          <div className="play-voice-own-share">
+            <span>Você está transmitindo sua tela</span>
+          </div>
+        ) : (
+          <AvatarBox src={avatarUrl} id={p.id} fallbackLetter={p.name[0]?.toUpperCase()} className="play-voice-avatar" />
+        )}
+        {ownScreen && (
+          <button type="button" className="play-voice-preview-toggle" onClick={(e) => { e.stopPropagation(); setShowOwnPreview((v) => !v) }}>
+            {showOwnPreview ? 'Ocultar prévia' : 'Mostrar prévia'}
+          </button>
+        )}
+        {showVideo && !ownScreen && (
+          <div className="play-voice-tile-controls" onClick={(e) => e.stopPropagation()}>
+            <button type="button" onClick={togglePause} title={paused ? 'Continuar' : 'Pausar'}>{paused ? <IconPlay size={16} /> : <IconPause size={16} />}</button>
+            {p.isScreen && startedAt && <span className="play-voice-time">{fmtElapsed(now - startedAt)}</span>}
+            <span className="play-voice-controls-spacer" />
+            {screenAudio && (
+              <>
+                <button type="button" onClick={() => setVolume((v) => (v > 0 ? 0 : 1))} title="Som">{volume > 0 ? <IconVolume size={16} /> : <IconVolumeOff size={16} />}</button>
+                <input type="range" min="0" max="1" step="0.05" value={volume} onChange={(e) => setVolume(Number(e.target.value))} />
+              </>
+            )}
+            <button type="button" onClick={() => onFullscreen(p.id)} title="Tela cheia"><IconFullscreen size={16} /></button>
+            <button type="button" onClick={(e) => { const r = e.currentTarget.getBoundingClientRect(); onMediaMenu(p.id, r.left, r.top - 130) }} title="Mais opções"><IconMore size={16} /></button>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function VoiceChannel({ me, membersById, channel, onParticipantsChange, onLeave, pipIds, maximizedId, onFullscreen, onTogglePip, onToggleMaximize, onMediaMenu }: {
+  me: Profile; membersById: Record<string, Profile>; channel: PlayChannel; onParticipantsChange: (p: VoiceParticipantInfo[]) => void; onLeave: () => void
+  pipIds: string[]; maximizedId: string | null; onFullscreen: (id: string) => void; onTogglePip: (id: string) => void; onToggleMaximize: (id: string) => void
+  onMediaMenu: (id: string, x: number, y: number) => void
+}) {
   const roomRef = useRef<Room | null>(null)
   const [connected, setConnected] = useState(false)
   const [connecting, setConnecting] = useState(true)
@@ -2272,25 +2670,32 @@ function VoiceChannel({ me, membersById, channel, onParticipantsChange, onLeave 
   const [cameraEnabled, setCameraEnabled] = useState(false)
   const [screenEnabled, setScreenEnabled] = useState(false)
   const [participants, setParticipants] = useState<ParticipantTile[]>([])
-  const videoRefs = useRef<Record<string, HTMLVideoElement | null>>({})
+  const [screenAudio, setScreenAudio] = useState<Record<string, HTMLMediaElement>>({})
+  const shareStart = useRef<Record<string, number>>({})
+  const [shareMenuOpen, setShareMenuOpen] = useState(false)
+  const [shareQuality, setShareQuality] = useState<'480' | '720'>('720')
+  const attachedAudio = useRef<HTMLMediaElement[]>([])
 
   function syncParticipants(room: Room) {
     const all: (LocalParticipant | RemoteParticipant)[] = [room.localParticipant, ...Array.from(room.remoteParticipants.values())]
-    const tiles = all.map((p) => {
-      const pubs = p.trackPublications.values() as IterableIterator<TrackPublication>
-      const videoPub = Array.from(pubs).find(
-        (pub) => (pub.source === Track.Source.Camera || pub.source === Track.Source.ScreenShare) && !!pub.track,
-      )
+    const tiles: ParticipantTile[] = all.map((p) => {
+      const pubs = Array.from(p.trackPublications.values() as IterableIterator<TrackPublication>)
+      const screenPub = pubs.find((pub) => pub.source === Track.Source.ScreenShare && !!pub.track)
+      const camPub = pubs.find((pub) => pub.source === Track.Source.Camera && !!pub.track)
+      const videoPub = screenPub || camPub
+      if (screenPub) { if (!shareStart.current[p.identity]) shareStart.current[p.identity] = Date.now() }
+      else delete shareStart.current[p.identity]
       return {
         id: p.identity,
         name: p.name || p.identity,
         isLocal: p === room.localParticipant,
         micOn: p.isMicrophoneEnabled,
+        isScreen: !!screenPub,
         videoTrack: videoPub?.track,
       }
     })
     setParticipants(tiles)
-    onParticipantsChange(tiles.map((t) => ({ id: t.id, name: t.name })))
+    onParticipantsChange(tiles.map((t) => ({ id: t.id, name: t.name, micOn: t.micOn, isScreen: t.isScreen, videoTrack: t.videoTrack })))
   }
 
   useEffect(() => {
@@ -2301,8 +2706,25 @@ function VoiceChannel({ me, membersById, channel, onParticipantsChange, onLeave 
     room
       .on(RoomEvent.ParticipantConnected, () => syncParticipants(room))
       .on(RoomEvent.ParticipantDisconnected, () => syncParticipants(room))
-      .on(RoomEvent.TrackSubscribed, () => syncParticipants(room))
-      .on(RoomEvent.TrackUnsubscribed, () => syncParticipants(room))
+      .on(RoomEvent.TrackSubscribed, (track, pub, participant) => {
+        if (track.kind === Track.Kind.Audio) {
+          const el = track.attach()
+          el.style.display = 'none'
+          document.body.appendChild(el)
+          attachedAudio.current.push(el)
+          if (pub.source === Track.Source.ScreenShareAudio) setScreenAudio((prev) => ({ ...prev, [participant.identity]: el }))
+        }
+        syncParticipants(room)
+      })
+      .on(RoomEvent.TrackUnsubscribed, (track, pub, participant) => {
+        if (track.kind === Track.Kind.Audio) {
+          track.detach().forEach((el) => { el.remove(); attachedAudio.current = attachedAudio.current.filter((x) => x !== el) })
+          if (pub.source === Track.Source.ScreenShareAudio) {
+            setScreenAudio((prev) => { const next = { ...prev }; delete next[participant.identity]; return next })
+          }
+        }
+        syncParticipants(room)
+      })
       .on(RoomEvent.TrackMuted, () => syncParticipants(room))
       .on(RoomEvent.TrackUnmuted, () => syncParticipants(room))
       .on(RoomEvent.LocalTrackPublished, () => syncParticipants(room))
@@ -2328,15 +2750,10 @@ function VoiceChannel({ me, membersById, channel, onParticipantsChange, onLeave 
       cancelled = true
       room.disconnect()
       roomRef.current = null
+      attachedAudio.current.forEach((el) => el.remove())
+      attachedAudio.current = []
     }
   }, [channel.id])
-
-  useEffect(() => {
-    for (const p of participants) {
-      const el = videoRefs.current[p.id]
-      if (el && p.videoTrack) p.videoTrack.attach(el)
-    }
-  }, [participants])
 
   async function toggleMic() {
     const room = roomRef.current
@@ -2356,17 +2773,31 @@ function VoiceChannel({ me, membersById, channel, onParticipantsChange, onLeave 
     syncParticipants(room)
   }
 
-  async function toggleScreenShare() {
+  // Abre o seletor de tela/janela do sistema (serve tanto pra comecar quanto pra TROCAR
+  // o que ta sendo compartilhado sem parar antes) - se cancelar, mantem a transmissao atual.
+  async function chooseScreen() {
     const room = roomRef.current
     if (!room) return
-    const next = !screenEnabled
+    setShareMenuOpen(false)
+    const res = shareQuality === '480' ? { width: 854, height: 480, frameRate: 30 } : { width: 1280, height: 720, frameRate: 30 }
     try {
-      await room.localParticipant.setScreenShareEnabled(next)
-      setScreenEnabled(next)
+      const tracks = await createLocalScreenTracks({ audio: true, resolution: res })
+      if (screenEnabled) await room.localParticipant.setScreenShareEnabled(false)
+      for (const t of tracks) await room.localParticipant.publishTrack(t)
+      setScreenEnabled(true)
       syncParticipants(room)
     } catch {
-      // usuario cancelou o picker de tela
+      // usuario cancelou o seletor de tela
     }
+  }
+
+  async function stopScreenShare() {
+    const room = roomRef.current
+    if (!room) return
+    setShareMenuOpen(false)
+    await room.localParticipant.setScreenShareEnabled(false)
+    setScreenEnabled(false)
+    syncParticipants(room)
   }
 
   return (
@@ -2376,30 +2807,51 @@ function VoiceChannel({ me, membersById, channel, onParticipantsChange, onLeave 
       {error && <p className="play-empty error">{error}</p>}
       {connected && (
         <>
-          <div className="play-voice-grid">
+          <div className={'play-voice-grid' + (maximizedId ? ' has-max' : '')}>
             {participants.map((p) => (
-              <div key={p.id} className="play-voice-tile">
-                {p.videoTrack ? (
-                  <video ref={(el) => { videoRefs.current[p.id] = el; if (el && p.videoTrack) p.videoTrack.attach(el) }} autoPlay playsInline muted={p.isLocal} />
-                ) : (
-                  <AvatarBox src={p.isLocal ? me.avatar_url : membersById[p.id]?.avatar_url || null} id={p.id} fallbackLetter={p.name[0]?.toUpperCase()} className="play-voice-avatar" />
-                )}
-                <span className="play-voice-name">
-                  {p.micOn ? <IconMic size={13} /> : <IconMicOff size={13} />} {p.name}{p.isLocal ? ' (você)' : ''}
-                </span>
-              </div>
+              <VoiceTile
+                key={p.id}
+                p={p}
+                avatarUrl={(p.isLocal ? me.avatar_url : membersById[p.id]?.avatar_url) || null}
+                startedAt={shareStart.current[p.id]}
+                maximized={maximizedId === p.id}
+                inPip={pipIds.includes(p.id)}
+                screenAudio={screenAudio[p.id]}
+                onFullscreen={onFullscreen}
+                onTogglePip={onTogglePip}
+                onToggleMaximize={onToggleMaximize}
+                onMediaMenu={onMediaMenu}
+              />
             ))}
           </div>
           <div className="play-voice-controls">
-            <button type="button" className={`icon-btn${micEnabled ? ' active' : ''}`} onClick={toggleMic} title={micEnabled ? 'Mutar' : 'Ativar microfone'}>
+            <button type="button" className={'icon-btn' + (micEnabled ? ' active' : '')} onClick={toggleMic} title={micEnabled ? 'Mutar' : 'Ativar microfone'}>
               {micEnabled ? <IconMic size={20} /> : <IconMicOff size={20} />}
             </button>
-            <button type="button" className={`icon-btn${cameraEnabled ? ' active' : ''}`} onClick={toggleCamera} title={cameraEnabled ? 'Desligar câmera' : 'Ligar câmera'}>
+            <button type="button" className={'icon-btn' + (cameraEnabled ? ' active' : '')} onClick={toggleCamera} title={cameraEnabled ? 'Desligar câmera' : 'Ligar câmera'}>
               {cameraEnabled ? <IconVideo size={20} /> : <IconVideoOff size={20} />}
             </button>
-            <button type="button" className={`icon-btn${screenEnabled ? ' active' : ''}`} onClick={toggleScreenShare} title="Compartilhar tela">
-              <IconMonitorShare size={20} />
-            </button>
+            <span className="play-share-wrap">
+              <button type="button" className={'icon-btn' + (screenEnabled ? ' active' : '')} onClick={() => setShareMenuOpen((v) => !v)} title="Compartilhar tela">
+                <IconMonitorShare size={20} />
+              </button>
+              {shareMenuOpen && (
+                <>
+                  <div className="play-group-menu-backdrop" onClick={() => setShareMenuOpen(false)} />
+                  <div className="play-share-menu">
+                    <strong>{screenEnabled ? 'Compartilhando sua tela' : 'Compartilhar tela'}</strong>
+                    <span className="play-share-menu-label">Qualidade</span>
+                    <div className="play-share-quality">
+                      <button type="button" className={shareQuality === '480' ? 'active' : ''} onClick={() => setShareQuality('480')}>480p</button>
+                      <button type="button" className={shareQuality === '720' ? 'active' : ''} onClick={() => setShareQuality('720')}>720p</button>
+                      <button type="button" disabled title="Em breve">1080p</button>
+                    </div>
+                    <button type="button" className="google-btn" onClick={chooseScreen}>{screenEnabled ? 'Trocar tela ou janela' : 'Escolher tela ou janela'}</button>
+                    {screenEnabled && <button type="button" className="settings-danger-btn" onClick={stopScreenShare}>Parar de compartilhar</button>}
+                  </div>
+                </>
+              )}
+            </span>
             <button type="button" className="icon-btn play-voice-leave" onClick={onLeave} title="Desconectar da chamada">
               <IconPhoneOff size={20} />
             </button>

@@ -499,3 +499,44 @@ export function IconMonitorShare({ size = 20 }: IconProps) {
     </svg>
   )
 }
+
+export function IconPlay({ size = 18 }: IconProps) {
+  return (
+    <svg {...base} width={size} height={size} fill="currentColor" stroke="none">
+      <path d="M8 5v14l11-7z" />
+    </svg>
+  )
+}
+
+export function IconPause({ size = 18 }: IconProps) {
+  return (
+    <svg {...base} width={size} height={size} fill="currentColor" stroke="none">
+      <rect x="6" y="5" width="4" height="14" rx="1" />
+      <rect x="14" y="5" width="4" height="14" rx="1" />
+    </svg>
+  )
+}
+
+export function IconFullscreen({ size = 18 }: IconProps) {
+  return (
+    <svg {...base} width={size} height={size}>
+      <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" />
+    </svg>
+  )
+}
+
+export function IconShrink({ size = 18 }: IconProps) {
+  return (
+    <svg {...base} width={size} height={size}>
+      <path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5" />
+    </svg>
+  )
+}
+
+export function IconFolder({ size = 18 }: IconProps) {
+  return (
+    <svg {...base} width={size} height={size}>
+      <path d="M3 6a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6z" />
+    </svg>
+  )
+}
