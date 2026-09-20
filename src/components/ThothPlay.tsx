@@ -13,7 +13,8 @@ import {
   IconLock, IconLockOpen, IconLogout, IconMic, IconMicOff, IconMonitorShare, IconPanelLeft, IconPhoneOff, IconPlus,
   IconAttach, IconSearch, IconSend, IconSmile, IconSettingsGear, IconTrash, IconUser, IconVideo, IconVideoOff,
 } from './icons'
-import type { Bot, PlayCategory, PlayChannel, PlayGroup, PlayMessage, PlayProfile, PlayRole, Profile } from '../types'
+import { fetchRandomStation, searchPublicStations, isHlsStream, type RadioStation } from '../lib/sonor'
+import type { Bot, PlayBotButton, PlaySonorSession, PlayCategory, PlayChannel, PlayGroup, PlayMessage, PlayProfile, PlayRole, Profile } from '../types'
 
 function useIsMobile() {
   const [m, setM] = useState(() => window.matchMedia('(max-width: 760px)').matches)
@@ -595,6 +596,19 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
   const [joinedVoiceChannel, setJoinedVoiceChannel] = useState<PlayChannel | null>(null)
   const [openReplayId, setOpenReplayId] = useState<string | null>(null)
   const [replayEvents, setReplayEvents] = useState<ReplayEvent[] | null>(null)
+  const [sonorSession, setSonorSession] = useState<PlaySonorSession | null>(null)
+  const [sonorModal, setSonorModal] = useState<null | 'search' | 'favs'>(null)
+  const [sonorQuery, setSonorQuery] = useState('')
+  const [sonorResults, setSonorResults] = useState<RadioStation[]>([])
+  const [sonorFavs, setSonorFavs] = useState<RadioStation[]>([])
+  const [sonorBusy, setSonorBusy] = useState(false)
+  const [sonorNotice, setSonorNotice] = useState<string | null>(null)
+  const sonorAudioRef = useRef<HTMLAudioElement>(null)
+  const sonorHlsRef = useRef<{ destroy: () => void } | null>(null)
+  const [sonorVolume, setSonorVolume] = useState(() => {
+    const v = parseFloat(localStorage.getItem('ferus-sonor-volume') || '')
+    return Number.isFinite(v) ? v : 0.8
+  })
   const [showChatEmoji, setShowChatEmoji] = useState(false)
   const chatFileRef = useRef<HTMLInputElement>(null)
   const [chatUploading, setChatUploading] = useState(false)
@@ -792,6 +806,116 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
     shell?.classList.toggle('play-focus', mobileScreen !== 'channels')
     return () => shell?.classList.remove('play-focus')
   }, [mobileScreen])
+
+  useEffect(() => {
+    let cancelled = false
+    supabase.from('play_sonor_sessions').select('*').eq('group_id', group.id).maybeSingle().then(({ data }) => {
+      if (!cancelled) setSonorSession((data as PlaySonorSession) || null)
+    })
+    const channel = supabase
+      .channel('play-sonor:' + group.id)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'play_sonor_sessions', filter: 'group_id=eq.' + group.id }, (payload) => {
+        if (payload.eventType === 'DELETE') setSonorSession(null)
+        else setSonorSession(payload.new as PlaySonorSession)
+      })
+      .subscribe()
+    return () => {
+      cancelled = true
+      supabase.removeChannel(channel)
+    }
+  }, [group.id])
+
+  useEffect(() => {
+    const audio = sonorAudioRef.current
+    if (!audio) return
+    sonorHlsRef.current?.destroy()
+    sonorHlsRef.current = null
+    if (!sonorSession) { audio.pause(); audio.removeAttribute('src'); audio.load(); return }
+    if (sonorSession.is_hls) {
+      import('hls.js').then(({ default: Hls }) => {
+        if (Hls.isSupported()) {
+          const hls = new Hls()
+          hls.loadSource(sonorSession.stream_url)
+          hls.attachMedia(audio)
+          sonorHlsRef.current = hls
+          audio.play().catch(() => {})
+        } else {
+          audio.src = sonorSession.stream_url
+          audio.play().catch(() => {})
+        }
+      })
+    } else {
+      audio.src = sonorSession.stream_url
+      audio.play().catch(() => {})
+    }
+  }, [sonorSession?.stream_url, sonorSession?.is_hls])
+
+  useEffect(() => {
+    if (sonorAudioRef.current) sonorAudioRef.current.volume = sonorVolume
+    try { localStorage.setItem('ferus-sonor-volume', String(sonorVolume)) } catch { /* ignore */ }
+  }, [sonorVolume, sonorSession?.stream_url])
+
+  async function postBot(slug: string, channelId: string, text: string) {
+    const { error } = await supabase.rpc('post_play_bot_message', { p_channel_id: channelId, p_bot_slug: slug, p_content: text })
+    if (error) console.error('bot post failed', error)
+  }
+
+  async function startStation(channelId: string, station: RadioStation) {
+    setSonorBusy(true)
+    const { error } = await supabase.rpc('play_sonor_set', {
+      p_group_id: group.id, p_title: station.name, p_stream_url: station.url, p_is_hls: isHlsStream(station.url),
+    })
+    setSonorBusy(false)
+    if (error) { setSonorNotice('não consegui tocar: ' + error.message); return }
+    setSonorModal(null)
+    await postBot('sonor', channelId, 'Tocando ' + station.name + ' (pedido por ' + displayName(myPlayProfile) + ')')
+  }
+
+  async function handleBotAction(action: string, channelId: string) {
+    setSonorNotice(null)
+    if (action === 'sonor_play') { setSonorQuery(''); setSonorResults([]); setSonorModal('search'); return }
+    if (action === 'sonor_random') {
+      setSonorBusy(true)
+      const st = await fetchRandomStation()
+      setSonorBusy(false)
+      if (!st) { setSonorNotice('não achei nenhuma rádio agora, tenta de novo'); return }
+      await startStation(channelId, st)
+      return
+    }
+    if (action === 'sonor_stop') {
+      await supabase.rpc('play_sonor_stop', { p_group_id: group.id })
+      await postBot('sonor', channelId, 'Rádio parada por ' + displayName(myPlayProfile))
+      return
+    }
+    if (action === 'sonor_save') {
+      if (!sonorSession) { setSonorNotice('nenhuma rádio tocando agora'); return }
+      const { error } = await supabase.from('sonor_favorites').insert({ user_id: me.id, name: sonorSession.title, stream_url: sonorSession.stream_url, is_hls: sonorSession.is_hls })
+      setSonorNotice(error ? 'não consegui salvar' : sonorSession.title + ' salva nos seus favoritos')
+      return
+    }
+    if (action === 'sonor_favs') {
+      const { data } = await supabase.from('sonor_favorites').select('name, stream_url').eq('user_id', me.id).order('created_at', { ascending: false })
+      setSonorFavs((data || []).map((r) => ({ name: r.name as string, url: r.stream_url as string, country: '' })))
+      setSonorModal('favs')
+      return
+    }
+    if (action.startsWith('zelador_d')) {
+      const sides = parseInt(action.slice('zelador_d'.length), 10) || 6
+      await postBot('zelador', channelId, displayName(myPlayProfile) + ' rolou ' + (1 + Math.floor(Math.random() * sides)) + ' (d' + sides + ')')
+      return
+    }
+    if (action === 'zelador_draw') {
+      const picked = members[Math.floor(Math.random() * members.length)]
+      if (picked) await postBot('zelador', channelId, 'Sorteado: ' + displayName(picked.profile))
+    }
+  }
+
+  async function searchStations() {
+    if (!sonorQuery.trim()) return
+    setSonorBusy(true)
+    setSonorResults(await searchPublicStations(sonorQuery.trim()))
+    setSonorBusy(false)
+  }
 
   async function handleChatFilePicked(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -1079,7 +1203,30 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
               </header>
               <div className="play-messages">
                 {messages.length === 0 && <p className="play-empty">nenhuma mensagem ainda</p>}
-                {messages.map((m) => (
+                {messages.map((m) => m.kind === 'bot_panel' ? (
+                  <div key={m.id} className="play-message">
+                    <AvatarBox src={m.author?.avatar_url} id={m.author_id} fallbackLetter={(m.author ? displayName(m.author) : 'B')[0]?.toUpperCase()} className="avatar-sm" />
+                    <div className="play-message-body">
+                      <div className="play-message-row"><strong>{m.author ? displayName(m.author) : 'Bot'}</strong><span className="play-bot-badge">APP</span></div>
+                      {(() => {
+                        let info: { title?: string; description?: string } = {}
+                        try { info = JSON.parse(m.content) } catch { info = { title: m.content } }
+                        return (
+                          <div className="play-bot-panel">
+                            <strong>{info.title}</strong>
+                            {info.description && <p>{info.description}</p>}
+                            <div className="play-bot-panel-buttons">
+                              {(m.components || []).map((b) => (
+                                <button key={b.id} type="button" disabled={sonorBusy} onClick={() => handleBotAction(b.action, m.channel_id)}>{b.label}</button>
+                              ))}
+                            </div>
+                            {sonorNotice && <span className="play-bot-panel-notice">{sonorNotice}</span>}
+                          </div>
+                        )
+                      })()}
+                    </div>
+                  </div>
+                ) : (
                   <div key={m.id} className="play-message">
                     <AvatarBox src={m.author?.avatar_url} id={m.author_id} fallbackLetter={(m.author ? displayName(m.author) : '?')[0]?.toUpperCase()} className="avatar-sm" />
                     <div className="play-message-body">
@@ -1212,6 +1359,35 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
           </aside>
         </div>
       </div>
+
+      <audio ref={sonorAudioRef} hidden />
+      {sonorSession && (
+        <div className="play-sonor-bar">
+          <span className="play-sonor-bar-title">Tocando: {sonorSession.title}</span>
+          <input type="range" min="0" max="1" step="0.05" value={sonorVolume} onChange={(e) => setSonorVolume(Number(e.target.value))} />
+          <button type="button" onClick={() => supabase.rpc('play_sonor_stop', { p_group_id: group.id })}>Parar</button>
+        </div>
+      )}
+      {sonorModal && (
+        <div className="modal-backdrop" onClick={() => setSonorModal(null)}>
+          <div className="modal-card play-channel-modal" onClick={(e) => e.stopPropagation()}>
+            <h2>{sonorModal === 'search' ? 'Tocar rádio' : 'Rádios favoritas'}</h2>
+            {sonorModal === 'search' && (
+              <div className="play-invite-code-row" style={{ marginBottom: 10 }}>
+                <input placeholder="Nome da rádio" value={sonorQuery} onChange={(e) => setSonorQuery(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') searchStations() }} />
+                <button type="button" className="google-btn" style={{ width: 'auto' }} disabled={sonorBusy} onClick={searchStations}>Buscar</button>
+              </div>
+            )}
+            {(sonorModal === 'search' ? sonorResults : sonorFavs).map((st) => (
+              <button key={st.url} type="button" className="play-sonor-station" disabled={sonorBusy} onClick={() => startStation(selectedChannel?.id || channels[0]?.id || '', st)}>
+                {st.name}{st.country ? ' (' + st.country + ')' : ''}
+              </button>
+            ))}
+            {sonorModal === 'favs' && sonorFavs.length === 0 && <p className="play-empty">você ainda não salvou nenhuma rádio</p>}
+            <button type="button" className="modal-close" onClick={() => setSonorModal(null)}>fechar</button>
+          </div>
+        </div>
+      )}
 
       {roleQuickMenu && (
         <>
@@ -1411,13 +1587,64 @@ function GroupInfoPanel({ group, myRole, members, me, channels, categories, open
     return () => { cancelled = true }
   }, [open, tab, canManage, group.id])
 
+  async function setupBotPanel(bot: Bot) {
+    const cfg = bot.slug === 'sonor'
+      ? {
+          cat: 'SONOR', ch: 'painel', title: 'Painel de Rádio',
+          desc: 'Toca rádio de verdade no servidor. Use os botões abaixo.',
+          buttons: [
+            { id: 'play', label: 'Tocar', action: 'sonor_play' },
+            { id: 'random', label: 'Aleatória', action: 'sonor_random' },
+            { id: 'stop', label: 'Parar', action: 'sonor_stop' },
+            { id: 'save', label: 'Salvar atual', action: 'sonor_save' },
+            { id: 'favs', label: 'Favoritos', action: 'sonor_favs' },
+          ] as PlayBotButton[],
+        }
+      : bot.slug === 'zelador'
+        ? {
+            cat: 'ZELADOR', ch: 'comandos', title: 'Painel do Zelador',
+            desc: 'Dados e sorteios pro servidor. Use os botões abaixo.',
+            buttons: [
+              { id: 'd6', label: 'Dado d6', action: 'zelador_d6' },
+              { id: 'd20', label: 'Dado d20', action: 'zelador_d20' },
+              { id: 'd100', label: 'Dado d100', action: 'zelador_d100' },
+              { id: 'draw', label: 'Sorteio', action: 'zelador_draw' },
+            ] as PlayBotButton[],
+          }
+        : null
+    if (!cfg) return
+    let cat = categories.find((c) => c.name.toUpperCase() === cfg.cat) || null
+    if (!cat) {
+      const { data } = await supabase.from('play_categories').insert({ group_id: group.id, name: cfg.cat, position: categories.length }).select().single()
+      cat = (data as PlayCategory) || null
+    }
+    if (!cat) return
+    let ch = channels.find((c) => c.category_id === cat!.id && c.name === cfg.ch) || null
+    let created = false
+    if (!ch) {
+      const { data } = await supabase.from('play_channels').insert({ group_id: group.id, name: cfg.ch, kind: 'text', category_id: cat.id, position: 0 }).select().single()
+      ch = (data as PlayChannel) || null
+      created = true
+    }
+    if (ch && created) {
+      const { error } = await supabase.rpc('post_play_bot_message', {
+        p_channel_id: ch.id, p_bot_slug: bot.slug, p_content: JSON.stringify({ title: cfg.title, description: cfg.desc }),
+        p_components: cfg.buttons, p_kind: 'bot_panel',
+      })
+      if (error) console.error('post bot panel failed', error)
+    }
+  }
+
   async function toggleBot(botId: string, installed: boolean) {
     if (installed) {
       await supabase.from('play_group_bots').delete().eq('group_id', group.id).eq('bot_id', botId)
       setInstalledBotIds((prev) => { const next = new Set(prev); next.delete(botId); return next })
     } else {
-      await supabase.from('play_group_bots').insert({ group_id: group.id, bot_id: botId, installed_by: me.id })
+      const { error } = await supabase.from('play_group_bots').insert({ group_id: group.id, bot_id: botId, installed_by: me.id })
+      if (error) { console.error('install bot failed', error); return }
       setInstalledBotIds((prev) => new Set(prev).add(botId))
+      const bot = botCatalog.find((b) => b.id === botId)
+      if (bot) await setupBotPanel(bot)
     }
   }
 
@@ -1789,6 +2016,9 @@ function GroupInfoPanel({ group, myRole, members, me, channels, categories, open
                   <strong>{bot.name}</strong>
                   <span>{bot.description}</span>
                 </div>
+                {installed && (bot.slug === 'sonor' || bot.slug === 'zelador') && (
+                  <button type="button" className="play-manage-member-unban" onClick={() => setupBotPanel(bot)}>Criar painel</button>
+                )}
                 <button type="button" className={`play-bot-switch${installed ? ' on' : ''}`} onClick={() => toggleBot(bot.id, installed)}>
                   <span className="play-bot-switch-knob" />
                 </button>

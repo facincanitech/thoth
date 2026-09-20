@@ -121,13 +121,19 @@ export type PlayRole = {
   created_at: string
 }
 
+export type PlayBotButton = { id: string; label: string; action: string }
+
 export type PlayMessage = {
   id: string
   channel_id: string
   author_id: string
   content: string
+  kind?: string
+  components?: PlayBotButton[] | null
   created_at: string
 }
+
+export type PlaySonorSession = { group_id: string; title: string; stream_url: string; is_hls: boolean; started_by: string; started_at: string }
 
 export type Bot = {
   id: string

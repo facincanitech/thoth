@@ -1908,3 +1908,27 @@ body{
   .play-icon-rail-profile{width:40px;height:40px}
   .play-icon-rail-home{width:44px;height:44px}
 }
+
+/* Play: moldura das fotos menor e proporcional (o tema Messenger deixava 3px de borda
+   numa foto de 24px, sobrando quase so moldura) */
+[data-theme="messenger"] .play-app-shell .avatar-sm{width:34px;height:34px;padding:1px;border-width:2px;border-radius:7px}
+[data-theme="messenger"] .play-app-shell .avatar-sm img{border-radius:5px}
+[data-theme="messenger"] .play-app-shell .play-channel-voice-member .avatar-sm{width:26px;height:26px;padding:1px;border-width:2px}
+[data-theme="messenger"] .play-app-shell .play-voice-avatar{border:2px solid #42acd2;padding:1px}
+
+/* Bots no Play: painel com botoes, selo APP, barra da radio */
+.play-bot-badge{font-size:10px;font-weight:700;padding:1px 5px;border-radius:4px;background:var(--accent-text);color:var(--bg-panel)}
+.play-bot-panel{margin-top:6px;padding:10px 12px;border-left:3px solid var(--accent-text);background:var(--bg-surface-2);border-radius:6px;max-width:520px}
+.play-bot-panel strong{display:block;font-size:14px}
+.play-bot-panel p{margin:4px 0 8px;font-size:13px;color:var(--text-secondary)}
+.play-bot-panel-buttons{display:flex;flex-wrap:wrap;gap:6px}
+.play-bot-panel-buttons button{padding:7px 13px;border:1px solid var(--line-2);border-radius:6px;background:var(--bg-panel);color:var(--text);font-size:13px;cursor:pointer}
+.play-bot-panel-buttons button:hover:not(:disabled){background:var(--bg-selected);border-color:var(--accent-text)}
+.play-bot-panel-buttons button:disabled{opacity:.5}
+.play-bot-panel-notice{display:block;margin-top:8px;font-size:12px;color:var(--muted)}
+.play-sonor-bar{position:fixed;left:50%;bottom:12px;transform:translateX(-50%);z-index:55;display:flex;align-items:center;gap:10px;padding:8px 14px;border-radius:999px;background:var(--bg-panel);border:1px solid var(--line-2);box-shadow:var(--shadow);max-width:calc(100vw - 24px)}
+.play-sonor-bar-title{font-size:12.5px;max-width:34vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.play-sonor-bar input[type=range]{width:80px}
+.play-sonor-bar button{border:0;background:none;color:var(--accent-text);font-weight:600;cursor:pointer}
+.play-sonor-station{display:block;width:100%;text-align:left;padding:9px 10px;margin-bottom:6px;border:1px solid var(--line-2);border-radius:8px;background:var(--bg-surface-2);color:var(--text);cursor:pointer;font-size:13px}
+.play-sonor-station:hover:not(:disabled){background:var(--bg-selected)}
