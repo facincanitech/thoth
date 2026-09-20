@@ -1,48 +1,44 @@
-import skinUrl from '../../thothchat-messenger/thothmessenger.css?url'
+import skinBase from '../../thothchat-messenger/thothmessenger.css?url'
+import skinDark from '../../thothchat-messenger/thothmessenger-dark.css?url'
+import skinRetro from '../../thothchat-messenger/thothmessenger-retro.css?url'
+import skinContrast from '../../thothchat-messenger/thothmessenger-contrast.css?url'
 
-// No desktop o tema "Frutiger Aero" e o skin completo (thothmessenger.css). Os outros temas
-// (Escuro, Retro, Alto contraste) usam o CSS normal do app + desktopBasic.css (so a moldura da janela).
-// Personalizacao livre de cores/fundo nao existe: so estes temas padronizados.
+// Desktop tem estrutura propria (skin thothmessenger.css = Frutiger Aero). Os outros temas sao a
+// MESMA estrutura com outra paleta (gerada por thothchat-messenger/gen-themes.mjs) - nunca o CSS do APK.
+// Nao existe personalizacao livre de cor/fundo: so estes temas padronizados.
 const THEME_KEY = 'ferus-theme'
-type ThemeId = 'messenger' | 'dark' | 'light' | 'contrast' | 'cyberpunk'
+const SKINS: Record<string, string> = { messenger: skinBase, dark: skinDark, light: skinRetro, contrast: skinContrast }
 
-export function readStoredDesktopTheme(): ThemeId {
+export function readStoredDesktopTheme(): string {
   try {
     const saved = localStorage.getItem(THEME_KEY)
-    if (saved === 'dark' || saved === 'light' || saved === 'contrast' || saved === 'cyberpunk') return saved
+    if (saved && SKINS[saved]) return saved
   } catch {
     // ignore
   }
   return 'messenger'
 }
 
-function setSkin(on: boolean): Promise<void> {
-  const root = document.documentElement
-  root.classList.toggle('no-msn-skin', !on)
+export function applyDesktopTheme(theme: string): Promise<void> {
+  const key = SKINS[theme] ? theme : 'messenger'
+  document.documentElement.dataset.desktopTheme = key
+  const href = SKINS[key]
   const existing = document.getElementById('msn-skin') as HTMLLinkElement | null
-  if (!on) {
-    existing?.remove()
-    return Promise.resolve()
-  }
-  if (existing) return Promise.resolve()
+  if (existing && existing.getAttribute('href') === href) return Promise.resolve()
   return new Promise((resolve) => {
     const link = document.createElement('link')
-    link.id = 'msn-skin'
+    link.id = 'msn-skin-next'
     link.rel = 'stylesheet'
-    link.href = skinUrl
-    link.onload = () => resolve()
-    link.onerror = () => resolve()
+    link.href = href
+    const done = () => {
+      existing?.remove()
+      link.id = 'msn-skin'
+      resolve()
+    }
+    link.onload = done
+    link.onerror = done
     document.head.appendChild(link)
   })
-}
-
-// data-theme so vale pros temas "de verdade" (retro/contraste); dark e o :root padrao
-// e o Frutiger do desktop e o skin em si (nao usa data-theme).
-export function applyDesktopTheme(theme: string): Promise<void> {
-  const root = document.documentElement
-  if (theme === 'light' || theme === 'contrast' || theme === 'cyberpunk') root.dataset.theme = theme
-  else delete root.dataset.theme
-  return setSkin(theme !== 'dark' && theme !== 'light' && theme !== 'contrast' && theme !== 'cyberpunk')
 }
 
 // Janelas secundarias (conversa) seguem o tema escolhido na janela principal.

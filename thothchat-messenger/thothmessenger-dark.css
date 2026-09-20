@@ -1,0 +1,425 @@
+/* GERADO por gen-themes.mjs a partir de thothmessenger.css - nao editar */
+/* ThothChat Messenger: skin exclusiva do desktop, MSN 8/9. */
+:root{font-family:Tahoma,"Segoe UI",Arial,sans-serif;color-scheme:dark;--bg:#122c38;--panel:#121212;--panel2:#0c2229;--line:#3e6171;--line-2:#29414c;--text:#a1c8df;--text-base:#a1c8df;--text-secondary:#88adc1;--muted:#738993;--muted-2:#62737c;--bg-deep:#122c38;--bg-panel:#121212;--bg-surface:#121212;--bg-surface-2:#10232b;--bg-selected:#0f2934;--bubble:#121212;--hover:#0c242e;--input:#121212;--avatar-bg:#162b35;--accent-text:#0069a6;--accent-dim-bg:#122d38;--green:#68b51c;--green2:#3f850d;--rail-bg:#0a96ce;--rail-icon:#121212;--scrollbar:#58676d;--danger:#c94337;--danger-bg:#2b0906;--shadow:0 12px 32px #a2d7f247;--msn-top:#43c0eb;--msn-mid:#13a3dc;--msn-bottom:#087fb5;--msn-edge:#08729f}
+*{box-sizing:border-box}html,body,#root{width:100%;height:100%;margin:0;overflow:hidden}body{font:12px Tahoma,"Segoe UI",Arial,sans-serif;color:var(--text);background:#306d82}button,input,textarea,select{font:inherit;color:inherit}
+.desktop-window-shell{height:100vh;display:flex;flex-direction:column;overflow:hidden;background:#121212;border:1px solid var(--msn-edge);box-shadow:inset 0 0 0 1px #121212b3,0 12px 35px #aadaf352}.titlebar{height:40px;display:flex;align-items:center;flex:none;padding-left:12px;color:#121212;background:linear-gradient(var(--msn-top),var(--msn-mid) 46%,var(--msn-bottom));border-bottom:1px solid var(--msn-edge);box-shadow:inset 0 1px #121212a6;text-shadow:0 1px #056e9b;-webkit-app-region:drag}.titlebar-logo{width:20px;height:20px;object-fit:contain;margin-right:8px}.titlebar-brand{font-weight:bold;font-size:13px}.window-controls{align-self:stretch;margin-left:auto;display:flex;-webkit-app-region:no-drag}.window-controls button{position:relative;width:38px;border:0;border-left:1px solid #8ed0ef57;background:transparent;color:#121212}.window-controls button:hover{background:#1212122e}.window-controls button>span{position:absolute;left:50%;top:50%;width:12px;height:11px;transform:translate(-50%,-50%)}.window-minimize span:before{content:"";position:absolute;inset:auto 1px 1px;height:1px;background:#121212}.window-maximize span:before{content:"";position:absolute;inset:1px;border:1px solid #121212}.window-close span:before,.window-close span:after{content:"";position:absolute;left:5px;top:-1px;width:2px;height:14px;background:#121212}.window-close span:before{transform:rotate(45deg)}.window-close span:after{transform:rotate(-45deg)}.window-controls .window-close:hover{background:linear-gradient(#862f1e,#ca3e30)}
+/* A janela do desktop pode ficar mais estreita que o breakpoint mobile do
+   App.css (max-width:760px), o que ligava sem querer o layout de app celular
+   (rail virando barra inferior). Forca layout desktop sempre, independente da
+   largura real da janela. */
+.desktop-window-shell .app{flex-direction:row!important}
+.desktop-window-shell .rail{
+  display:flex!important;order:0!important;width:72px!important;flex-direction:column!important;
+  justify-content:flex-start!important;gap:6px!important;
+  padding:16px 6px 14px!important;border-right:1px solid var(--line)!important;border-top:0!important;
+}
+/* o logo do Thoth mudou pra titlebar, a rail no desktop fica so com a navegacao */
+.desktop-window-shell .rail-brand{display:none!important}
+.desktop-window-shell .rail .spacer{display:block!important}
+.app{flex:1;min-width:0;min-height:0;display:flex;overflow:hidden;background:#121212}.rail{width:72px}.msn-contacts-window{flex:1;min-width:0}.desktop-window-shell:not(.desktop-chat-shell) .chats{width:100%;border:0;background:#121212;box-shadow:none}.top{min-height:118px;padding:17px 18px;background:radial-gradient(circle at 80% -30%,#121212,transparent 48%),linear-gradient(#06212b,#153543);border-bottom:1px solid #3d6578}.brand{font-size:17px;font-weight:bold;color:#a1c8df}.brand-caption{margin-top:6px;font-size:12px;color:#7c96a5;font-style:italic}.search-wrap{padding:10px;background:#091b24;border-bottom:1px solid #2d444e}.search{height:35px;border:1px solid #476c7d;border-radius:0;background:#121212}.filters{gap:4px;padding:8px 10px;background:linear-gradient(#121212,#14252c);border-bottom:1px solid #375664}.filter-tab,.filter-more-btn{border-radius:3px!important;background:linear-gradient(#121212,#15262d)!important}.filter-tab.active,.filter-more-btn.active{background:linear-gradient(#a8e555,#68b51c 53%,#47920d)!important;color:#121212!important}.chat-list{margin:0;padding:5px 7px;background:#121212}.chat{min-height:56px;margin:0;padding:5px 8px;border-radius:0}.chat:hover,.chat.selected{background:linear-gradient(#061d27,#132b35);border-color:#2d4d5a}.chat.selected:before{display:none}
+
+/* Identidade MSN da navegacao do desktop. Fundo propositalmente limpo: sem
+   bolhas decorativas e sem indicadores verdes na barra. */
+.desktop-window-shell .rail{
+  width:80px!important;gap:10px!important;padding:12px 7px 10px!important;
+  color:#121212!important;
+  background:
+    linear-gradient(90deg,#12121238,transparent 9%,transparent 88%,#8bceee38),
+    linear-gradient(180deg,#28c3ee 0%,#08a4db 42%,#0789bd 100%)!important;
+  border-right:1px solid #0877a5!important;
+  box-shadow:inset 1px 0 #121212b3,inset -1px 0 #12121261,4px 0 10px #8cd0ef21;
+}
+.desktop-window-shell .rail:before{
+  content:"";position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(180deg,#12121247,transparent 12%,transparent 88%,#8ed0ef1f);
+}
+/* mesma listra diagonal clara que tinha no rail do Thoth Play - so o efeito de
+   brilho, sem mexer na cor/gradiente azul que ja tava aqui */
+.desktop-window-shell .rail:after{
+  content:"";position:absolute;top:-20%;left:30%;width:44%;height:150%;
+  background:linear-gradient(100deg,transparent 40%,#1212124d 48%,transparent 58%);
+  transform:rotate(8deg);pointer-events:none;
+}
+.desktop-window-shell .rail-item,.desktop-window-shell .rail>.spacer{position:relative;z-index:1}
+.desktop-window-shell .rail-link{
+  min-height:62px;padding:8px 3px;gap:5px;border:1px solid transparent;border-radius:13px;
+  color:#121212;text-shadow:0 1px 1px #92d0ef9e;
+  background:transparent;box-shadow:none;
+  transition:background .14s ease,border-color .14s ease,box-shadow .14s ease,transform .14s ease;
+}
+.desktop-window-shell .rail-link:hover{
+  color:#121212;background:linear-gradient(180deg,#12121240,#08313a1a);
+  border-color:#12121261;box-shadow:inset 0 1px #1212126b;
+}
+.desktop-window-shell .rail-link:active{transform:translateY(1px)}
+.desktop-window-shell .rail-link[aria-current="page"]{
+  color:#075d8c!important;text-shadow:none;
+  background:linear-gradient(180deg,#051f24 0%,#072834 45%,#0f3948 100%)!important;
+  border:1px solid #39a9d1!important;
+  box-shadow:inset 0 0 0 2px #121212e0,inset 0 -4px 8px #2ba1cd1f,0 2px 6px #8ed0ef57!important;
+}
+.desktop-window-shell .rail-symbol{width:28px;height:27px;filter:drop-shadow(0 1px 1px #8dd0ef73)}
+.desktop-window-shell .rail-symbol svg{width:24px;height:24px;stroke-width:2}
+.desktop-window-shell .rail-link[aria-current="page"] .rail-symbol{filter:drop-shadow(0 1px #121212)}
+.desktop-window-shell .rail-label{font-size:10px;line-height:1.1;font-weight:700;letter-spacing:-.1px}
+.desktop-window-shell .rail-badge{
+  top:4px;right:3px;min-width:16px;width:auto;height:15px;padding:0 4px;border-radius:7px!important;
+  color:#121212;background:linear-gradient(#956015,#e77a18)!important;border:1px solid #c45d08;
+  box-shadow:inset 0 1px #121212a6,0 1px 3px #92d2ef66;
+}
+.desktop-window-shell .rail-account{
+  min-height:70px;padding-top:7px;background:linear-gradient(180deg,#12121229,#0068971f);
+  border-color:#1212124d;box-shadow:inset 0 1px #12121247;
+}
+.desktop-window-shell .rail-account .avatar-sm{
+  width:36px;height:36px;padding:3px;border:2px solid #0e4e60!important;border-radius:8px;
+  background:linear-gradient(145deg,#121212,#237688 48%,#0788ba);color:#075d8c;
+  box-shadow:inset 0 1px #121212,0 2px 5px #95d3f06b;
+}
+.desktop-window-shell .rail-account .avatar-sm img{border-radius:4px}
+/* Moldura "vidro" MSN - 1 contorno so (sem outline por fora, so o border com
+   gradiente de vidro por baixo), azul por padrao (neutro, sem presenca), muda
+   pra verde/vermelho quando o avatar tem um .presence-dot irmao. !important
+   neutraliza qualquer borderColor inline (cor de nome customizada) que so faz
+   sentido no mobile/web - no desktop a moldura eh sempre sobre presenca, nunca
+   sobre nome. */
+.photo,.header-photo,.avatar-sm,.msn-avatar-frame,.msn-contact-avatar,.msn-avatar-me{overflow:hidden;padding:3px;border:3px solid #42acd2!important;border-radius:8px;background:linear-gradient(145deg,#06272a,#26788c 43%,#0788ba);box-shadow:inset 0 2px 2px #121212e6,inset 0 -2px 4px #86c8e847,0 2px 5px #92c9e23d}.photo{width:42px;height:42px}.header-photo{width:61px;height:61px}.photo img,.header-photo img,.avatar-sm img{width:100%;height:100%;object-fit:cover;border-radius:4px}
+.photo:has(+ .presence-dot.online),.header-photo:has(+ .presence-dot.online),.avatar-sm:has(+ .presence-dot.online),.msn-contact-avatar:has(+ .presence-dot.online){border-color:#73b923!important;background:linear-gradient(145deg,#323d09,#a9dd49 42%,#4c990f)}
+.photo:has(+ .presence-dot.afk),.header-photo:has(+ .presence-dot.afk),.avatar-sm:has(+ .presence-dot.afk),.msn-contact-avatar:has(+ .presence-dot.afk){border-color:#e0a020!important;background:linear-gradient(145deg,#3e3609,#f0c355 42%,#c98d0c)}
+.photo:has(+ .presence-dot.offline),.header-photo:has(+ .presence-dot.offline),.avatar-sm:has(+ .presence-dot.offline),.msn-contact-avatar:has(+ .presence-dot.offline),.photo:has(+ .presence-dot:not(.online):not(.afk)),.header-photo:has(+ .presence-dot:not(.online):not(.afk)),.msn-contact-avatar:has(+ .presence-dot:not(.online):not(.afk)){border-color:#121212!important;background:linear-gradient(145deg,#121212,#162024 48%,#2c3a40);box-shadow:inset 0 2px 2px #121212,inset 0 -2px 4px #697b8447,0 2px 5px #92c9e23d}
+.msn-contact-avatar:has(+ .presence-dot.offline) img,.desktop-chat-shell .header-photo:has(+ .presence-dot.offline) img,.msn-contact-avatar:has(+ .presence-dot:not(.online):not(.afk)) img,.desktop-chat-shell .header-photo:has(+ .presence-dot:not(.online):not(.afk)) img{opacity:.5}
+.desktop-chat-shell .main{width:100%;display:flex}.chat-header{min-height:96px;padding:13px 17px;background:radial-gradient(circle at 82% -35%,#121212,transparent 48%),linear-gradient(#06202b,#163744);border-bottom:1px solid #406575;color:#a1c8df}.header-name{font-size:17px;display:flex;align-items:center;flex-wrap:wrap;gap:8px}.header-status-phrase{font-size:12px;font-weight:400;font-style:italic;color:#7c9baa}.header-actions{align-self:stretch;align-items:center}.messages{padding:17px 20px;background:#121212}.desktop-chat-shell .message.in{justify-content:flex-start;margin:0 0 16px}.desktop-chat-shell .message.out{justify-content:flex-end;margin:0 0 16px}.desktop-chat-shell .bubble{max-width:100%;padding:0;background:transparent!important;border:0!important;box-shadow:none!important;color:#a6c3da}.author-label{color:#1673a1!important;font-weight:bold}.out .author-label{color:#5d941a!important}.composer{min-height:136px;padding:0;background:#0d1e23;border-top:1px solid #40606f;color:#a1c8df;flex-direction:column;align-items:stretch;flex-wrap:nowrap}.composer-icons{order:-1;width:100%;padding:4px 8px;border:0;border-bottom:1px solid #34515d;border-radius:0;background:linear-gradient(#0a1f1f,#172932)}.composer-input-row{padding:9px}.input{min-height:78px;border:1px solid #476c7d;border-radius:0;background:#121212}.send,.send-text{border:1px solid #408507;border-radius:3px;background:linear-gradient(#a7e94c,#65b417 52%,#4b960e);color:#121212}.compose-btn{color:#7c9baa}.compose-btn:hover{background:#121212b3;color:#0069a6}.compose-btn.active{background:linear-gradient(#164a5f,#286483)!important;color:#9acfe8!important;box-shadow:inset 0 1px 3px #a2d7f259}.compose-btn.recording{background:linear-gradient(#5b1b16,#e0574a)!important;color:#121212!important}.compose-btn.active[title="Chamar atenção"]{background:linear-gradient(#796111,#e0a812)!important;color:#ecce9b!important}.icon-btn{color:#a1c8df}
+.emoji-picker,.wink-picker,.attach-menu,.request-menu,.filter-popup,.modal-card,.profile-popup{border:1px solid #4d778a;border-radius:5px;background:linear-gradient(#121212,#122831);box-shadow:0 6px 18px #a2d7f247}.emoji-picker button,.wink-picker-grid button{border:1px solid transparent;background:#121212}.nudge-btn,.compose-btn[title="Chamar atenção"]{border-color:#d59721!important;background:linear-gradient(#49430a,#997f1e)!important;color:#95600a!important}
+/* reservas para componentes MSN que serao ligados depois */
+.msn-identity-card{min-height:104px;display:flex;align-items:center;gap:12px;padding:13px 14px;background:linear-gradient(#072330,#143544);border-bottom:1px solid #40606f}.msn-notice{padding:7px 11px;background:#413c09;border-bottom:1px solid #766f27}.msn-contact-group-title{height:27px;font-weight:bold;position:relative}
+
+/* Tela de contatos (janela principal) - estrutura ligada aos dados reais do app,
+   portada do mockup public/desktop-msn/msn.css (janela .contacts-window). */
+.msn-contacts-window{height:100%;display:flex;flex-direction:column;min-height:0;overflow:hidden}
+.msn-identity-card,.msn-search-row,.msn-notice{flex-shrink:0}
+.msn-avatar-me{width:67px;height:67px;border-radius:9px;flex:none;box-shadow:0 2px 5px #95c4da40;overflow:hidden}
+.msn-avatar-me img{width:100%;height:100%;object-fit:cover}
+.msn-identity-copy{display:flex;flex:1;min-width:0;flex-direction:column}
+.msn-identity-copy strong{font-size:16px;color:#a1c8df}
+.msn-presence{font-size:12px;color:#849eab;display:flex;align-items:center;gap:5px}
+.msn-mail-button{position:relative;color:#0069a6;font-size:13px}
+.msn-search-row{padding:8px;background:#091b24;border-bottom:1px solid #29414c}
+.msn-search-row input{width:100%;height:28px;padding:0 9px;border:1px solid #446676;background:#121212;box-shadow:inset 0 1px 2px #a3d7f21f;border-radius:0}
+.msn-notice button{border:0;background:none;color:#0069a6;text-decoration:underline;padding:0;cursor:pointer}
+.msn-contact-list{flex:1;overflow:auto;background:#121212;padding:4px 6px}
+.msn-contact-list details{border-radius:0}
+.msn-contact-list details.dragging{opacity:.5}
+.msn-contact-list details summary{height:27px;display:flex;align-items:center;gap:5px;font-weight:600;font-size:12px;cursor:pointer;color:#96b9cd;list-style:none}
+.msn-contact-list details summary::-webkit-details-marker{display:none}
+.msn-contact-list .msn-contact-group-title small{font-weight:400;color:#6d818c;margin-left:2px}
+.msn-section-grip{display:flex;align-items:center;color:#4a5c65;cursor:grab;touch-action:none;flex-shrink:0}
+.msn-section-grip:hover{color:#7c9baa}
+.msn-section-chevron{display:inline-flex;flex-shrink:0;transition:transform .12s ease;color:#7c9baa}
+.msn-section-chevron.open{transform:rotate(0deg)}
+.msn-section-chevron:not(.open){transform:rotate(-90deg)}
+.msn-contact{width:100%;height:52px;display:flex;align-items:center;gap:6px;padding:4px 7px;border:1px solid transparent;background:none;text-align:left;cursor:pointer;border-radius:0}
+.msn-contact:hover{background:linear-gradient(#061e28,#132b35);border-color:#2d4855}
+.msn-contact.dragging{opacity:.5}
+.msn-contact-grip{display:flex;align-items:center;color:#4a5c65;cursor:grab;touch-action:none;flex-shrink:0;margin-right:-2px}
+.msn-contact-grip:hover{color:#7c9baa}
+.msn-contact-info{display:flex;flex:1;min-width:0;flex-direction:column}
+.msn-contact-info strong{font-size:12px;font-weight:600;color:#a1c8df;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.msn-contact-info small{margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#708089;font-size:10px}
+.msn-contact-avatar{width:36px;height:36px;border-radius:5px;flex:none;overflow:hidden}
+.msn-contact-avatar img{width:100%;height:100%;object-fit:cover}
+.msn-unread{min-width:18px;padding:2px 5px;border-radius:9px;background:#ef7b32;color:#121212;text-align:center;font-size:10px;flex-shrink:0}
+.msn-empty{padding:10px 8px;font-size:11px;color:#708089}
+.msn-category-menu-btn{margin-left:auto;border:0;background:none;color:#708089;cursor:pointer;display:flex;padding:2px}
+.msn-category-menu-btn:hover{color:#a1c8df}
+.msn-category-menu{position:absolute;right:10px;margin-top:2px;z-index:20;min-width:170px;padding:4px}
+.msn-category-menu button{width:100%;display:flex;align-items:center;gap:7px;padding:7px 9px;border:0;background:none;text-align:left;font-size:12px;color:#a1c8df;cursor:pointer;border-radius:4px}
+.msn-category-menu button:hover{background:#0c242e}
+.msn-category-menu button.decline{color:#c94337}
+.msn-new-category-btn{
+  width:calc(100% - 12px);margin:6px;display:flex;align-items:center;justify-content:center;gap:6px;
+  padding:7px;border:1px dashed #4a5c65;border-radius:5px;background:none;color:#7c9baa;font-size:11.5px;cursor:pointer;
+}
+.msn-new-category-btn:hover{background:#061e28;color:#0069a6}
+.msn-manage-category-list{max-height:280px;overflow-y:auto;margin-top:10px;text-align:left}
+.msn-manage-category-row{display:flex;align-items:center;gap:8px;padding:6px 2px;cursor:pointer}
+.msn-manage-category-row span{font-size:13px}
+
+/* Acabamento das duas janelas independentes (contatos e conversa). */
+.titlebar{
+  height:42px;padding-left:11px;color:#121212;background:linear-gradient(180deg,#cecece,#dbdbdb 58%,#dfdfdf);
+  border-bottom:1px solid #e9e9e9;box-shadow:inset 0 1px #12121224,0 1px #42c8ed;text-shadow:0 1px #ededed;
+}
+.titlebar-logo{width:22px;height:22px;margin-right:9px;filter:drop-shadow(0 1px 1px #ededed)}
+.titlebar-brand{font-size:14px;font-weight:700}
+.window-controls button{width:42px;border-left-color:#1212121c}
+.window-controls button:hover{background:#12121217}
+.desktop-window-shell{border-color:#0876a3;border-radius:7px 7px 5px 5px;box-shadow:inset 0 0 0 1px #1212128c,0 12px 35px #aadaf352}
+
+.msn-identity-card{
+  min-height:112px;padding:14px 15px;gap:13px;
+  background:radial-gradient(circle at 88% -35%,#121212 0 12%,transparent 48%),linear-gradient(180deg,#06222b,#143643);
+  border-bottom:1px solid #3e697a;box-shadow:inset 0 1px #121212;
+}
+.msn-avatar-me{width:70px;height:70px;border-width:3px!important;box-shadow:inset 0 1px #121212,0 3px 7px #92d2ef47}
+.msn-identity-copy strong{font-size:18px;line-height:1.15;color:#96c7e8;text-shadow:0 1px #121212}
+.msn-presence{margin-top:4px;font-size:12px;line-height:1.35;color:#80a2b3}
+.msn-mail-button{width:36px;height:36px;border:1px solid transparent;border-radius:7px;display:grid;place-items:center}
+.msn-mail-button:hover{border-color:#305968;background:linear-gradient(#121212,#0f2e39);box-shadow:inset 0 1px #121212}
+.msn-search-row{padding:9px 10px;background:linear-gradient(#091b22,#11262e);border-bottom-color:#2f505d}
+.msn-search-row input{
+  height:34px;padding:0 11px;border-color:#446c7d;border-radius:1px;
+  box-shadow:inset 0 1px 3px #a3d7f221,0 1px #121212;font-size:12px;
+}
+.msn-contact-list{padding:6px 8px;background:linear-gradient(90deg,#121212,#0b171d 78%,#0d1e23)}
+.msn-contact-list details summary{height:31px;font-size:13px;color:#9cc4df;text-shadow:0 1px #121212}
+.msn-contact-list .msn-contact-group-title small{color:#6c8695}
+.msn-contact{height:56px;gap:8px;padding:5px 8px;border-radius:7px}
+.msn-contact:hover{
+  background:linear-gradient(180deg,#051d25,#0f2e39);border-color:#316174;
+  box-shadow:inset 0 1px #121212,0 1px 3px #8ed1ef1f;
+}
+.msn-contact-avatar{width:40px;height:40px;border-radius:7px}
+.msn-contact-info strong{font-size:12px;color:#92c4e8}
+
+.desktop-chat-shell .main{background:#0d2028;border-top:1px solid #154250}
+.desktop-chat-shell .chat-header{
+  min-height:112px;padding:13px 18px;gap:14px;
+  background:radial-gradient(circle at 86% -40%,#121212 0 10%,transparent 46%),linear-gradient(180deg,#06222b,#143846);
+  border-bottom:1px solid #407082;box-shadow:inset 0 1px #121212,0 1px #082b37;color:#9cc6e1;
+}
+.desktop-chat-shell .header-photo{width:72px;height:72px;border-radius:9px}
+.desktop-chat-shell .header-name{font-size:19px;color:#06477a;text-shadow:0 1px #121212}
+.desktop-chat-shell .header-status-phrase{display:block;flex-basis:100%;margin-top:1px;color:#809ead;font-size:12px}
+.desktop-chat-shell .header-actions{align-self:stretch;gap:8px;margin-right:0}
+.desktop-chat-shell .header-actions .icon-btn{
+  width:54px;height:64px;align-self:center;border:1px solid #305967;border-radius:7px;
+  color:#0876ab;background:linear-gradient(180deg,#121212d1,#113643b8);
+  box-shadow:inset 0 1px #121212,0 1px 3px #8dd1ef29;text-shadow:0 1px #121212;
+}
+.desktop-chat-shell .header-actions .icon-btn:hover{background:linear-gradient(#121212,#113d4d);border-color:#58aed0;color:#055a87}
+.desktop-chat-shell .messages{
+  margin:10px 10px 0;padding:20px 22px;background:#121212;border:1px solid #3b6575;border-radius:5px;
+  box-shadow:inset 0 1px 3px #a1d7f214,0 1px #121212;scrollbar-gutter:stable;
+}
+.desktop-chat-shell .date{border-radius:4px;background:#0d1f27;border-color:#29444f}
+.desktop-chat-shell .composer{
+  min-height:148px;margin:9px 10px 10px;padding:0;gap:0;background:linear-gradient(#0b222a,#122f39);
+  border:1px solid #3b6778;border-radius:6px;box-shadow:inset 0 1px #121212;color:#a1c8df;
+}
+.desktop-chat-shell .composer-icons{min-height:39px;padding:5px 8px;background:linear-gradient(#051b22,#162c35);border-bottom-color:#365664}
+.desktop-chat-shell .compose-btn{width:34px;height:28px;border:1px solid transparent;border-radius:4px;color:#0874a6}
+.desktop-chat-shell .compose-btn:hover{border-color:#376071;background:linear-gradient(#121212,#14303a);box-shadow:inset 0 1px #121212}
+.desktop-chat-shell .composer-input-row{padding:9px;gap:9px}
+.desktop-chat-shell .input{min-height:76px;padding:8px 10px;border-color:#457184;border-radius:2px;box-shadow:inset 0 1px 3px #a5d8f221}
+.desktop-chat-shell .input textarea{font:13px Tahoma,"Segoe UI",Arial,sans-serif}
+.desktop-chat-shell .send{
+  width:86px;height:42px;border:1px solid #408507;border-radius:4px;
+  background:linear-gradient(#649123,#66bc18 52%,#46910b);box-shadow:inset 0 1px #121212bf,0 2px 4px #b7f0953d;
+}
+.desktop-chat-shell .send:hover{filter:brightness(1.05)}
+
+/* Tela de login (janela principal, antes de autenticar) */
+.msn-login-screen{
+  flex:1;min-width:0;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;
+  padding:24px;background:radial-gradient(circle at 50% 0,#06282c 0 15%,transparent 55%),linear-gradient(180deg,#5fb8df,#103d4e 60%,#448581);
+  text-align:center;
+}
+.msn-login-logo{width:84px;height:84px;object-fit:contain;filter:drop-shadow(0 6px 10px #a0d5f14d)}
+.msn-login-screen h1{margin:0;font-size:16px;color:#a1c8df}
+.msn-login-google{
+  border:1px solid #08729f;border-radius:4px;padding:10px 22px;font-size:13px;font-weight:600;color:#121212;cursor:pointer;
+  background:linear-gradient(180deg,#49bee9,#13a3dc 48%,#087caf);box-shadow:inset 0 1px #121212a6,0 3px 8px #a0d5f140;
+}
+.msn-login-google:hover{filter:brightness(1.05)}
+
+/* So a titlebar (X/maximizar/minimizar) segue o tema do Windows - o resto (menubar
+   removida, corpo da janela) mantem sempre a cara MSN, claro ou escuro. */
+@media(prefers-color-scheme:dark){
+  .titlebar{background:#d2d2d2;border-bottom:1px solid #ededed;text-shadow:none;box-shadow:none}
+  .window-controls button{border-left-color:#12121226}
+  .window-controls button:hover{background:#1212121a}
+}
+
+/* Presenca via moldura do avatar - a bolinha verde/vermelha some, o esquema de
+   cor por presenca fica todo na regra unificada da moldura de vidro la em cima. */
+.presence-dot{display:none}
+
+/* Thoth Play - layout exclusivo da janela Tauri. A estrutura e a logica ficam
+   no componente compartilhado; aqui entram somente layout e os temas claro /
+   escuro inspirados nos mockups aprovados. */
+.play-window-shell{
+  --bg-deep:#051c25;--bg-panel:#06212c;--bg-surface:#121212;--bg-surface-2:#0c2a35;--bg-selected:#0d3340;
+  --line:#2f677b;--line-2:#224d5b;--text:#92c2e8;--text-base:#92c2e8;--text-secondary:#285f82;
+  --muted:#658495;--accent-text:#0877bd;--input:#121212;--avatar-bg:#162b35;--green:#078cd1;--on-button:#121212;
+  --play-glass-top:#051d25;--play-glass-bottom:#143643;--play-rail-top:#18afe3;--play-rail-bottom:#047dac;
+  --play-canvas:#121212;--play-heading:#0752a0;--play-cyan:#08a9eb;--shadow:0 10px 28px #92d1ef2e;
+  background:var(--bg-deep);color:var(--text);
+}
+.play-window-shell .titlebar{background:linear-gradient(#cfd4db,#d9dfe7)!important;border-bottom:1px solid #ededed;text-shadow:none;box-shadow:0 1px var(--play-cyan)}
+.play-window-shell .titlebar-logo{filter:drop-shadow(0 0 4px #33c6ff)}
+.play-window-shell .window-controls button{border-left-color:#1212121f}
+.play-window-shell .window-controls button:hover{background:#1212121a}
+.play-window-shell .play-desktop-app,.play-window-shell .play-group-view{background:var(--bg-deep)}
+
+/* Rail: lista permanente dos "meus grupos" (estilo Discord), com atalho pra
+   home/criar no fim da lista e perfil no rodape. Largura -25% (112px -> 84px). */
+.play-window-shell .play-icon-rail{
+  width:84px;padding:18px 8px 10px;gap:11px;background:
+    linear-gradient(90deg,#12121238,transparent 10%,transparent 88%,#93d1f02e),
+    linear-gradient(180deg,var(--play-rail-top),var(--play-rail-bottom));
+  border-right:1px solid #0773a0;box-shadow:inset 1px 0 #121212b3,inset -1px 0 #12121261;
+}
+.play-window-shell .play-icon-rail-home{
+  display:grid;place-items:center;width:40px;height:40px;margin-bottom:4px;flex-shrink:0;
+  border:1px solid #1212124d;border-radius:10px;color:#121212;background:#1212121f;
+}
+.play-window-shell .play-icon-rail-home:hover{background:#1212123d}
+.play-window-shell .play-icon-rail-groups{gap:11px}
+.play-window-shell .play-icon-rail-group{
+  width:54px;height:54px;margin:0;border:1px solid #30a9d5;border-radius:12px;padding:4px;flex-shrink:0;
+  background:linear-gradient(#052025,#103e50);box-shadow:inset 0 0 0 2px #121212,0 3px 8px #98d3f059;
+}
+.play-window-shell .play-icon-rail-group.active{outline:2px solid #18baf4;outline-offset:2px}
+.play-window-shell .play-icon-rail-group .play-group-avatar{width:100%;height:100%;border-radius:8px}
+.play-window-shell .play-icon-rail-add{
+  display:grid;place-items:center;color:#121212;background:#1212121a;
+  border:1px dashed #12121273;box-shadow:none;
+}
+.play-window-shell .play-icon-rail-spacer{display:block}
+.play-window-shell .play-icon-rail-profile{
+  width:40px;height:40px;margin:0;border:1px solid #30a9d5;border-radius:11px;padding:3px;flex-shrink:0;
+  background:linear-gradient(#052025,#103e50);box-shadow:inset 0 0 0 2px #121212,0 3px 8px #98d3f059;
+}
+.play-window-shell .play-icon-rail-profile .play-group-avatar{width:100%;height:100%;border-radius:8px}
+
+.play-window-shell .play-group-main{background:var(--bg-deep)}
+.play-window-shell .play-group-topbar{
+  min-height:84px;padding:11px 24px;gap:12px;background:radial-gradient(circle at 86% -40%,#121212 0 9%,transparent 45%),linear-gradient(var(--play-glass-top),var(--play-glass-bottom));
+  border-bottom:1px solid var(--line);box-shadow:inset 0 1px #121212d1;
+}
+.play-window-shell .play-group-topbar .play-group-avatar{width:54px;height:54px;padding:4px;border:1px solid #3aaed5;border-radius:11px;background:linear-gradient(#051f24,#18495a);box-shadow:inset 0 0 0 2px #121212,0 2px 7px #8fd1ef3d}
+.play-window-shell .play-group-topbar-title{gap:8px}
+.play-window-shell .play-group-topbar-title strong{font-size:18px;color:var(--play-heading);text-shadow:0 1px #121212cc}
+.play-window-shell .play-group-topbar-copy>span{margin-top:3px;font-size:12px;color:var(--text-secondary)}
+.play-window-shell .play-quick-invite-btn{
+  border-color:var(--line-2);background:linear-gradient(var(--play-glass-top),var(--play-glass-bottom));
+  color:var(--accent-text);box-shadow:inset 0 1px #121212cc;text-shadow:none;
+}
+.play-window-shell .play-group-menu-trigger{color:var(--accent-text)}
+.play-window-shell .play-group-menu{background:var(--bg-panel);border-color:var(--line-2)}
+
+.play-window-shell .play-group-body{background:var(--bg-deep);gap:0;padding:6px 6px 6px 0}
+.play-window-shell .play-channel-sidebar{
+  width:310px;padding:10px 9px 12px;background:linear-gradient(90deg,var(--bg-panel),var(--bg-surface-2));
+  border:1px solid var(--line);border-left:0;border-radius:0 5px 5px 0;box-shadow:inset 0 1px #121212b3;
+}
+.play-window-shell .play-channel-group-title{padding:11px 10px 5px;font-size:12px;font-weight:700;color:var(--play-heading)}
+.play-window-shell .play-channel-group-title button{color:var(--accent-text)}
+.play-window-shell .play-channel-item{min-height:42px;padding:8px 12px;border:1px solid transparent;border-radius:6px;color:var(--text-secondary);font-size:15px}
+.play-window-shell .play-channel-item svg{color:var(--accent-text)}
+.play-window-shell .play-channel-item:hover{background:#1212127a;border-color:var(--line-2)}
+.play-window-shell .play-channel-item.active{color:var(--play-heading);background:linear-gradient(var(--play-glass-top),#113a49);border-color:#64bddc;box-shadow:inset 0 1px #121212,0 1px 3px #92d1ef26}
+.play-window-shell .play-channel-voice-member{min-height:32px;padding:6px 8px 6px 37px;color:var(--text);font-size:13px}
+.play-window-shell .play-channel-voice-member .avatar-sm{border:2px solid #225565;border-radius:5px}
+
+.play-window-shell .play-text-channel,.play-window-shell .play-voice-channel{
+  margin-left:6px;background:var(--play-canvas);border:1px solid var(--line);border-radius:5px;box-shadow:inset 0 1px #121212bf;
+}
+.play-window-shell .play-text-channel-header{min-height:88px;padding:15px 20px;background:linear-gradient(var(--play-glass-top),var(--bg-panel));border-bottom-color:var(--line)}
+.play-window-shell .play-text-channel-header>div{gap:9px;color:var(--play-heading)}
+.play-window-shell .play-text-channel-header>div strong{font-size:23px}
+.play-window-shell .play-text-channel-header>div svg{width:27px;height:27px}
+.play-window-shell .play-text-channel-header>span{padding-left:36px;font-size:13px;color:var(--text-secondary)}
+.play-window-shell .play-messages{padding:16px 20px;gap:13px;background:var(--play-canvas)}
+.play-window-shell .play-message{gap:14px}
+.play-window-shell .play-message-row{gap:9px}
+.play-window-shell .play-message-row strong{font-size:14px;color:var(--play-heading)}
+.play-window-shell .play-message-time{font-size:11px;color:var(--muted)}
+.play-window-shell .play-message-body p{margin-top:3px;font-size:14px;line-height:1.35;color:var(--text-base)}
+.play-window-shell .play-message .avatar-sm{width:36px;height:36px;padding:2px;border:2px solid #276173;border-radius:7px;background:linear-gradient(#051f26,#1e5566);box-shadow:inset 0 0 0 1px #121212,0 1px 4px #97d4f038}
+.play-window-shell .play-composer{padding:9px;border-top:1px solid var(--line);background:linear-gradient(var(--bg-panel),var(--play-glass-bottom))}
+.play-window-shell .play-composer input{height:45px;border:1px solid #66b9da;border-radius:4px;padding:0 13px;background:var(--input);color:var(--text-base);box-shadow:inset 0 1px 3px #a2d7f21f}
+.play-window-shell .play-composer input:focus{outline:1px solid var(--play-cyan);outline-offset:0}
+.play-window-shell .play-composer button{width:48px;height:45px;border:1px solid #0574b2;border-radius:4px;background:linear-gradient(#29bdf1,#087dcc);box-shadow:inset 0 1px #121212a6;color:#121212}
+
+.play-window-shell .play-member-sidebar{
+  width:330px;margin-left:6px;padding:0 10px 12px;background:linear-gradient(90deg,var(--bg-panel),var(--bg-surface-2));
+  border:1px solid var(--line);border-radius:5px;box-shadow:inset 0 1px #121212b3;
+}
+.play-window-shell .play-member-tabs{gap:6px;padding:10px 0;border-bottom:1px solid var(--line)}
+.play-window-shell .play-member-tabs button{height:40px;border-color:var(--line);border-radius:5px;background:linear-gradient(var(--play-glass-top),var(--play-glass-bottom));color:var(--play-heading);box-shadow:inset 0 1px #121212c7}
+.play-window-shell .play-member-tabs button.active{background:linear-gradient(#1aaef0,#087dcc);border-color:#0572af;color:#121212;box-shadow:inset 0 1px #1212128c,0 0 5px #0090d747}
+.play-window-shell .play-member-group-title{padding:12px 7px 6px;border-bottom:1px solid var(--line-2);font-size:12px;font-weight:700;color:var(--play-heading)}
+.play-window-shell .play-member-row{min-height:58px;padding:7px;font-size:14px;font-weight:700;color:var(--play-heading)}
+.play-window-shell .play-member-row .avatar-sm{width:42px;height:42px;padding:3px;border:2px solid #276173;border-radius:7px;background:linear-gradient(#051f26,#1e5566);box-shadow:inset 0 0 0 1px #121212,0 1px 4px #97d4f038}
+.play-window-shell .play-member-row>svg{color:var(--accent-text)}
+.play-window-shell .play-member-row.offline{opacity:.5}
+
+.play-window-shell .modal-card{background:var(--bg-panel)!important;color:var(--text-base);border:1px solid var(--line)}
+.play-window-shell .modal-card h2{color:var(--text-base)}
+.play-window-shell .google-btn{background:linear-gradient(#29bdf1,#087dcc);border-color:#0574b2;color:#121212}
+
+/* Tema claro/escuro do Play e independente do resto do app (escolhido no
+   perfil, nao segue a aparencia do exe) - atributo explicito sempre vence o
+   prefers-color-scheme abaixo, que so continua servindo de fallback quando
+   ninguem escolheu nada ainda. */
+.play-window-shell[data-theme="light"]{
+  color-scheme:dark;
+  --bg-deep:#0f252e;--bg-panel:#091d25;--bg-surface:#121212;--bg-surface-2:#0f2832;--bg-selected:#123441;
+  --line:#366d83;--line-2:#244958;--text:#9fc7df;--text-base:#9fc7df;--text-secondary:#85adc0;
+  --muted:#6a8795;--accent-text:#047bac;--input:#121212;--avatar-bg:#122b34;--green:#078bc3;--on-button:#121212;
+  --play-glass-top:#121212;--play-glass-bottom:#12313d;--play-rail-top:#26b5df;--play-rail-bottom:#057da9;
+  --play-canvas:#121212;--play-heading:#07518a;--play-cyan:#08a6dc;--shadow:0 12px 30px #1a5c7a2e;
+}
+.play-window-shell[data-theme="dark"]{
+  --bg-deep:#cfdded;--bg-panel:#bfd6e8;--bg-surface:#c5d8e8;--bg-surface-2:#c8dae9;--bg-selected:#a5cde6;
+  --line:#087eb0;--line-2:#18506d;--text:#092d3d;--text-base:#092d3d;--text-secondary:#2c4d5f;
+  --muted:#4d7083;--accent-text:#35c7ff;--input:#c6dbed;--avatar-bg:#b6cdde;--green:#1aaee8;--on-button:#121212;
+  --play-glass-top:#9fc4df;--play-glass-bottom:#b8d4e9;--play-rail-top:#075e91;--play-rail-bottom:#b3d7ef;
+  --play-canvas:#c6daec;--play-heading:#157292;--play-cyan:#18baf4;--shadow:0 12px 30px #ededed73;
+}
+
+@media(prefers-color-scheme:dark){
+  .play-window-shell{
+    --bg-deep:#cfdded;--bg-panel:#bfd6e8;--bg-surface:#c5d8e8;--bg-surface-2:#c8dae9;--bg-selected:#a5cde6;
+    --line:#087eb0;--line-2:#18506d;--text:#092d3d;--text-base:#092d3d;--text-secondary:#2c4d5f;
+    --muted:#4d7083;--accent-text:#35c7ff;--input:#c6dbed;--avatar-bg:#b6cdde;--green:#1aaee8;--on-button:#121212;
+    --play-glass-top:#9fc4df;--play-glass-bottom:#b8d4e9;--play-rail-top:#075e91;--play-rail-bottom:#b3d7ef;
+    --play-canvas:#c6daec;--play-heading:#157292;--play-cyan:#18baf4;--shadow:0 12px 30px #ededed73;
+  }
+  .play-window-shell .play-icon-rail{background:linear-gradient(90deg,#31c9ff26,transparent 12%,transparent 88%,#ededed38),linear-gradient(180deg,var(--play-rail-top),var(--play-rail-bottom))}
+  .play-window-shell .play-icon-rail-group,.play-window-shell .play-icon-rail-profile{background:linear-gradient(#174d70,#b0d1e9);border-color:#18baf4;box-shadow:inset 0 0 0 2px #a6cde5,0 0 9px #13b7f152}
+  .play-window-shell .play-icon-rail-home{background:#1212121a}
+  .play-window-shell .play-group-topbar{background:linear-gradient(180deg,#9dc3df,#b7d3ea)}
+  .play-window-shell .play-group-topbar .play-group-avatar{background:linear-gradient(#174d70,#b0d1e9);border-color:#16b7ef;box-shadow:inset 0 0 0 2px #abcfe7,0 0 8px #0fb5f23d}
+  .play-window-shell .play-group-topbar-title strong{text-shadow:0 1px #ededed}
+  .play-window-shell .play-channel-sidebar,.play-window-shell .play-member-sidebar{background:linear-gradient(90deg,#bdd5e7,#c8deed);box-shadow:inset 0 1px #34c5f91f}
+  .play-window-shell .play-channel-item:hover{background:#b3d1e5;border-color:#175572}
+  .play-window-shell .play-channel-item.active{background:linear-gradient(#8bc2e2,#a6cfe9);border-color:#18a9df;box-shadow:inset 0 1px #167a983b,0 0 5px #00a2e129}
+  .play-window-shell .play-channel-voice-member:before{border-color:#229dca;background:linear-gradient(145deg,#94c0d9,#b1d1e8 52%,#c7dfee);box-shadow:inset 0 0 0 2px #c3daec,0 1px 4px #ededed88}
+  .play-window-shell .play-text-channel,.play-window-shell .play-voice-channel{box-shadow:inset 0 1px #36c6fa1a}
+  .play-window-shell .play-text-channel-header{background:linear-gradient(#b4d0e4,#c2d8ea)}
+  .play-window-shell .play-composer{background:linear-gradient(#b9d4e8,#c8dded)}
+  .play-window-shell .play-composer input{border-color:#087ead;box-shadow:inset 0 1px 4px #ededed88}
+  .play-window-shell .play-member-tabs button{background:linear-gradient(#a4c8df,#bfd7ea);box-shadow:inset 0 1px #1b7d9f29}
+  .play-window-shell .play-member-tabs button.active{background:linear-gradient(#078fd0,#075a90);box-shadow:inset 0 1px #136e8659,0 0 7px #00b1f047}
+  .play-window-shell .play-member-row .avatar-sm{border-color:#218fba;background:linear-gradient(#9fc4dc,#bed6ea);box-shadow:inset 0 0 0 1px #adcee4,0 1px 4px #ededed88}
+  .play-window-shell .play-message .avatar-sm{border-color:#218fba;background:linear-gradient(#9fc4dc,#bed6ea);box-shadow:inset 0 0 0 1px #adcee4,0 1px 4px #ededed88}
+}
+
+.msn-login-paste{display:flex;gap:6px;margin-top:14px;width:min(320px,90%)}
+.msn-login-paste input{flex:1;min-width:0;height:30px;padding:0 8px;border:1px solid #446676;background:#121212;color:#a1c8df}
+.msn-login-paste button{height:30px;padding:0 12px;border:1px solid #0574b2;background:linear-gradient(#29bdf1,#087dcc);color:#121212;cursor:pointer}
+.msn-login-paste button:disabled{opacity:.5;cursor:default}
+
+/* Play desktop: foto de quem esta na voz (lista de canais) sumia por causa da borda/padding genericos do avatar */
+.play-window-shell .play-channel-voice-member{padding-left:30px}
+.play-window-shell .play-channel-voice-member .avatar-sm{width:28px!important;height:28px!important;padding:1px!important;border:2px solid #276173!important;border-radius:6px!important;background:linear-gradient(#051f26,#1e5566)!important}
+.play-window-shell .play-channel-voice-member .avatar-sm img{border-radius:4px}
+/* espaco entre o botao do Play e o primeiro servidor (a moldura do selecionado encostava) */
+.play-window-shell .play-icon-rail-home{margin-bottom:18px}
+.play-window-shell .play-icon-rail-groups{padding-top:4px}
+.play-window-shell .play-icon-rail-groups,.play-window-shell .play-icon-rail{scrollbar-width:none}
+.play-window-shell .play-icon-rail-groups::-webkit-scrollbar{display:none}
+/* Play desktop: moldura das fotos nas listas de gerenciar (membros/banidos/cargos) menor */
+.play-window-shell .play-manage-member-row .avatar-sm,.play-window-shell .play-role-check-row .avatar-sm{width:30px!important;height:30px!important;padding:1px!important;border:2px solid #276173!important;border-radius:6px!important}

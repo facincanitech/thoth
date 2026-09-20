@@ -8,7 +8,6 @@ import { DesktopCallWindow } from './components/DesktopCallWindow.tsx'
 import { DesktopPipWindow } from './components/DesktopPipWindow.tsx'
 import { isTauriDesktop } from './lib/platform.ts'
 import { applyDesktopTheme, followDesktopTheme, readStoredDesktopTheme } from './lib/desktopTheme.ts'
-import './desktopBasic.css'
 
 // Sem o menu nativo do navegador (voltar/imprimir/traduzir...) em nenhuma janela - so nos
 // campos de texto, pra poder colar. Os menus proprios do app continuam funcionando.

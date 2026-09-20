@@ -69,7 +69,11 @@ function themeIsLight(el: Element | null): boolean {
   const theme = el?.closest('[data-theme]')?.getAttribute('data-theme')
   if (theme === 'dark' || theme === 'contrast' || theme === 'cyberpunk') return false
   if (theme) return true
-  return isTauriDesktop
+  if (isTauriDesktop) {
+    const d = document.documentElement.dataset.desktopTheme
+    return !(d === 'dark' || d === 'contrast')
+  }
+  return false
 }
 
 export function StyledName({ name, font, effect, color: rawColor, className }: Props) {
