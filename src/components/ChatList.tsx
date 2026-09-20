@@ -1272,7 +1272,7 @@ export function ChatList({
   }
 
   async function loadContactCategories() {
-    if (!me || !isTauriDesktop) return
+    if (!me || !(isTauriDesktop || theme === 'messenger')) return
     const { data: cats } = await supabase.from('contact_categories').select('*').eq('user_id', me.id).order('position', { ascending: true })
     setContactCategories((cats || []) as ContactCategory[])
     const ids = (cats || []).map((c) => c.id as string)
@@ -1776,8 +1776,10 @@ export function ChatList({
     )
   }
 
+  // Lista de contatos estilo MSN (desktop) tambem no web/APK quando o tema e "Messenger".
+  const useMsnList = isTauriDesktop || theme === 'messenger'
   let desktopContactsSurface: ReactNode = null
-  if (isTauriDesktop) {
+  if (useMsnList) {
     const sortByChatOrder = <T extends { id: string }>(items: T[]): T[] => {
       if (!chatOrder.length) return items
       return [...items].sort((a, b) => {
@@ -2060,7 +2062,7 @@ export function ChatList({
             </button>
           </div>
         </div>
-      ) : isTauriDesktop ? (
+      ) : useMsnList ? (
         desktopContactsSurface
       ) : (
         <>

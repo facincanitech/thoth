@@ -32,6 +32,12 @@ function App() {
 
   const [theme, setTheme] = useState<Theme>(() => {
     try {
+      // v2: todo mundo cai no tema Messenger uma vez (padrao novo), depois respeita a escolha.
+      if (!localStorage.getItem('thoth-theme-v2')) {
+        localStorage.setItem('thoth-theme-v2', '1')
+        localStorage.setItem('ferus-theme', 'messenger')
+        return 'messenger'
+      }
       const saved = localStorage.getItem('ferus-theme')
       if (saved === 'dark' || saved === 'light' || saved === 'contrast' || saved === 'frutiger' || saved === 'messenger') return saved
     } catch {
@@ -39,6 +45,7 @@ function App() {
     }
     return 'messenger'
   })
+
 
   useEffect(() => {
     // ThothChat Messenger (desktop/Tauri) tem visual proprio e fixo, sem sistema de
