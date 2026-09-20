@@ -203,8 +203,8 @@ type Props = {
   communityTab: 'home' | 'info' | 'members' | 'settings'
   onCommunityTabChange: (tab: 'home' | 'info' | 'members' | 'settings') => void
   onCommunityBack: () => void
-  theme: 'dark' | 'light' | 'contrast' | 'frutiger'
-  onThemeChange: (theme: 'dark' | 'light' | 'contrast' | 'frutiger') => void
+  theme: 'dark' | 'light' | 'contrast' | 'frutiger' | 'messenger'
+  onThemeChange: (theme: 'dark' | 'light' | 'contrast' | 'frutiger' | 'messenger') => void
   statusOpen: boolean
   onStatusOpenChange: (open: boolean) => void
   onOpenStatus: () => void
@@ -1533,28 +1533,6 @@ export function ChatList({
     }
   }
 
-  async function setAppColor(
-    field:
-      | 'app_bg_color'
-      | 'app_sidebar_color'
-      | 'app_button_color'
-      | 'app_card_color'
-      | 'app_incoming_color'
-      | 'app_outgoing_color'
-      | 'app_text_size',
-    value: string | null,
-  ) {
-    if (!me) return
-    try {
-      const { error: err } = await supabase.from('profiles').update({ [field]: value }).eq('id', me.id)
-      if (err) throw err
-      onProfileChange({ [field]: value })
-    } catch (err) {
-      console.error('setAppColor failed', err)
-      setAccountError(getErrorMessage(err))
-    }
-  }
-
   async function setNameStyle(field: 'name_style_font' | 'name_style_effect' | 'name_style_color', value: string | null) {
     if (!me) return
     try {
@@ -2088,7 +2066,7 @@ export function ChatList({
         <>
           <div className="top">
             <div className="brand-lockup">
-              <div className="brand">ThothChat</div>
+              <div className="brand">Thoth Messenger</div>
               <div className="brand-caption">Conversa de verdade, ao vivo.</div>
             </div>
             <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 2, position: 'relative' }}>
@@ -2804,40 +2782,6 @@ export function ChatList({
 
             <div className="appearance-separator" />
 
-            <label style={{ marginTop: 14 }}>Aparência do app</label>
-
-            <ColorField label="Fundo" value={me.app_bg_color} onPick={(v) => setAppColor('app_bg_color', v)} />
-            <ColorField label="Barra lateral" value={me.app_sidebar_color} onPick={(v) => setAppColor('app_sidebar_color', v)} />
-            <ColorField label="Botões" value={me.app_button_color} onPick={(v) => setAppColor('app_button_color', v)} />
-            <ColorField label="Mensagem recebida" value={me.app_incoming_color} onPick={(v) => setAppColor('app_incoming_color', v)} />
-            <ColorField label="Mensagem enviada" value={me.app_outgoing_color} onPick={(v) => setAppColor('app_outgoing_color', v)} />
-            <ColorField label="Cards (comunidade)" value={me.app_card_color} onPick={(v) => setAppColor('app_card_color', v)} />
-
-            <label style={{ marginTop: 12 }}>Tamanho do texto</label>
-            <div className="name-style-picker">
-              <button
-                type="button"
-                className={`name-effect-option${(me.app_text_size || 'normal') === 'small' ? ' active' : ''}`}
-                onClick={() => setAppColor('app_text_size', 'small')}
-              >
-                Menor
-              </button>
-              <button
-                type="button"
-                className={`name-effect-option${(me.app_text_size || 'normal') === 'normal' ? ' active' : ''}`}
-                onClick={() => setAppColor('app_text_size', null)}
-              >
-                Padrão
-              </button>
-              <button
-                type="button"
-                className={`name-effect-option${(me.app_text_size || 'normal') === 'large' ? ' active' : ''}`}
-                onClick={() => setAppColor('app_text_size', 'large')}
-              >
-                Maior
-              </button>
-            </div>
-
             {isTauriDesktop ? (
               <>
                 <label style={{ marginTop: 14 }}>Tema</label>
@@ -2847,6 +2791,13 @@ export function ChatList({
               <>
                 <label style={{ marginTop: 14 }}>Tema</label>
                 <div className="theme-picker">
+                  <button
+                    type="button"
+                    className={`theme-option${theme === 'messenger' ? ' active' : ''}`}
+                    onClick={() => onThemeChange('messenger')}
+                  >
+                    Messenger
+                  </button>
                   <button
                     type="button"
                     className={`theme-option${theme === 'dark' ? ' active' : ''}`}
@@ -3012,7 +2963,7 @@ export function ChatList({
         {accountView === 'terms' && (
           <div className="new-conv-form terms-text">
             <p>
-              O ThothChat é fornecido "como está". Não nos responsabilizamos por uso indevido do
+              O Thoth Messenger é fornecido "como está". Não nos responsabilizamos por uso indevido do
               app por parte dos usuários, incluindo o conteúdo das mensagens trocadas.
             </p>
             <p>
@@ -3029,7 +2980,7 @@ export function ChatList({
               da temporária) e não ficam salvas no histórico.
             </p>
             <p>
-              O app bloqueia print e gravação de tela em toda a área do ThothChat — não é possível
+              O app bloqueia print e gravação de tela em toda a área do Thoth Messenger — não é possível
               tirar captura nem gravar o que aparece na tela enquanto o app está aberto.
             </p>
             <p>
@@ -3074,7 +3025,7 @@ export function ChatList({
             <IconArrowLeft size={20} />
           </button>
           <div className="brand" style={{ fontSize: 18 }}>
-            {groupsView.startsWith('community-') ? 'ThothChat - Comunidades' : 'ThothChat - Grupos'}
+            {groupsView.startsWith('community-') ? 'Thoth Messenger - Comunidades' : 'Thoth Messenger - Grupos'}
           </div>
         </div>
 

@@ -1782,7 +1782,7 @@ function ProfilePanel({ me, open, onClose, onSaved }: { me: Profile; open: boole
         <strong>Perfil</strong>
       </div>
       <div className="play-group-info-body">
-        <p style={{ color: 'var(--muted)', fontSize: 12 }}>Esse perfil é só do Thoth Play - editar aqui não muda seu perfil no resto do ThothChat.</p>
+        <p style={{ color: 'var(--muted)', fontSize: 12 }}>Esse perfil é só do Thoth Play - editar aqui não muda seu perfil no resto do Thoth Messenger.</p>
         <button type="button" className="play-group-info-avatar" onClick={() => fileRef.current?.click()} style={{ border: 0, cursor: 'pointer' }}>
           <AvatarBox src={avatarUrl} id={me.id} fallbackLetter={(displayNameDraft || '?')[0]?.toUpperCase()} className="play-group-avatar" />
         </button>

@@ -42,7 +42,7 @@ export async function registerPushNotifications(userId: string) {
   // customizado, em vez de continuar preso no canal velho pra sempre.
   await LocalNotifications.createChannel({
     id: 'flux_messages_v2',
-    name: 'Mensagens do ThothChat',
+    name: 'Mensagens do Thoth Messenger',
     description: 'Mensagens, sininho e winks',
     importance: 5,
     visibility: 1,
@@ -53,7 +53,7 @@ export async function registerPushNotifications(userId: string) {
 
   await LocalNotifications.createChannel({
     id: 'flux_calls',
-    name: 'Chamadas do ThothChat',
+    name: 'Chamadas do Thoth Messenger',
     description: 'Chamadas de voz e vídeo',
     importance: 5,
     visibility: 1,
@@ -104,7 +104,7 @@ export async function registerPushNotifications(userId: string) {
       notifications: [
         {
           id: Math.floor(Math.random() * 1000000),
-          title: notification.title || 'ThothChat',
+          title: notification.title || 'Thoth Messenger',
           body: notification.body || '',
           channelId: isCall ? 'flux_calls' : 'flux_messages_v2',
           ...(!isCall && data?.conversationId

@@ -1749,3 +1749,40 @@ body{
 }
 .desktop-window-shell .rail-label-full{display:inline!important}
 .desktop-window-shell .rail-label-short{display:none!important}
+
+/* Tema "Messenger" - visual do Thoth Messenger desktop (MSN 8/9) levado pro web/APK.
+   Tema padrao; Retro/Frutiger/Escuro/Alto contraste continuam como alternativas. */
+[data-theme="messenger"]{
+  color-scheme:light;
+  --bg:#d9eef8;--panel:#fff;--panel2:#edf8fc;--line:#8eb9cd;--line-2:#bdd7e3;--text:#123d57;--text-base:#123d57;
+  --text-secondary:#315f78;--muted:#668391;--muted-2:#8299a4;--bg-deep:#d9eef8;--bg-panel:#fff;--bg-surface:#fff;
+  --bg-surface-2:#e9f5fa;--bg-selected:#dff2fa;--bubble:#fff;--hover:#e8f6fc;--input:#fff;--avatar-bg:#dcedf5;
+  --accent-text:#0069a6;--accent-dim-bg:#d9eff8;--green:#3aa0d8;--green2:#0789bd;--rail-bg:#0a96ce;--rail-icon:#fff;
+  --scrollbar:#94a7af;--danger:#c94337;--danger-bg:#fff0ef;--on-button:#fff;--shadow:0 12px 32px rgb(0 55 82 / 28%);
+  font-family:Tahoma,"Segoe UI",Arial,sans-serif;
+}
+[data-theme="messenger"] .rail{
+  color:#fff;border-right:1px solid #0877a5;
+  background:linear-gradient(90deg,rgb(255 255 255 / 22%),transparent 9%,transparent 88%,rgb(0 75 112 / 22%)),linear-gradient(180deg,#28c3ee 0%,#08a4db 42%,#0789bd 100%);
+  box-shadow:inset 1px 0 rgb(255 255 255 / 70%),inset -1px 0 rgb(255 255 255 / 38%);
+}
+[data-theme="messenger"] .rail-link{color:#fff;text-shadow:0 1px 1px rgb(0 69 104 / 62%);border:1px solid transparent}
+[data-theme="messenger"] .rail-link[aria-current="page"]{
+  color:#075d8c;text-shadow:none;border:1px solid #39a9d1;
+  background:linear-gradient(180deg,#f9feff 0%,#e4f8ff 45%,#c7edfb 100%);
+  box-shadow:inset 0 0 0 2px rgb(255 255 255 / 88%),0 2px 6px rgb(0 73 108 / 34%);
+}
+[data-theme="messenger"] .rail-wordmark{color:#fff}
+[data-theme="messenger"] .top{background:radial-gradient(circle at 80% -30%,#fff,transparent 48%),linear-gradient(#f0fbff,#cceaf6);border-bottom:1px solid #86b8cf}
+[data-theme="messenger"] .brand{color:#123d57}
+[data-theme="messenger"] .chat-header{background:linear-gradient(#f0fbff,#d3ecf7);border-bottom:1px solid #86b8cf}
+[data-theme="messenger"] .chat-list{background:#fff}
+[data-theme="messenger"] .chats{background:#fff;border-right:1px solid #8eb9cd}
+[data-theme="messenger"] .filter-tab.active,[data-theme="messenger"] .filter-more-btn.active{
+  background:linear-gradient(#a8e555,#68b51c 53%,#47920d);border-color:#47920d;color:#fff;
+}
+[data-theme="messenger"] .compose-btn,[data-theme="messenger"] .header-actions .icon-btn,[data-theme="messenger"] .nudge-btn{color:#1f4d68}
+[data-theme="messenger"] .new-conv-panel{background:#d9eef8}
+@media(max-width:760px){
+  [data-theme="messenger"] .rail{border-right:0;border-top:1px solid #72c9e9}
+}

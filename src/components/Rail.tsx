@@ -96,7 +96,7 @@ export function Rail({ me, onRequireAuth, onNewConversation, onOpenAccount, onOp
 
   return (
     <aside className="rail" aria-label="Navegação principal">
-      <div className="rail-brand" aria-label="ThothChat">
+      <div className="rail-brand" aria-label="Thoth Messenger">
         <img className="brand-image" src={thothLogo} alt="" />
         <span className="rail-wordmark">thoth</span>
       </div>

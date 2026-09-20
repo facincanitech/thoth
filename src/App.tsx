@@ -18,27 +18,26 @@ import { saveCustomWink, type CustomWink } from './lib/customWinks'
 import { registerPushNotifications, setCurrentConversationId, clearAllNotifications } from './lib/pushNotifications'
 import { promptDisableBatteryOptimization, promptFullScreenIntentPermission } from './lib/batteryOpt'
 import { readCache, writeCache } from './lib/cache'
-import { pickTextColor } from './lib/appTheme'
 import { isTauriDesktop } from './lib/platform'
 import { openChatWindow, openPlayWindow } from './lib/desktopWindows'
 import { DesktopTitleBar } from './components/DesktopChrome'
 import './App.css'
 
-type Theme = 'dark' | 'light' | 'contrast' | 'frutiger'
+type Theme = 'dark' | 'light' | 'contrast' | 'frutiger' | 'messenger'
 
 function App() {
   useEffect(() => {
-    document.title = `ThothChat v${APP_VERSION}`
+    document.title = `Thoth Messenger v${APP_VERSION}`
   }, [])
 
   const [theme, setTheme] = useState<Theme>(() => {
     try {
       const saved = localStorage.getItem('ferus-theme')
-      if (saved === 'dark' || saved === 'light' || saved === 'contrast' || saved === 'frutiger') return saved
+      if (saved === 'dark' || saved === 'light' || saved === 'contrast' || saved === 'frutiger' || saved === 'messenger') return saved
     } catch {
       // ignore
     }
-    return 'light'
+    return 'messenger'
   })
 
   useEffect(() => {
@@ -150,39 +149,12 @@ function App() {
     }
   })
   useEffect(() => {
+    // Personalizacao livre de cores/tamanho foi removida (so temas prontos) - limpa
+    // qualquer variavel que uma versao anterior tenha deixado aplicada.
     const root = document.documentElement.style
-    function applyVar(cssVar: string, value: string | null | undefined, textVar?: string) {
-      if (value) {
-        root.setProperty(cssVar, value)
-        if (textVar) {
-          const t = pickTextColor(value)
-          if (t) root.setProperty(textVar, t)
-          else root.removeProperty(textVar)
-        }
-      } else {
-        root.removeProperty(cssVar)
-        if (textVar) root.removeProperty(textVar)
-      }
-    }
-    applyVar('--bg-deep', profile?.app_bg_color, '--text')
-    applyVar('--bg-panel', profile?.app_bg_color)
-    applyVar('--rail-bg', profile?.app_sidebar_color, '--rail-icon')
-    applyVar('--green', profile?.app_button_color, '--on-button')
-    applyVar('--btn-custom', profile?.app_button_color)
-    applyVar('--card-custom', profile?.app_card_color, '--on-card')
-    applyVar('--in-custom', profile?.app_incoming_color, '--on-in')
-    applyVar('--out-custom', profile?.app_outgoing_color, '--on-out')
-    const zoom = profile?.app_text_size === 'small' ? '0.85' : profile?.app_text_size === 'large' ? '1.15' : null
-    applyVar('--ui-zoom', zoom)
-  }, [
-    profile?.app_bg_color,
-    profile?.app_sidebar_color,
-    profile?.app_button_color,
-    profile?.app_card_color,
-    profile?.app_incoming_color,
-    profile?.app_outgoing_color,
-    profile?.app_text_size,
-  ])
+    ;['--bg-deep', '--bg-panel', '--text', '--rail-bg', '--rail-icon', '--green', '--on-button', '--btn-custom', '--card-custom', '--on-card', '--in-custom', '--on-in', '--out-custom', '--on-out', '--ui-zoom']
+      .forEach((v) => root.removeProperty(v))
+  }, [])
 
   const [selected, setSelected] = useState<Conversation | null>(null)
   const restoredSelectedRef = useRef(false)
