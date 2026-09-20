@@ -1986,3 +1986,5 @@ body{
 .play-share-quality button:disabled{opacity:.4;cursor:not-allowed}
 .play-share-menu .google-btn,.play-share-menu .settings-danger-btn{width:100%;margin:0}
 .play-share-notice{margin:8px 16px 0;padding:9px 12px;border-radius:8px;background:var(--bg-selected);border:1px solid var(--line-2);font-size:12.5px;color:var(--text)}
+[data-theme="messenger"] .msn-contacts-window{width:100%;max-width:100%;min-width:0}
+[data-theme="messenger"] .msn-search-row input{min-width:0;max-width:100%}

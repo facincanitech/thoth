@@ -1997,7 +1997,7 @@ export function MainPanel({ me, conversation, onBack, onConversationUpdate, bloc
         <div className="empty">
           <div className="empty-card welcome-card">
             <div className="welcome-emblem"><img src={thothLogo} alt="" /></div>
-            <span className="welcome-eyebrow">THOTHCHAT</span>
+            <span className="welcome-eyebrow">THOTH MESSENGER</span>
             <h2>Toda conversa tem vida.</h2>
             <p>{me ? 'Escolha alguém ao lado. Aqui, até o caminho das palavras faz parte da conversa.' : 'Entre na sua conta. Aqui, até o caminho das palavras faz parte da conversa.'}</p>
             <div className="welcome-features">
