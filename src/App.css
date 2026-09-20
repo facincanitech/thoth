@@ -1850,7 +1850,43 @@ body{
   [data-theme="messenger"] .rail{border-right:0;border-top:1px solid #72c9e9}
 }
 
-/* Lista de contatos estilo MSN (a mesma do desktop) no tema Messenger do web/APK. */
+/* Estrutura padrao da Tela 1 ---------------------------------------------------
+   A hierarquia Frutiger/MSN pertence ao produto, nao ao tema: perfil no topo,
+   busca, avisos, categorias recolhiveis e contatos. No APK a rail fica embaixo;
+   no desktop, na lateral. As skins abaixo alteram somente a aparencia. */
+.msn-contacts-window{height:100%;width:100%;max-width:100%;min-width:0;display:flex;flex:1;flex-direction:column;overflow:hidden;background:var(--bg-panel)}
+.msn-identity-card{flex-shrink:0;min-height:96px;display:flex;align-items:center;gap:12px;padding:calc(14px + env(safe-area-inset-top)) 14px 14px;background:var(--bg-surface-2);border-bottom:1px solid var(--line)}
+.msn-avatar-me,.msn-contact-avatar{overflow:hidden;padding:3px;border:3px solid var(--line-2);border-radius:8px;background:var(--avatar-bg);display:grid;place-items:center;flex:none}
+.msn-avatar-me{width:64px;height:64px}
+.msn-contact-avatar{width:42px;height:42px;padding:2px;border-width:2px}
+.msn-avatar-me img,.msn-contact-avatar img{width:100%;height:100%;object-fit:cover;border-radius:4px}
+.msn-identity-copy{display:flex;flex:1;min-width:0;flex-direction:column}
+.msn-identity-copy strong{font-size:17px;color:var(--text)}
+.msn-presence{margin-top:3px;font-size:12px;color:var(--text-secondary)}
+.msn-mail-button{width:36px;height:36px;display:grid;place-items:center;color:var(--accent-text)}
+.msn-search-row{flex-shrink:0;padding:8px;background:var(--bg-surface);border-bottom:1px solid var(--line)}
+.msn-search-row input{width:100%;min-width:0;max-width:100%;height:34px;padding:0 10px;border:1px solid var(--line-2);background:var(--input);border-radius:4px;font-size:14px;color:var(--text)}
+.msn-notice{flex-shrink:0;padding:7px 11px;background:var(--accent-dim-bg);border-bottom:1px solid var(--line);font-size:12px;color:var(--text)}
+.msn-notice button{border:0;background:none;color:var(--accent-text);text-decoration:underline;padding:0}
+.msn-contact-list{flex:1;min-height:0;overflow:auto;background:var(--bg-panel);padding:4px 6px}
+.msn-contact-list details summary{height:32px;display:flex;align-items:center;gap:5px;font-weight:600;font-size:13px;color:var(--text-secondary);list-style:none;cursor:pointer}
+.msn-contact-list details summary::-webkit-details-marker{display:none}
+.msn-contact-list .msn-contact-group-title small{font-weight:400;color:var(--muted);margin-left:2px}
+.msn-contact-grip{display:none}
+.msn-section-grip{display:flex;align-items:center;color:var(--muted);touch-action:none;flex-shrink:0}
+.msn-section-chevron{display:inline-flex;color:var(--muted);transition:transform .12s ease}
+.msn-section-chevron:not(.open){transform:rotate(-90deg)}
+.msn-contact{width:100%;min-height:58px;display:flex;align-items:center;gap:8px;padding:5px 7px;border:1px solid transparent;background:none;text-align:left;border-radius:4px;color:var(--text)}
+.msn-contact:active{background:var(--bg-selected);border-color:var(--line-2)}
+.msn-contact-info{display:flex;flex:1;min-width:0;flex-direction:column}
+.msn-contact-info strong{font-size:14px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.msn-contact-info small{margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted);font-size:11px}
+.msn-unread{min-width:20px;padding:2px 6px;border-radius:10px;background:var(--green);color:var(--on-button,#fff);text-align:center;font-size:11px;flex-shrink:0}
+.msn-empty{padding:10px 8px;font-size:12px;color:var(--muted)}
+.msn-category-menu-btn{margin-left:auto;border:0;background:none;color:var(--muted);display:flex}
+.msn-new-category-btn{margin:8px;padding:8px;border:1px dashed var(--line-2);background:none;color:var(--text-secondary);border-radius:6px;width:calc(100% - 16px)}
+
+/* Skin Frutiger da estrutura compartilhada. */
 [data-theme="messenger"] .msn-contacts-window{height:100%;display:flex;flex-direction:column;min-height:0;overflow:hidden;background:#fff;flex:1}
 [data-theme="messenger"] .msn-identity-card{
   flex-shrink:0;min-height:96px;display:flex;align-items:center;gap:12px;padding:calc(14px + env(safe-area-inset-top)) 14px 14px;
@@ -2278,6 +2314,71 @@ body{
 [data-theme="wood"] .send,[data-theme="wood"] .send-text{color:#3b210f;background:linear-gradient(#edcf99,#c4914f);box-shadow:0 2px 7px #120703}
 [data-theme="wood"] .theme-option-wood{color:#edc991;border-color:#8c633f;background:linear-gradient(#4b2e1d,#2d190f)}
 [data-theme="wood"] .theme-option-wood.active{color:#3b210f;background:linear-gradient(#efd49f,#c69655);border-color:#f4dfba}
+
+/* Tela 1 compartilhada: skins para a estrutura de mensageiro classico. -------
+   Nenhuma regra daqui muda hierarquia ou navegacao; apenas veste a mesma lista. */
+[data-theme="dark"] .msn-identity-card{background:linear-gradient(145deg,#202b3c,#111823);box-shadow:inset 0 1px #ffffff0d}
+[data-theme="dark"] .msn-search-row{background:#111923}
+[data-theme="dark"] .msn-contact-list{background:linear-gradient(#0f1620,#0b1119)}
+[data-theme="dark"] .msn-contact{border-bottom:1px solid #263244;border-radius:4px}
+[data-theme="dark"] .msn-contact:active{background:#243451;border-color:#40516a}
+[data-theme="dark"] .msn-avatar-me,[data-theme="dark"] .msn-contact-avatar{border-color:#53647b;background:#263447;box-shadow:inset 0 1px #ffffff18,0 2px 5px #0005}
+[data-theme="dark"] .msn-contact-list details summary{color:#c2ccdc}
+
+[data-theme="contrast"] .msn-identity-card{background:#000;border-bottom:2px solid #fff}
+[data-theme="contrast"] .msn-search-row{background:#000;border-bottom:2px solid #fff}
+[data-theme="contrast"] .msn-search-row input{border:2px solid #fff;border-radius:0;background:#000;color:#fff}
+[data-theme="contrast"] .msn-contact-list{background:#000}
+[data-theme="contrast"] .msn-contact{border-bottom:1px solid #fff;border-radius:0}
+[data-theme="contrast"] .msn-contact:active{background:#fff;color:#000}
+[data-theme="contrast"] .msn-contact:active strong,[data-theme="contrast"] .msn-contact:active small{color:#000}
+[data-theme="contrast"] .msn-avatar-me,[data-theme="contrast"] .msn-contact-avatar{border:2px solid #fff;border-radius:0;background:#000}
+
+[data-theme="light"] .msn-contacts-window{background:#fff;border:1px solid #9fb8d4}
+[data-theme="light"] .msn-identity-card{background:linear-gradient(#f8fbff,#d9e6f5);border-bottom:1px solid #9fb8d4}
+[data-theme="light"] .msn-identity-copy strong{color:#315d9b}
+[data-theme="light"] .msn-search-row{background:#e8eff8;border-bottom-color:#9fb8d4}
+[data-theme="light"] .msn-search-row input{border-radius:2px;border-color:#9fb8d4;background:#fff}
+[data-theme="light"] .msn-contact-list{background:#fff;padding:3px 7px}
+[data-theme="light"] .msn-contact-list details summary{color:#315d9b;border-bottom:1px solid #c9d7e7}
+[data-theme="light"] .msn-contact{border-radius:1px;border-bottom:1px solid #e1e8f1}
+[data-theme="light"] .msn-contact:active{background:#e1ebf7;border-color:#b2c9e1}
+[data-theme="light"] .msn-avatar-me,[data-theme="light"] .msn-contact-avatar{border-color:#b1c7df;border-radius:2px;background:#edf3fa;box-shadow:0 1px 3px #315d9b24}
+[data-theme="light"] .msn-unread{border-radius:2px;background:var(--retro-pink)}
+
+[data-theme="cyberpunk"] .msn-contacts-window{background:rgb(7 9 20 / 92%);backdrop-filter:blur(16px)}
+[data-theme="cyberpunk"] .msn-identity-card{background:linear-gradient(135deg,rgb(13 28 48 / 94%),rgb(42 14 55 / 94%));border-bottom-color:#20e7ff;box-shadow:inset 0 -1px #ff3cac66}
+[data-theme="cyberpunk"] .msn-search-row{background:#090c1df2;border-bottom-color:#253b68}
+[data-theme="cyberpunk"] .msn-search-row input{color:#f4f7ff;background:#080d20;border-color:#20e7ff;border-radius:0;box-shadow:0 0 10px #20e7ff20}
+[data-theme="cyberpunk"] .msn-contact-list{background:linear-gradient(rgb(5 7 16 / 88%),rgb(11 8 25 / 94%)),url('/themes/cyberpunk-city.png') center bottom/cover fixed}
+[data-theme="cyberpunk"] .msn-contact-list details summary{color:#20e7ff;text-shadow:0 0 7px #20e7ff77}
+[data-theme="cyberpunk"] .msn-contact{border-radius:0;border-bottom:1px solid #25305a}
+[data-theme="cyberpunk"] .msn-contact:active{background:#182b4d;border-color:#20e7ff}
+[data-theme="cyberpunk"] .msn-avatar-me,[data-theme="cyberpunk"] .msn-contact-avatar{border-radius:0;border-color:#20e7ff;background:#101329;box-shadow:0 0 10px #20e7ff55}
+[data-theme="cyberpunk"] .msn-unread{border-radius:0;color:#110518;background:#ff3cac;box-shadow:0 0 8px #ff3cac88}
+
+[data-theme="matrix"] .msn-contacts-window{background:#010502}
+[data-theme="matrix"] .msn-identity-card{background:linear-gradient(#06170b,#020904);border-bottom-color:#20df50;box-shadow:inset 0 -1px #36ff6744}
+[data-theme="matrix"] .msn-search-row{background:#020904;border-bottom-color:#125224}
+[data-theme="matrix"] .msn-search-row input{color:#caffd4;-webkit-text-fill-color:#caffd4;background:#010502;border-color:#167435;border-radius:0;box-shadow:inset 0 0 8px #000}
+[data-theme="matrix"] .msn-search-row input::placeholder{color:#5ca66d;opacity:1}
+[data-theme="matrix"] .msn-contact-list{background:repeating-linear-gradient(0deg,#010502 0,#010502 35px,#07190b 36px)}
+[data-theme="matrix"] .msn-contact-list details summary{color:#43ff6d;text-shadow:0 0 6px #18d94a66}
+[data-theme="matrix"] .msn-contact{border-radius:0;border-bottom:1px solid #0d4820}
+[data-theme="matrix"] .msn-contact:active{background:#092d12;border-color:#35ff65}
+[data-theme="matrix"] .msn-avatar-me,[data-theme="matrix"] .msn-contact-avatar{border-radius:0;border-color:#20df50;background:#05170a;box-shadow:0 0 8px #20df5044}
+[data-theme="matrix"] .msn-unread{border-radius:0;color:#001707;background:#36ff67;box-shadow:0 0 8px #20df5077}
+
+[data-theme="wood"] .msn-contacts-window{background:rgb(37 20 12 / 96%)}
+[data-theme="wood"] .msn-identity-card{background:linear-gradient(rgb(82 48 29 / 94%),rgb(42 22 13 / 97%)),url('/themes/walnut-grain.png') center/420px auto;border-bottom:2px solid #b9874f;box-shadow:inset 0 1px #f2d2a744}
+[data-theme="wood"] .msn-search-row{background:#2a160d;border-bottom-color:#795438}
+[data-theme="wood"] .msn-search-row input{color:#f5e4c9;background:#1d0f08;border-color:#8b613f;border-radius:4px;box-shadow:inset 0 2px 5px #0e0603}
+[data-theme="wood"] .msn-contact-list{background:linear-gradient(rgb(36 18 10 / 83%),rgb(25 12 7 / 91%)),url('/themes/walnut-grain.png') center/420px auto}
+[data-theme="wood"] .msn-contact-list details summary{color:#efc47f;text-shadow:0 1px #160a05}
+[data-theme="wood"] .msn-contact{border-radius:4px;border-bottom:1px solid #624128}
+[data-theme="wood"] .msn-contact:active{background:#553721;border-color:#b9874f}
+[data-theme="wood"] .msn-avatar-me,[data-theme="wood"] .msn-contact-avatar{border-radius:4px;border-color:#b18455;background:#4b2e1d;box-shadow:0 2px 5px #120703}
+[data-theme="wood"] .msn-unread{color:#3b210f;background:linear-gradient(#efd49f,#c69655);box-shadow:0 1px 4px #13080399}
 
 /* As opcoes continuam reconheciveis mesmo antes do proprio tema estar ativo. */
 .theme-option-matrix{color:#22b94b;border-color:#1d7132;background:#07160b}

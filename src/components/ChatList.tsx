@@ -16,7 +16,6 @@ import { checkForUpdate } from '../lib/updateCheck'
 import { downloadAndInstallUpdate } from '../lib/appUpdate'
 import { downloadAndInstallDesktopUpdate } from '../lib/desktopUpdate'
 import { isTauriDesktop } from '../lib/platform'
-import { useDesktopLayout } from '../lib/useDesktopLayout'
 import { startDesktopGoogleLogin } from '../lib/desktopLogin'
 import { getPresenceColor } from '../lib/presence'
 import { playMessageSound } from '../lib/notificationSound'
@@ -278,7 +277,6 @@ export function ChatList({
   onOpenGroupsTip,
   onRequestInviteDemo,
 }: Props) {
-  const desktopLayout = useDesktopLayout()
   const [conversations, setConversations] = useState<ConvWithLabel[]>(() => {
     const lastUserId = (() => {
       try {
@@ -1290,7 +1288,9 @@ export function ChatList({
   }
 
   async function loadContactCategories() {
-    if (!me || !(desktopLayout || theme === 'messenger')) return
+    // Categorias fazem parte da estrutura padrao da lista de contatos em todas
+    // as plataformas e temas; tema deve mudar apenas a aparencia.
+    if (!me) return
     const { data: cats } = await supabase.from('contact_categories').select('*').eq('user_id', me.id).order('position', { ascending: true })
     setContactCategories((cats || []) as ContactCategory[])
     const ids = (cats || []).map((c) => c.id as string)
@@ -1803,8 +1803,9 @@ export function ChatList({
     )
   }
 
-  // Lista de contatos estilo MSN (desktop) tambem no web/APK quando o tema e "Messenger".
-  const useMsnList = desktopLayout || theme === 'messenger'
+  // Estrutura oficial do Thoth: lista Frutiger/MSN em todas as skins.
+  // No APK a navegacao continua embaixo; no desktop continua na lateral.
+  const useMsnList = true
   let desktopContactsSurface: ReactNode = null
   if (useMsnList) {
     const sortByChatOrder = <T extends { id: string }>(items: T[]): T[] => {
