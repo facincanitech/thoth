@@ -13,8 +13,8 @@ android {
         applicationId "com.facincanitech.flux"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 313
-        versionName "1.3.313"
+        versionCode 314
+        versionName "1.3.314"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.

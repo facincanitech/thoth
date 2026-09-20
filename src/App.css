@@ -1888,3 +1888,10 @@ body{
   .play-app-shell.play-focus .play-icon-rail,.play-app-shell.play-focus .play-group-topbar{display:none}
   .play-text-channel-header{display:none}
 }
+
+/* Paineis do Play (perfil, config) seguem o tema proprio do Play, nao o tema geral do app */
+.play-app-shell .new-conv-panel{background:var(--bg-panel);color:var(--text)}
+.play-app-shell .new-conv-header{color:var(--text)}
+@media(max-width:760px){
+  .play-home-header .icon-btn{display:none}
+}
