@@ -2209,7 +2209,6 @@ function GroupInfoPanel({ group, myRole, members, me, can, channels, categories,
   const [bans, setBans] = useState<{ user_id: string; profile?: Profile }[]>([])
   const [roles, setRoles] = useState<PlayRole[]>([])
   const [roleMemberIds, setRoleMemberIds] = useState<Record<string, string[]>>({})
-  const [roleChannelIds, setRoleChannelIds] = useState<Record<string, string[]>>({})
   const [expandedRoleId, setExpandedRoleId] = useState<string | null>(null)
   const [newRoleName, setNewRoleName] = useState('')
   const [newRoleEmoji, setNewRoleEmoji] = useState('')
@@ -2246,7 +2245,7 @@ function GroupInfoPanel({ group, myRole, members, me, can, channels, categories,
     const { data: roleRows } = await supabase.from('play_roles').select('*').eq('group_id', group.id).order('position', { ascending: true })
     const roleList = (roleRows || []) as PlayRole[]
     setRoles(roleList)
-    if (!roleList.length) { setRoleMemberIds({}); setRoleChannelIds({}); return }
+    if (!roleList.length) { setRoleMemberIds({}); return }
     const roleIds = roleList.map((r) => r.id)
     const { data: rm } = await supabase.from('play_role_members').select('role_id, user_id').in('role_id', roleIds)
     const memberMap: Record<string, string[]> = {}
@@ -2255,13 +2254,6 @@ function GroupInfoPanel({ group, myRole, members, me, can, channels, categories,
       memberMap[rId] = [...(memberMap[rId] || []), row.user_id as string]
     }
     setRoleMemberIds(memberMap)
-    const { data: ca } = await supabase.from('play_channel_role_access').select('role_id, channel_id').in('role_id', roleIds)
-    const channelMap: Record<string, string[]> = {}
-    for (const row of ca || []) {
-      const rId = row.role_id as string
-      channelMap[rId] = [...(channelMap[rId] || []), row.channel_id as string]
-    }
-    setRoleChannelIds(channelMap)
   }
 
   useEffect(() => {
@@ -2386,16 +2378,6 @@ function GroupInfoPanel({ group, myRole, members, me, can, channels, categories,
     } else {
       await supabase.from('play_role_members').insert({ role_id: roleId, user_id: userId })
       setRoleMemberIds((prev) => ({ ...prev, [roleId]: [...(prev[roleId] || []), userId] }))
-    }
-  }
-
-  async function toggleRoleChannel(roleId: string, channelId: string, has: boolean) {
-    if (has) {
-      await supabase.from('play_channel_role_access').delete().eq('role_id', roleId).eq('channel_id', channelId)
-      setRoleChannelIds((prev) => ({ ...prev, [roleId]: (prev[roleId] || []).filter((id) => id !== channelId) }))
-    } else {
-      await supabase.from('play_channel_role_access').insert({ role_id: roleId, channel_id: channelId })
-      setRoleChannelIds((prev) => ({ ...prev, [roleId]: [...(prev[roleId] || []), channelId] }))
     }
   }
 
@@ -2667,7 +2649,7 @@ function GroupInfoPanel({ group, myRole, members, me, can, channels, categories,
               {showRoleEmojiPicker && (
                 <>
                   <div className="play-group-menu-backdrop" onClick={() => setShowRoleEmojiPicker(false)} />
-                  <div className="emoji-picker" style={{ top: '110%', left: 0 }}>
+                  <div className="emoji-picker play-role-emoji-picker">
                     {ROLE_EMOJIS.map((em) => (
                       <button key={em} type="button" onClick={() => { setNewRoleEmoji(em); setShowRoleEmojiPicker(false) }}>{em}</button>
                     ))}
@@ -2681,7 +2663,6 @@ function GroupInfoPanel({ group, myRole, members, me, can, channels, categories,
           {roles.length === 0 && <p className="play-empty">nenhum cargo criado ainda</p>}
           {roles.map((role) => {
             const memberIds = new Set(roleMemberIds[role.id] || [])
-            const channelIds = new Set(roleChannelIds[role.id] || [])
             const expanded = expandedRoleId === role.id
             return (
               <div key={role.id} className="play-role-block">
@@ -2706,19 +2687,6 @@ function GroupInfoPanel({ group, myRole, members, me, can, channels, categories,
                         Configurar cargo
                       </button>
                     )}
-
-                    <label style={{ marginTop: 14 }}>Canais visíveis (nenhum marcado = visível pra todo mundo)</label>
-                    {categories.map((cat) => (
-                      <div key={cat.id}>
-                        <span className="play-role-cat-label">{cat.name}</span>
-                        {channels.filter((c) => c.category_id === cat.id).map((c) => (
-                          <label key={c.id} className="play-role-check-row">
-                            <input type="checkbox" checked={channelIds.has(c.id)} onChange={() => toggleRoleChannel(role.id, c.id, channelIds.has(c.id))} />
-                            {c.kind === 'text' ? <IconHash size={13} /> : <IconVideo size={13} />} {c.name}
-                          </label>
-                        ))}
-                      </div>
-                    ))}
 
                     {canManageRoles && <button type="button" className="settings-danger-btn" style={{ marginTop: 18 }} onClick={() => deleteRole(role.id)}>Excluir cargo</button>}
                   </div>

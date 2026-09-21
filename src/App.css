@@ -2483,3 +2483,7 @@ html .desktop-window-shell.desktop-web-shell{border:0;border-radius:0;box-shadow
 .play-channel-kind-option input[type="radio"]{margin-top:2px}
 .play-channel-modal input:not([type="checkbox"]):not([type="radio"]){width:100%;box-sizing:border-box}
 .play-channel-modal .play-role-check-row{padding:7px 2px}
+
+/* seletor de emoji do "criar cargo": popup centralizado (absolute dentro do painel com scroll ficava minusculo) */
+.emoji-picker.play-role-emoji-picker{position:fixed;left:50%;top:50%;bottom:auto;right:auto;transform:translate(-50%,-50%);width:min(340px,90vw);max-width:none;max-height:min(380px,70dvh);z-index:200;justify-content:flex-start}
+.play-role-emoji-picker button{width:40px;height:40px;display:grid;place-items:center}
