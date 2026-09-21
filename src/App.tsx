@@ -25,6 +25,7 @@ import { useHeartbeat } from './lib/useHeartbeat'
 import { ensureCallWindow, openChatWindow, openPlayWindow, requestCall } from './lib/desktopWindows'
 import { DesktopTitleBar } from './components/DesktopChrome'
 import { showDesktopToast } from './lib/desktopToast'
+import { applyCommunityTheme, type StoreItem } from './lib/store'
 import './App.css'
 
 type Theme = 'dark' | 'light' | 'contrast' | 'frutiger' | 'messenger' | 'cyberpunk' | 'matrix' | 'wood'
@@ -173,6 +174,30 @@ function App() {
       return null
     }
   })
+
+  useEffect(() => {
+    if (!profile) { applyCommunityTheme(null); return }
+    let cancelled = false
+    async function syncStorePreferences() {
+      const { data: preferences } = await supabase.from('store_preferences').select('*').eq('user_id', profile!.id).maybeSingle()
+      if (cancelled || !preferences) return
+      const ids = [preferences.active_theme_id, preferences.message_sound_id, preferences.nudge_sound_id].filter(Boolean) as string[]
+      if (!ids.length) { applyCommunityTheme(null); return }
+      const { data } = await supabase.from('store_items').select('*').in('id', ids)
+      if (cancelled) return
+      const items = (data || []) as StoreItem[]
+      applyCommunityTheme(items.find((item) => item.id === preferences.active_theme_id) || null)
+      const messageSound = items.find((item) => item.id === preferences.message_sound_id)
+      const nudgeSound = items.find((item) => item.id === preferences.nudge_sound_id)
+      if (messageSound?.asset_url) localStorage.setItem('thoth-message-sound', messageSound.asset_url)
+      if (nudgeSound?.asset_url) localStorage.setItem('thoth-nudge-sound', nudgeSound.asset_url)
+    }
+    syncStorePreferences()
+    const channel = supabase.channel(`store-preferences:${profile.id}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'store_preferences', filter: `user_id=eq.${profile.id}` }, syncStorePreferences)
+      .subscribe()
+    return () => { cancelled = true; supabase.removeChannel(channel) }
+  }, [profile?.id])
   useEffect(() => {
     // Personalizacao livre de cores/tamanho foi removida (so temas prontos) - limpa
     // qualquer variavel que uma versao anterior tenha deixado aplicada.

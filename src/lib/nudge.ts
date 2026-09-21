@@ -2,7 +2,8 @@ let nudgeAudio: HTMLAudioElement | null = null
 
 export function playNudgeSound() {
   try {
-    if (!nudgeAudio) nudgeAudio = new Audio(`${import.meta.env.BASE_URL}sounds/nudge.mp3`)
+    const selected = localStorage.getItem('thoth-nudge-sound')
+    if (!nudgeAudio || (selected && nudgeAudio.src !== selected)) nudgeAudio = new Audio(selected || `${import.meta.env.BASE_URL}sounds/nudge.mp3`)
     nudgeAudio.currentTime = 0
     nudgeAudio.play().catch(() => {})
   } catch {

@@ -8,6 +8,7 @@ import { uploadImage } from '../lib/uploadImage'
 import { displayName } from '../lib/displayName'
 import { AvatarBox } from './AvatarBox'
 import { NotificationCenter } from './NotificationCenter'
+import { ThothStore } from './ThothStore'
 import { StatusView } from './StatusView'
 import { StyledName, NAME_FONTS, NAME_EFFECTS, PRISM_PALETTES } from './StyledName'
 import { readCache, writeCache } from '../lib/cache'
@@ -25,6 +26,7 @@ import {
   IconArrowLeft,
   IconBellOff,
   IconChevronDown,
+  IconDownload,
   IconEdit,
   IconGrip,
   IconPaint,
@@ -42,7 +44,7 @@ import {
 } from './icons'
 import type { Community, ContactCategory, Conversation, PanelView, Profile } from '../types'
 
-type AccountView = 'root' | 'profile' | 'appearance' | 'account' | 'privacy' | 'blocked' | 'terms' | 'privacy-policy'
+type AccountView = 'root' | 'profile' | 'appearance' | 'store' | 'account' | 'privacy' | 'blocked' | 'terms' | 'privacy-policy'
 
 export type GroupsView =
   | 'group-root' | 'group-create' | 'group-search' | 'group-trending' | 'group-mine'
@@ -629,13 +631,25 @@ export function ChatList({
   const bannerInputRef = useRef<HTMLInputElement>(null)
   const bannerPreviewRef = useRef<HTMLDivElement>(null)
   const bannerDragRef = useRef<{ startX: number; startY: number; startPosX: number; startPosY: number } | null>(null)
+  const loadConversationsRetries = useRef(0)
   async function loadConversations() {
     if (!me) return
-    const { data: memberRows } = await supabase
+    const { data: memberRows, error: memberError } = await supabase
       .from('conversation_members')
       .select('role, conversation:conversations(*), is_favorite, favorited_at, archived_at, muted, manually_unread, deleted_at')
       .eq('user_id', me.id)
       .is('deleted_at', null)
+    if (memberError) {
+      // Falha temporaria (Supabase instavel, JWT recusado, sem rede): NAO limpa a lista nem o cache local - antes
+      // ela virava vazia e os contatos "sumiam" ate o proximo reload bem-sucedido. Tenta de novo com espera crescente.
+      console.error('load conversations failed', memberError)
+      if (loadConversationsRetries.current < 6) {
+        loadConversationsRetries.current += 1
+        setTimeout(() => { loadConversations() }, 3000 * loadConversationsRetries.current)
+      }
+      return
+    }
+    loadConversationsRetries.current = 0
 
     // grupos dedicados (com role) so aparecem em "ThothChat - Grupos", nao na lista de conversas
     const myRows = (memberRows || []).filter((r) => !r.role)
@@ -1286,10 +1300,11 @@ export function ChatList({
 
   async function loadMyCommunities() {
     if (!me) return
-    const { data } = await supabase
+    const { data, error: communitiesError } = await supabase
       .from('community_members')
       .select('community:communities(*)')
       .eq('user_id', me.id)
+    if (communitiesError) { console.error('load my communities failed', communitiesError); return }
     setMyCommunities(
       (data || [])
         .map((row) => row.community as unknown as Community)
@@ -1726,6 +1741,8 @@ export function ChatList({
         ? 'Conta'
         : accountView === 'appearance'
           ? 'Aparência'
+        : accountView === 'store'
+          ? 'Loja Thoth'
         : accountView === 'account'
           ? 'Configurações'
           : accountView === 'privacy'
@@ -2648,6 +2665,13 @@ export function ChatList({
                   <div className="option-subtitle">Cor ou imagem de fundo do seu perfil</div>
                 </div>
               </div>
+              <div className="new-conv-option" onClick={() => setAccountView('store')}>
+                <div className="option-icon"><IconDownload size={20} /></div>
+                <div>
+                  <div>Loja Thoth</div>
+                  <div className="option-subtitle">Temas, sons, winks, stickers, emojis e bots</div>
+                </div>
+              </div>
               <div className="new-conv-option" onClick={() => setAccountView('account')}>
                 <div className="option-icon"><IconKey size={20} /></div>
                 <div>
@@ -2724,6 +2748,8 @@ export function ChatList({
             {accountSaving && <span style={{ fontSize: '.75rem', color: '#8696a0', marginTop: 8 }}>salvando...</span>}
           </div>
         )}
+
+        {accountView === 'store' && me && <ThothStore me={me} />}
 
         {accountView === 'appearance' && me && (
           <div className="new-conv-form">
