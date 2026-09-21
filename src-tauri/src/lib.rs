@@ -12,7 +12,7 @@ fn download_and_run_installer(url: String) -> Result<(), String> {
     }
     let safe_url = url.replace('\'', "");
     let script = format!(
-      "$ErrorActionPreference='Stop'; $p=Join-Path $env:TEMP 'ThothMessenger-Update.exe';        [Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12;        Invoke-WebRequest -UseBasicParsing -Uri '{}' -OutFile $p;        Stop-Process -Id {} -Force -ErrorAction SilentlyContinue; Start-Process $p",
+      "$ErrorActionPreference='Stop'; $p=Join-Path $env:TEMP 'ThothMessenger-Update.exe';        [Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12;        Invoke-WebRequest -UseBasicParsing -Uri '{}' -OutFile $p;        Stop-Process -Id {} -Force -ErrorAction SilentlyContinue; Start-Process $p -ArgumentList '/UPDATE'",
       safe_url,
       std::process::id()
     );
