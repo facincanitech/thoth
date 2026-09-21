@@ -1648,11 +1648,6 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
             <aside
               className="play-channel-sidebar"
               style={sidebarWidth ? { width: sidebarWidth } : undefined}
-              onContextMenu={(e) => {
-                if (!canManage || (e.target as HTMLElement).closest('.play-channel-group-title, .play-channel-item, .play-channel-voice-member, .play-group-menu, .play-group-menu-backdrop')) return
-                e.preventDefault()
-                setShowNewCategory(true)
-              }}
             >
               {categories.slice().sort((a, b) => a.position - b.position).map((cat) => (
                 <div
@@ -2152,22 +2147,28 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
 
       {showNewCategory && (
         <div className="modal-backdrop" onClick={() => setShowNewCategory(false)}>
-          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+          <div className="modal-card play-channel-modal" onClick={(e) => e.stopPropagation()}>
             <h2>Criar categoria</h2>
-            <input placeholder="Nome da categoria" value={newCategoryName} onChange={(e) => setNewCategoryName(e.target.value)} />
-            <button type="button" className="google-btn" style={{ marginTop: 10 }} onClick={createCategory}>Criar</button>
-            <button type="button" className="modal-close" onClick={() => setShowNewCategory(false)}>fechar</button>
+            <label className="play-channel-modal-label">Nome da categoria</label>
+            <input autoFocus placeholder="Nome da categoria" value={newCategoryName} onChange={(e) => setNewCategoryName(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') createCategory() }} />
+            <div className="play-channel-modal-actions">
+              <button type="button" className="modal-close" onClick={() => setShowNewCategory(false)}>Cancelar</button>
+              <button type="button" className="google-btn" style={{ width: 'auto' }} onClick={createCategory}>Criar</button>
+            </div>
           </div>
         </div>
       )}
 
       {renameCategoryId && (
         <div className="modal-backdrop" onClick={() => setRenameCategoryId(null)}>
-          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+          <div className="modal-card play-channel-modal" onClick={(e) => e.stopPropagation()}>
             <h2>Renomear categoria</h2>
-            <input placeholder="Nome da categoria" value={renameCategoryDraft} onChange={(e) => setRenameCategoryDraft(e.target.value)} />
-            <button type="button" className="google-btn" style={{ marginTop: 10 }} onClick={renameCategory}>Salvar</button>
-            <button type="button" className="modal-close" onClick={() => setRenameCategoryId(null)}>fechar</button>
+            <label className="play-channel-modal-label">Nome da categoria</label>
+            <input autoFocus placeholder="Nome da categoria" value={renameCategoryDraft} onChange={(e) => setRenameCategoryDraft(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') renameCategory() }} />
+            <div className="play-channel-modal-actions">
+              <button type="button" className="modal-close" onClick={() => setRenameCategoryId(null)}>Cancelar</button>
+              <button type="button" className="google-btn" style={{ width: 'auto' }} onClick={renameCategory}>Salvar</button>
+            </div>
           </div>
         </div>
       )}
