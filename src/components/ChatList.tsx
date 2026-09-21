@@ -1868,8 +1868,12 @@ export function ChatList({
         >
           <IconGrip size={12} />
         </span>
-        <AvatarBox src={avatarUrl} id={id} fallbackLetter={label[0]?.toUpperCase()} className="msn-contact-avatar" />
-        {presence && <span className={`presence-dot ${getPresenceColor(presence.lastSeenAt, presence.isIdle)}`} />}
+        <AvatarBox
+          src={avatarUrl}
+          id={id}
+          fallbackLetter={label[0]?.toUpperCase()}
+          className={`msn-contact-avatar${presence ? ` presence-${getPresenceColor(presence.lastSeenAt, presence.isIdle)}` : ''}`}
+        />
         <div className="msn-contact-info">
           <strong>{label}</strong>
         </div>

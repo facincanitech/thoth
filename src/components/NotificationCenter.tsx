@@ -124,7 +124,9 @@ export function NotificationCenter({ onOpenAppearance, onOpenStatus, onOpenCommu
     tip.onClick()
   }
 
-  const hasBadge = !!updateVersion || pendingTips.length > 0
+  // O ponto no sininho significa exclusivamente "ha uma versao nova".
+  // Dicas continuam acessiveis no painel, mas nao simulam uma atualizacao.
+  const hasBadge = !!updateVersion
 
   return (
     <div style={{ position: 'relative' }}>

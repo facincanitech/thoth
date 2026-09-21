@@ -76,17 +76,11 @@
   box-shadow:inset 0 1px #fff,0 2px 5px rgb(0 67 99 / 42%);
 }
 .desktop-window-shell .rail-account .avatar-sm img{border-radius:4px}
-/* Moldura "vidro" MSN - 1 contorno so (sem outline por fora, so o border com
-   gradiente de vidro por baixo), azul por padrao (neutro, sem presenca), muda
-   pra verde/vermelho quando o avatar tem um .presence-dot irmao. !important
-   neutraliza qualquer borderColor inline (cor de nome customizada) que so faz
-   sentido no mobile/web - no desktop a moldura eh sempre sobre presenca, nunca
-   sobre nome. */
+/* Moldura "vidro" MSN neutra. Presenca nao usa bolinhas nem troca a cor da
+   moldura: online/AFK fica 100% visivel e offline fica com 50% de opacidade. */
 .photo,.header-photo,.avatar-sm,.msn-avatar-frame,.msn-contact-avatar,.msn-avatar-me{overflow:hidden;padding:3px;border:3px solid #42acd2!important;border-radius:8px;background:linear-gradient(145deg,#f1feff,#6dd3ec 43%,#0788ba);box-shadow:inset 0 2px 2px #ffffffe6,inset 0 -2px 4px #06537847,0 2px 5px #0e4d693d}.photo{width:42px;height:42px}.header-photo{width:61px;height:61px}.photo img,.header-photo img,.avatar-sm img{width:100%;height:100%;object-fit:cover;border-radius:4px}
-.photo:has(+ .presence-dot.online),.header-photo:has(+ .presence-dot.online),.avatar-sm:has(+ .presence-dot.online),.msn-contact-avatar:has(+ .presence-dot.online){border-color:#73b923!important;background:linear-gradient(145deg,#f7ffd8,#a9dd49 42%,#4c990f)}
-.photo:has(+ .presence-dot.afk),.header-photo:has(+ .presence-dot.afk),.avatar-sm:has(+ .presence-dot.afk),.msn-contact-avatar:has(+ .presence-dot.afk){border-color:#e0a020!important;background:linear-gradient(145deg,#fff9d6,#f0c355 42%,#c98d0c)}
-.photo:has(+ .presence-dot.offline),.header-photo:has(+ .presence-dot.offline),.avatar-sm:has(+ .presence-dot.offline),.msn-contact-avatar:has(+ .presence-dot.offline),.photo:has(+ .presence-dot:not(.online):not(.afk)),.header-photo:has(+ .presence-dot:not(.online):not(.afk)),.msn-contact-avatar:has(+ .presence-dot:not(.online):not(.afk)){border-color:#fff!important;background:linear-gradient(145deg,#fff,#eef4f6 48%,#cbd9df);box-shadow:inset 0 2px 2px #fff,inset 0 -2px 4px #78909c47,0 2px 5px #0e4d693d}
-.msn-contact-avatar:has(+ .presence-dot.offline) img,.desktop-chat-shell .header-photo:has(+ .presence-dot.offline) img,.msn-contact-avatar:has(+ .presence-dot:not(.online):not(.afk)) img,.desktop-chat-shell .header-photo:has(+ .presence-dot:not(.online):not(.afk)) img{opacity:.5}
+.presence-online,.presence-afk{opacity:1}
+.presence-offline{opacity:.5}
 .desktop-chat-shell .main{width:100%;display:flex}.chat-header{min-height:96px;padding:13px 17px;background:radial-gradient(circle at 82% -35%,#fff,transparent 48%),linear-gradient(#effaff,#cae9f5);border-bottom:1px solid #8ab8cb;color:#123d57}.header-name{font-size:17px;display:flex;align-items:center;flex-wrap:wrap;gap:8px}.header-status-phrase{font-size:12px;font-weight:400;font-style:italic;color:#4b7286}.header-actions{align-self:stretch;align-items:center}.messages{padding:17px 20px;background:#fff}.desktop-chat-shell .message.in{justify-content:flex-start;margin:0 0 16px}.desktop-chat-shell .message.out{justify-content:flex-end;margin:0 0 16px}.desktop-chat-shell .bubble{max-width:100%;padding:0;background:transparent!important;border:0!important;box-shadow:none!important;color:#183952}.author-label{color:#1673a1!important;font-weight:bold}.out .author-label{color:#5d941a!important}.composer{min-height:136px;padding:0;background:#f3fafc;border-top:1px solid #91b9cb;color:#123d57;flex-direction:column;align-items:stretch;flex-wrap:nowrap}.composer-icons{order:-1;width:100%;padding:4px 8px;border:0;border-bottom:1px solid #a7c8d7;border-radius:0;background:linear-gradient(#fafefe,#dfedf4)}.composer-input-row{padding:9px}.input{min-height:78px;border:1px solid #80afc4;border-radius:0;background:#fff}.send,.send-text{border:1px solid #408507;border-radius:3px;background:linear-gradient(#a7e94c,#65b417 52%,#4b960e);color:#fff}.compose-btn{color:#4b7286}.compose-btn:hover{background:rgb(255 255 255 / 70%);color:#0069a6}.compose-btn.active{background:linear-gradient(#a8e0f7,#79c3e8)!important;color:#08425e!important;box-shadow:inset 0 1px 3px rgb(0 55 82 / 35%)}.compose-btn.recording{background:linear-gradient(#f7b3ad,#e0574a)!important;color:#fff!important}.compose-btn.active[title="Chamar atenção"]{background:linear-gradient(#ffe488,#e0a812)!important;color:#5c3c05!important}.icon-btn{color:#123d57}
 .emoji-picker,.wink-picker,.attach-menu,.request-menu,.filter-popup,.modal-card,.profile-popup{border:1px solid #6fa5be;border-radius:5px;background:linear-gradient(#fff,#e2f2f8);box-shadow:0 6px 18px #00375247}.emoji-picker button,.wink-picker-grid button{border:1px solid transparent;background:#fff}.nudge-btn,.compose-btn[title="Chamar atenção"]{border-color:#d59721!important;background:linear-gradient(#fff9c7,#f6d55c)!important;color:#95600a!important}
 /* reservas para componentes MSN que serao ligados depois */
@@ -238,10 +232,6 @@
   .window-controls button{border-left-color:#ffffff26}
   .window-controls button:hover{background:#ffffff1a}
 }
-
-/* Presenca via moldura do avatar - a bolinha verde/vermelha some, o esquema de
-   cor por presenca fica todo na regra unificada da moldura de vidro la em cima. */
-.presence-dot{display:none}
 
 /* Thoth Play - layout exclusivo da janela Tauri. A estrutura e a logica ficam
    no componente compartilhado; aqui entram somente layout e os temas claro /

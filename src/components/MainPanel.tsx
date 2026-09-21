@@ -2024,7 +2024,7 @@ export function MainPanel({ me, conversation, onBack, onConversationUpdate, bloc
           }}
         >
           <div
-            className="header-photo"
+            className={`header-photo${otherMember ? ` presence-${getPresenceColor(otherMember.last_seen_at, otherMember.is_idle)}` : ''}`}
             style={{
               overflow: 'hidden',
               borderColor: otherMember?.name_style_color || 'transparent',
@@ -2044,9 +2044,6 @@ export function MainPanel({ me, conversation, onBack, onConversationUpdate, bloc
               title[0]?.toUpperCase()
             )}
           </div>
-          {otherMember && (
-            <span className={`presence-dot ${getPresenceColor(otherMember.last_seen_at, otherMember.is_idle)}`} />
-          )}
         </div>
         <div className="header-text">
           <div
