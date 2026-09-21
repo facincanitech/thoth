@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Capacitor } from '@capacitor/core'
 import { IconBell } from './icons'
 import { checkForUpdate } from '../lib/updateCheck'
@@ -29,6 +29,7 @@ export function NotificationCenter({ onOpenAppearance, onOpenStatus, onOpenCommu
   const [updating, setUpdating] = useState(false)
   const [updateError, setUpdateError] = useState<string | null>(null)
   const [visited, setVisited] = useState<Record<string, boolean>>({})
+  const checkingUpdateRef = useRef(false)
 
   function readVisited() {
     const keys = ['ferus-visited-appearance', 'ferus-visited-chat-config', 'ferus-visited-groups', 'ferus-visited-status']
@@ -47,22 +48,37 @@ export function NotificationCenter({ onOpenAppearance, onOpenStatus, onOpenCommu
     readVisited()
   }, [])
 
-  function recheckUpdate() {
+  const recheckUpdate = useCallback(async () => {
     if (!Capacitor.isNativePlatform() && !isTauriDesktop) return
-    checkForUpdate(APP_VERSION).then((info) => {
+    if (checkingUpdateRef.current) return
+    checkingUpdateRef.current = true
+    try {
+      const info = await checkForUpdate(APP_VERSION)
       setUpdateVersion(info.available ? info.version || null : null)
-    })
-  }
+    } finally {
+      checkingUpdateRef.current = false
+    }
+  }, [])
 
   useEffect(() => {
     recheckUpdate()
-  }, [])
+    const interval = window.setInterval(recheckUpdate, 30 * 60 * 1000)
+    const onFocus = () => recheckUpdate()
+    const onVisibility = () => { if (!document.hidden) recheckUpdate() }
+    window.addEventListener('focus', onFocus)
+    document.addEventListener('visibilitychange', onVisibility)
+    return () => {
+      window.clearInterval(interval)
+      window.removeEventListener('focus', onFocus)
+      document.removeEventListener('visibilitychange', onVisibility)
+    }
+  }, [recheckUpdate])
 
   useEffect(() => {
     if (!open) return
     recheckUpdate()
     readVisited()
-  }, [open])
+  }, [open, recheckUpdate])
 
   async function handleUpdateClick() {
     setUpdateError(null)
