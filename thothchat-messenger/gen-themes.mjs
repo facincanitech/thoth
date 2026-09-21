@@ -1,5 +1,6 @@
 // Gera as variacoes de tema do Messenger DESKTOP a partir do skin base (thothmessenger.css = Frutiger Aero).
-// A estrutura/layout e a mesma do skin - so as cores mudam (mapeamento HSL de toda cor do arquivo).
+// A estrutura/layout e sempre a mesma. O HSL cria uma base e cada skin recebe
+// acabamento proprio depois, seguindo a mesma direcao artistica dos temas do APK.
 // Rode: node thothchat-messenger/gen-themes.mjs  (o build:tauri ja roda isso).
 import fs from 'node:fs'
 import path from 'node:path'
@@ -57,6 +58,21 @@ const themes = {
 }
 
 const extras = {
+  dark: `
+:root{--bg-deep:#090d13;--bg-panel:#101720;--bg-surface:#17212e;--bg-surface-2:#1c2938;--bg-selected:#24354a;--line:#2d3b4e;--line-2:#40526a;--text:#eef4ff;--text-base:#eef4ff;--text-secondary:#b9c6d8;--muted:#7f90a6;--accent-text:#65bdec;--input:#0d141e;--rail-bg:#111a25;--rail-icon:#bdc9da;--green:#56b7e9;--on-button:#07131c}
+html,body,#root{background:#070b10!important;color:#eef4ff!important}
+.desktop-window-shell{background:#0b1018!important;border-color:#34475e!important;box-shadow:inset 0 0 0 1px #ffffff0b,0 18px 45px #0009!important}
+.titlebar{background:linear-gradient(#182332,#0b111a)!important;border-bottom-color:#40526a!important;color:#eef4ff!important}
+.rail{background:linear-gradient(120deg,#26384d33,transparent 42%),linear-gradient(#162332,#0c131d)!important;border-right-color:#40526a!important}
+.rail-link[aria-current="page"]{background:linear-gradient(#324b66,#21374d)!important;color:#dff5ff!important;border-color:#65bdec!important;box-shadow:inset 0 1px #ffffff22,0 0 12px #56b7e933!important}
+.chat-header,.top,.msn-identity-card{background:linear-gradient(135deg,#202d3d,#111923)!important;color:#eef4ff!important;border-color:#40526a!important}
+.messages{background:radial-gradient(circle at 82% 8%,#1a2a3a 0,transparent 38%),#090e15!important;color:#eef4ff!important}
+.chats,.chat-list,.msn-contacts-window,.msn-contact-list,.new-conv-panel{background:#0d141dee!important;color:#eef4ff!important}
+.msn-search-row,.composer,.composer-icons{background:#111a25!important;border-color:#34475e!important}
+.search,.input,.msn-search-row input{background:#0a111a!important;color:#eef4ff!important;border-color:#40526a!important}
+.chat,.msn-contact,.name,.preview,.time,.status,.header-name,.header-text{color:#eef4ff!important}
+.chat.selected,.msn-contact:hover,.msn-contact:active{background:#24354a!important;border-color:#65bdec!important}
+`,
   retro: `
 :root{--bg-deep:#d9e6f5;--bg-panel:#fff;--bg-surface:#fff;--bg-surface-2:#edf3fa;--bg-selected:#e1ebf7;--line:#9fb8d4;--line-2:#c4d3e5;--text:#30405a;--text-base:#30405a;--text-secondary:#4d6380;--muted:#70839a;--accent-text:#315d9b;--input:#fff;--rail-bg:#d5e3f3;--rail-icon:#315d9b;--green:#315d9b;--on-button:#fff}
 .play-window-shell .titlebar{background:linear-gradient(#7599c8,#4f75aa)!important}
@@ -70,6 +86,26 @@ const extras = {
 .chat,.bubble,.input,.search,.msn-contact,.msn-search-row input{border-radius:2px!important;box-shadow:none!important}
 .chat.selected,.msn-contact:active{background:#e1ebf7!important;border-color:#b2c9e1!important}
 .composer,.composer-icons,.msn-search-row{background:#d9e6f5!important;border-color:#9fb8d4!important}
+.msn-contact-list details summary{color:#315d9b!important;border-bottom:1px solid #c9d7e7!important}
+.msn-contact:hover{background:#eef4fb!important;border-color:#b2c9e1!important}
+.msn-avatar-me,.msn-contact-avatar,.header-photo{border-radius:2px!important;border-color:#a9bfd9!important;background:#edf3fa!important;box-shadow:0 1px 4px #315d9b2b!important}
+.desktop-chat-shell .messages{background:#fff!important}
+.desktop-chat-shell .bubble{border-radius:3px!important;box-shadow:none!important}
+.desktop-chat-shell .in .bubble{background:#fff!important;border-color:#c1d1e3!important}
+.desktop-chat-shell .out .bubble{background:#e6eef8!important;border-color:#afc4dd!important}
+`,
+  contrast: `
+:root{--bg-deep:#000;--bg-panel:#000;--bg-surface:#000;--bg-surface-2:#111;--bg-selected:#fff;--line:#fff;--line-2:#fff;--text:#fff;--text-base:#fff;--text-secondary:#fff;--muted:#fff;--accent-text:#fff;--input:#000;--rail-bg:#000;--rail-icon:#fff;--green:#fff;--on-button:#000}
+html,body,#root,.app,.desktop-window-shell{background:#000!important;color:#fff!important}
+.desktop-window-shell{border:2px solid #fff!important;box-shadow:none!important}
+.titlebar,.rail,.chat-header,.top,.msn-identity-card,.composer,.composer-icons,.msn-search-row{background:#000!important;color:#fff!important;border-color:#fff!important}
+.rail{border-right:2px solid #fff!important}.rail-link[aria-current="page"]{background:#fff!important;color:#000!important;border:2px solid #fff!important;box-shadow:none!important}
+.chats,.chat-list,.msn-contacts-window,.msn-contact-list,.messages,.new-conv-panel{background:#000!important;color:#fff!important}
+.search,.input,.msn-search-row input{background:#000!important;color:#fff!important;border:2px solid #fff!important}
+.chat,.msn-contact{color:#fff!important;border-bottom:1px solid #fff!important}.chat.selected,.msn-contact:hover,.msn-contact:active{background:#fff!important;color:#000!important;border-color:#fff!important}
+.chat.selected *,.msn-contact:hover *,.msn-contact:active *{color:#000!important}
+.bubble{background:#000!important;color:#fff!important;border:2px solid #fff!important}.out .bubble{background:#fff!important;color:#000!important}
+.send,.send-text{background:#fff!important;color:#000!important;border:2px solid #fff!important}
 `,
   cyberpunk: `
 :root{--bg-deep:#050710;--bg-panel:#0b0d1c;--bg-surface:#101329;--bg-surface-2:#151936;--bg-selected:#182b4d;--line:#25305a;--line-2:#2a3865;--text:#f4f7ff;--text-base:#f4f7ff;--text-secondary:#bec8e8;--muted:#8993b5;--accent-text:#20e7ff;--input:#080d20;--rail-bg:#09091a;--rail-icon:#9aa8d2;--green:#20e7ff;--on-button:#061019}
@@ -85,6 +121,10 @@ body{background:#050710 url('../src/assets/themes/cyberpunk-city.png') center/co
 .search,.input,.msn-search-row input{background:#080d20!important;color:#f4f7ff!important;border-color:#345078!important}
 .chat,.msn-contact{color:#f4f7ff!important}.chat.selected,.msn-contact:active{background:#182b4d!important;border-color:#20e7ff!important}
 .bubble{color:#f4f7ff!important;background:#101329!important;border-color:#2a3865!important}.out .bubble{background:#311653!important;border-color:#a33da3!important}
+.msn-contact-list details summary{color:#20e7ff!important;text-shadow:0 0 7px #20e7ff77!important;border-bottom:1px solid #25305a!important}
+.msn-contact:hover{background:#182b4d!important;border-color:#20e7ff!important;box-shadow:inset 3px 0 #ff3cac!important}
+.msn-avatar-me,.msn-contact-avatar,.header-photo{border-radius:0!important;border-color:#20e7ff!important;background:#101329!important;box-shadow:0 0 11px #20e7ff66!important}
+.send,.send-text{background:linear-gradient(135deg,#20e7ff,#a23cff)!important;color:#061019!important;border-color:#20e7ff!important;box-shadow:0 0 13px #20e7ff55!important}
 `,
   matrix: `
 :root{--bg-deep:#010502;--bg-panel:#031008;--bg-surface:#05170a;--bg-surface-2:#071e0c;--bg-selected:#0b3214;--line:#0d4820;--line-2:#126329;--text:#caffd4;--text-base:#d5ffdc;--text-secondary:#8cdb9b;--muted:#5ca66d;--accent-text:#36ff67;--input:#020b04;--rail-bg:#020a04;--rail-icon:#77cb88;--green:#20df50;--on-button:#001707}
@@ -105,6 +145,9 @@ html,body,#root{background:#010502!important;color:#caffd4!important}
 .chat.selected,.msn-contact:active{background:#092d12!important;border-color:#167435!important}
 .bubble{color:#d5ffdc!important;background:#041208!important;border:1px solid #125426!important}.out .bubble{background:#082d12!important;border-color:#19893a!important}
 .system-message{color:#9debab!important;background:#092d12!important}.send,.send-text{background:#27df55!important;color:#001707!important}
+.msn-contact-list details summary{color:#43ff6d!important;text-shadow:0 0 6px #18d94a66!important;border-bottom:1px solid #0d4820!important}
+.msn-contact:hover{background:#092d12!important;border-color:#35ff65!important;box-shadow:inset 3px 0 #35ff65!important}
+.msn-avatar-me,.msn-contact-avatar,.header-photo{border-radius:0!important;border-color:#20df50!important;background:#05170a!important;box-shadow:0 0 9px #20df5055!important}
 `,
   wood: `
 :root{--bg-deep:#1a0e08;--bg-panel:#2a180f;--bg-surface:#372116;--bg-surface-2:#42291b;--bg-selected:#5b3b25;--line:#624128;--line-2:#795438;--text:#f5e4c9;--text-base:#f5e4c9;--text-secondary:#d9c09f;--muted:#b89b79;--accent-text:#efc47f;--input:#201109;--rail-bg:#241209;--rail-icon:#e4c69f;--green:#c49553;--on-button:#3b210f}
@@ -122,8 +165,38 @@ body{background:#1b0f09 url('../src/assets/themes/walnut-grain.png') center/420p
 .messages{background:linear-gradient(#efe1c8f2,#e1cdabf5),url('../src/assets/themes/walnut-grain.png') center/520px auto!important;color:#3e291b!important}
 .bubble{color:#3d291c!important;background:#f6ead3!important;border:1px solid #a9825c!important}.out .bubble{background:#d8b37b!important;border-color:#aa7f49!important}
 .system-message{color:#64452d!important;background:#dfbd84!important}.send,.send-text{background:#d4ad70!important;color:#3b210f!important}
+.msn-contact-list details summary{color:#efc47f!important;text-shadow:0 1px #160a05!important;border-bottom:1px solid #624128!important}
+.msn-contact:hover{background:#553721!important;border-color:#b9874f!important;box-shadow:inset 3px 0 #efc47f!important}
+.msn-avatar-me,.msn-contact-avatar,.header-photo{border-radius:4px!important;border-color:#b18455!important;background:#4b2e1d!important;box-shadow:0 2px 6px #120703!important}
 `,
 }
+
+// Acabamento estrutural comum: traz para o desktop a densidade, hierarquia e
+// legibilidade do APK sem mover nenhum componente da estrutura desktop.
+const desktopFoundation = `
+.desktop-window-shell .msn-identity-card{min-height:118px!important;padding:16px 18px!important}
+.desktop-window-shell .msn-identity-copy strong{color:var(--text)!important;font-size:18px!important}
+.desktop-window-shell .msn-presence{color:var(--text-secondary)!important;line-height:1.45!important}
+.desktop-window-shell .msn-search-row{padding:10px 12px!important}
+.desktop-window-shell .msn-search-row input{height:38px!important;padding:0 12px!important;color:var(--text)!important;background:var(--input)!important;border:1px solid var(--line-2)!important}
+.desktop-window-shell .msn-search-row input::placeholder{color:var(--muted)!important;opacity:1!important}
+.desktop-window-shell .msn-contact-list{padding:7px 9px!important}
+.desktop-window-shell .msn-contact-list details summary{height:34px!important;color:var(--text-secondary)!important;font-size:13px!important}
+.desktop-window-shell .msn-contact{height:58px!important;gap:9px!important;padding:6px 9px!important;color:var(--text)!important;transition:background .14s,border-color .14s,box-shadow .14s!important}
+.desktop-window-shell .msn-contact-info strong{color:var(--text)!important;font-size:13px!important}
+.desktop-window-shell .msn-contact-info small{color:var(--muted)!important;font-size:11px!important}
+.desktop-window-shell .msn-contact-avatar{width:42px!important;height:42px!important}
+.desktop-chat-shell .chat-header{min-height:108px!important;padding:15px 20px!important}
+.desktop-chat-shell .messages{padding:22px 24px!important}
+.desktop-chat-shell .bubble{max-width:min(620px,82%)!important;padding:10px 13px 8px!important;border:1px solid var(--line-2)!important;border-radius:10px!important;box-shadow:0 2px 8px #00000016!important}
+.desktop-chat-shell .in .bubble{background:var(--bg-surface)!important;color:var(--text-base)!important}
+.desktop-chat-shell .out .bubble{background:var(--bg-selected)!important;color:var(--text-base)!important}
+.desktop-chat-shell .composer{min-height:142px!important;background:var(--bg-panel)!important;border-top:1px solid var(--line)!important}
+.desktop-chat-shell .composer-icons{background:var(--bg-surface-2)!important;border-bottom:1px solid var(--line)!important}
+.desktop-chat-shell .input{background:var(--input)!important;color:var(--text)!important;border:1px solid var(--line-2)!important}
+.desktop-chat-shell .input textarea{color:var(--text)!important;-webkit-text-fill-color:var(--text)!important}
+.desktop-chat-shell .input textarea::placeholder{color:var(--muted)!important;opacity:1!important}
+`
 
 const HEX = /#([0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{3,4})\b/g
 const RGB = /rgba?\(\s*([\d.]+)[\s,]+([\d.]+)[\s,]+([\d.]+)(?:\s*[,/]\s*([\d.]+%?))?\s*\)/g
@@ -153,6 +226,7 @@ function convert(css, fn) {
 for (const [name, fn] of Object.entries(themes)) {
   let css = convert(base, fn)
   if (name !== 'retro') css = css.replace(/color-scheme:\s*light/g, 'color-scheme:dark')
+  css += desktopFoundation
   css += extras[name] || ''
   // a barra de titulo nao precisa seguir o tema do Windows aqui (o tema do app manda)
   fs.writeFileSync(path.join(dir, `thothmessenger-${name}.css`), `/* GERADO por gen-themes.mjs a partir de thothmessenger.css - nao editar */\n` + css)

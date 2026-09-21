@@ -424,6 +424,29 @@
 /* Play desktop: moldura das fotos nas listas de gerenciar (membros/banidos/cargos) menor */
 .play-window-shell .play-manage-member-row .avatar-sm,.play-window-shell .play-role-check-row .avatar-sm{width:30px!important;height:30px!important;padding:1px!important;border:2px solid #a4bad1!important;border-radius:6px!important}
 
+.desktop-window-shell .msn-identity-card{min-height:118px!important;padding:16px 18px!important}
+.desktop-window-shell .msn-identity-copy strong{color:var(--text)!important;font-size:18px!important}
+.desktop-window-shell .msn-presence{color:var(--text-secondary)!important;line-height:1.45!important}
+.desktop-window-shell .msn-search-row{padding:10px 12px!important}
+.desktop-window-shell .msn-search-row input{height:38px!important;padding:0 12px!important;color:var(--text)!important;background:var(--input)!important;border:1px solid var(--line-2)!important}
+.desktop-window-shell .msn-search-row input::placeholder{color:var(--muted)!important;opacity:1!important}
+.desktop-window-shell .msn-contact-list{padding:7px 9px!important}
+.desktop-window-shell .msn-contact-list details summary{height:34px!important;color:var(--text-secondary)!important;font-size:13px!important}
+.desktop-window-shell .msn-contact{height:58px!important;gap:9px!important;padding:6px 9px!important;color:var(--text)!important;transition:background .14s,border-color .14s,box-shadow .14s!important}
+.desktop-window-shell .msn-contact-info strong{color:var(--text)!important;font-size:13px!important}
+.desktop-window-shell .msn-contact-info small{color:var(--muted)!important;font-size:11px!important}
+.desktop-window-shell .msn-contact-avatar{width:42px!important;height:42px!important}
+.desktop-chat-shell .chat-header{min-height:108px!important;padding:15px 20px!important}
+.desktop-chat-shell .messages{padding:22px 24px!important}
+.desktop-chat-shell .bubble{max-width:min(620px,82%)!important;padding:10px 13px 8px!important;border:1px solid var(--line-2)!important;border-radius:10px!important;box-shadow:0 2px 8px #00000016!important}
+.desktop-chat-shell .in .bubble{background:var(--bg-surface)!important;color:var(--text-base)!important}
+.desktop-chat-shell .out .bubble{background:var(--bg-selected)!important;color:var(--text-base)!important}
+.desktop-chat-shell .composer{min-height:142px!important;background:var(--bg-panel)!important;border-top:1px solid var(--line)!important}
+.desktop-chat-shell .composer-icons{background:var(--bg-surface-2)!important;border-bottom:1px solid var(--line)!important}
+.desktop-chat-shell .input{background:var(--input)!important;color:var(--text)!important;border:1px solid var(--line-2)!important}
+.desktop-chat-shell .input textarea{color:var(--text)!important;-webkit-text-fill-color:var(--text)!important}
+.desktop-chat-shell .input textarea::placeholder{color:var(--muted)!important;opacity:1!important}
+
 :root{--bg-deep:#d9e6f5;--bg-panel:#fff;--bg-surface:#fff;--bg-surface-2:#edf3fa;--bg-selected:#e1ebf7;--line:#9fb8d4;--line-2:#c4d3e5;--text:#30405a;--text-base:#30405a;--text-secondary:#4d6380;--muted:#70839a;--accent-text:#315d9b;--input:#fff;--rail-bg:#d5e3f3;--rail-icon:#315d9b;--green:#315d9b;--on-button:#fff}
 .play-window-shell .titlebar{background:linear-gradient(#7599c8,#4f75aa)!important}
 .titlebar{background:linear-gradient(#7599c8,#4f75aa)!important}
@@ -436,3 +459,10 @@
 .chat,.bubble,.input,.search,.msn-contact,.msn-search-row input{border-radius:2px!important;box-shadow:none!important}
 .chat.selected,.msn-contact:active{background:#e1ebf7!important;border-color:#b2c9e1!important}
 .composer,.composer-icons,.msn-search-row{background:#d9e6f5!important;border-color:#9fb8d4!important}
+.msn-contact-list details summary{color:#315d9b!important;border-bottom:1px solid #c9d7e7!important}
+.msn-contact:hover{background:#eef4fb!important;border-color:#b2c9e1!important}
+.msn-avatar-me,.msn-contact-avatar,.header-photo{border-radius:2px!important;border-color:#a9bfd9!important;background:#edf3fa!important;box-shadow:0 1px 4px #315d9b2b!important}
+.desktop-chat-shell .messages{background:#fff!important}
+.desktop-chat-shell .bubble{border-radius:3px!important;box-shadow:none!important}
+.desktop-chat-shell .in .bubble{background:#fff!important;border-color:#c1d1e3!important}
+.desktop-chat-shell .out .bubble{background:#e6eef8!important;border-color:#afc4dd!important}

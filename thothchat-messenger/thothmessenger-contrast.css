@@ -423,3 +423,38 @@
 .play-window-shell .play-icon-rail-groups::-webkit-scrollbar{display:none}
 /* Play desktop: moldura das fotos nas listas de gerenciar (membros/banidos/cargos) menor */
 .play-window-shell .play-manage-member-row .avatar-sm,.play-window-shell .play-role-check-row .avatar-sm{width:30px!important;height:30px!important;padding:1px!important;border:2px solid #ffffff!important;border-radius:6px!important}
+
+.desktop-window-shell .msn-identity-card{min-height:118px!important;padding:16px 18px!important}
+.desktop-window-shell .msn-identity-copy strong{color:var(--text)!important;font-size:18px!important}
+.desktop-window-shell .msn-presence{color:var(--text-secondary)!important;line-height:1.45!important}
+.desktop-window-shell .msn-search-row{padding:10px 12px!important}
+.desktop-window-shell .msn-search-row input{height:38px!important;padding:0 12px!important;color:var(--text)!important;background:var(--input)!important;border:1px solid var(--line-2)!important}
+.desktop-window-shell .msn-search-row input::placeholder{color:var(--muted)!important;opacity:1!important}
+.desktop-window-shell .msn-contact-list{padding:7px 9px!important}
+.desktop-window-shell .msn-contact-list details summary{height:34px!important;color:var(--text-secondary)!important;font-size:13px!important}
+.desktop-window-shell .msn-contact{height:58px!important;gap:9px!important;padding:6px 9px!important;color:var(--text)!important;transition:background .14s,border-color .14s,box-shadow .14s!important}
+.desktop-window-shell .msn-contact-info strong{color:var(--text)!important;font-size:13px!important}
+.desktop-window-shell .msn-contact-info small{color:var(--muted)!important;font-size:11px!important}
+.desktop-window-shell .msn-contact-avatar{width:42px!important;height:42px!important}
+.desktop-chat-shell .chat-header{min-height:108px!important;padding:15px 20px!important}
+.desktop-chat-shell .messages{padding:22px 24px!important}
+.desktop-chat-shell .bubble{max-width:min(620px,82%)!important;padding:10px 13px 8px!important;border:1px solid var(--line-2)!important;border-radius:10px!important;box-shadow:0 2px 8px #00000016!important}
+.desktop-chat-shell .in .bubble{background:var(--bg-surface)!important;color:var(--text-base)!important}
+.desktop-chat-shell .out .bubble{background:var(--bg-selected)!important;color:var(--text-base)!important}
+.desktop-chat-shell .composer{min-height:142px!important;background:var(--bg-panel)!important;border-top:1px solid var(--line)!important}
+.desktop-chat-shell .composer-icons{background:var(--bg-surface-2)!important;border-bottom:1px solid var(--line)!important}
+.desktop-chat-shell .input{background:var(--input)!important;color:var(--text)!important;border:1px solid var(--line-2)!important}
+.desktop-chat-shell .input textarea{color:var(--text)!important;-webkit-text-fill-color:var(--text)!important}
+.desktop-chat-shell .input textarea::placeholder{color:var(--muted)!important;opacity:1!important}
+
+:root{--bg-deep:#000;--bg-panel:#000;--bg-surface:#000;--bg-surface-2:#111;--bg-selected:#fff;--line:#fff;--line-2:#fff;--text:#fff;--text-base:#fff;--text-secondary:#fff;--muted:#fff;--accent-text:#fff;--input:#000;--rail-bg:#000;--rail-icon:#fff;--green:#fff;--on-button:#000}
+html,body,#root,.app,.desktop-window-shell{background:#000!important;color:#fff!important}
+.desktop-window-shell{border:2px solid #fff!important;box-shadow:none!important}
+.titlebar,.rail,.chat-header,.top,.msn-identity-card,.composer,.composer-icons,.msn-search-row{background:#000!important;color:#fff!important;border-color:#fff!important}
+.rail{border-right:2px solid #fff!important}.rail-link[aria-current="page"]{background:#fff!important;color:#000!important;border:2px solid #fff!important;box-shadow:none!important}
+.chats,.chat-list,.msn-contacts-window,.msn-contact-list,.messages,.new-conv-panel{background:#000!important;color:#fff!important}
+.search,.input,.msn-search-row input{background:#000!important;color:#fff!important;border:2px solid #fff!important}
+.chat,.msn-contact{color:#fff!important;border-bottom:1px solid #fff!important}.chat.selected,.msn-contact:hover,.msn-contact:active{background:#fff!important;color:#000!important;border-color:#fff!important}
+.chat.selected *,.msn-contact:hover *,.msn-contact:active *{color:#000!important}
+.bubble{background:#000!important;color:#fff!important;border:2px solid #fff!important}.out .bubble{background:#fff!important;color:#000!important}
+.send,.send-text{background:#fff!important;color:#000!important;border:2px solid #fff!important}
