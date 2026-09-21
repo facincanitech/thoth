@@ -140,6 +140,8 @@ export type PlayMessage = {
   content: string
   kind?: string
   components?: PlayBotButton[] | null
+  visible_to?: string | null
+  expires_at?: string | null
   created_at: string
 }
 

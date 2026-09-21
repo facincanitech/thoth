@@ -926,6 +926,12 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
   const [newCategoryName, setNewCategoryName] = useState('')
   const [catMenu, setCatMenu] = useState<{ categoryId: string; x: number; y: number } | null>(null)
   const [chanMenu, setChanMenu] = useState<{ channelId: string; x: number; y: number } | null>(null)
+  const [accessModal, setAccessModal] = useState<{ channelId: string; roleIds: string[] } | null>(null)
+  const [nowTick, setNowTick] = useState(() => Date.now())
+  useEffect(() => {
+    const t = setInterval(() => setNowTick(Date.now()), 5000)
+    return () => clearInterval(t)
+  }, [])
   const [renameChannelDraft, setRenameChannelDraft] = useState<{ id: string; name: string } | null>(null)
   const [renameCategoryId, setRenameCategoryId] = useState<string | null>(null)
   const [renameCategoryDraft, setRenameCategoryDraft] = useState('')
@@ -1101,6 +1107,22 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
     await supabase.from('play_categories').update({ name: renameCategoryDraft.trim() }).eq('id', renameCategoryId)
     setRenameCategoryId(null)
     onCategoriesChange()
+  }
+
+  async function openChannelAccess(channelId: string) {
+    const { data } = await supabase.from('play_channel_role_access').select('role_id').eq('channel_id', channelId)
+    setAccessModal({ channelId, roleIds: (data || []).map((r) => r.role_id as string) })
+  }
+
+  async function toggleChannelAccess(roleId: string) {
+    if (!accessModal) return
+    const has = accessModal.roleIds.includes(roleId)
+    const { error } = has
+      ? await supabase.from('play_channel_role_access').delete().eq('role_id', roleId).eq('channel_id', accessModal.channelId)
+      : await supabase.from('play_channel_role_access').insert({ role_id: roleId, channel_id: accessModal.channelId })
+    if (error) { console.error('channel access failed', error); return }
+    setAccessModal({ ...accessModal, roleIds: has ? accessModal.roleIds.filter((x) => x !== roleId) : [...accessModal.roleIds, roleId] })
+    onChannelsChange()
   }
 
   async function renameChannelSave() {
@@ -1385,8 +1407,15 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
     if (maximizedId && !live.has(maximizedId)) setMaximizedId(null)
   }, [voiceParticipants])
 
+  async function stopRadio() {
+    const { error } = await supabase.rpc('play_sonor_stop', { p_group_id: group.id })
+    if (error) { console.error('sonor stop failed', error); setSonorNotice('não consegui parar: ' + error.message); return }
+    setSonorSession(null)
+  }
+
+  // Resposta de comando: so quem rodou ve, e some depois de 1 minuto (p_ephemeral)
   async function postBot(slug: string, channelId: string, text: string) {
-    const { error } = await supabase.rpc('post_play_bot_message', { p_channel_id: channelId, p_bot_slug: slug, p_content: text })
+    const { error } = await supabase.rpc('post_play_bot_message', { p_channel_id: channelId, p_bot_slug: slug, p_content: text, p_ephemeral: true })
     if (error) console.error('bot post failed', error)
   }
 
@@ -1522,7 +1551,7 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
     <div className="play-sonor-bar">
       <span className="play-sonor-bar-title">Tocando: {sonorSession.title}</span>
       <input type="range" min="0" max="1" step="0.05" value={sonorVolume} onChange={(e) => setSonorVolume(Number(e.target.value))} />
-      <button type="button" onClick={() => supabase.rpc('play_sonor_stop', { p_group_id: group.id })}>Parar</button>
+      <button type="button" onClick={stopRadio}>Parar</button>
     </div>
   ) : null
 
@@ -1700,6 +1729,11 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
                     <button type="button" onClick={() => { const ch = channels.find((c) => c.id === chanMenu.channelId); setChanMenu(null); if (ch) setRenameChannelDraft({ id: ch.id, name: ch.name }) }}>
                       <IconEdit size={14} /> Renomear canal
                     </button>
+                    {can('manage_roles') && (
+                      <button type="button" onClick={() => { const id = chanMenu.channelId; setChanMenu(null); openChannelAccess(id) }}>
+                        <IconLock size={14} /> Acesso por cargo
+                      </button>
+                    )}
                     <button type="button" className="danger" onClick={() => { const id = chanMenu.channelId; setChanMenu(null); deleteChannel(id) }}>
                       <IconTrash size={14} /> Excluir canal
                     </button>
@@ -1760,7 +1794,7 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
               </header>
               <div className="play-messages">
                 {messages.length === 0 && <p className="play-empty">nenhuma mensagem ainda</p>}
-                {messages.map((m) => m.kind === 'bot_panel' ? (
+                {messages.filter((m) => !m.expires_at || Date.parse(m.expires_at) > nowTick).map((m) => m.kind === 'bot_panel' ? (
                   <div key={m.id} className="play-message">
                     <AvatarBox src={m.author?.avatar_url} id={m.author_id} fallbackLetter={(m.author ? displayName(m.author) : 'B')[0]?.toUpperCase()} className="avatar-sm" />
                     <div className="play-message-body">
@@ -2047,6 +2081,23 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
               <button type="button" className="modal-close" onClick={() => setShowNewChannel(false)}>Cancelar</button>
               <button type="button" className="google-btn" style={{ width: 'auto' }} disabled={!newChannelName.trim()} onClick={createChannel}>Criar canal</button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {accessModal && (
+        <div className="modal-backdrop" onClick={() => setAccessModal(null)}>
+          <div className="modal-card play-channel-modal" onClick={(e) => e.stopPropagation()} style={{ maxHeight: '86vh', overflowY: 'auto' }}>
+            <h2>Acesso por cargo</h2>
+            <p className="play-invite-hint">#{channels.find((c) => c.id === accessModal.channelId)?.name} — só os cargos marcados enxergam este canal. Nenhum marcado = todo mundo vê. Dono e admin sempre veem.</p>
+            {groupRoles.length === 0 && <p className="play-empty">nenhum cargo criado ainda</p>}
+            {groupRoles.map((r) => (
+              <label key={r.id} className="play-role-check-row">
+                <input type="checkbox" checked={accessModal.roleIds.includes(r.id)} onChange={() => toggleChannelAccess(r.id)} />
+                {r.emoji ? r.emoji + ' ' : ''}{r.name}
+              </label>
+            ))}
+            <button type="button" className="modal-close" onClick={() => setAccessModal(null)}>fechar</button>
           </div>
         </div>
       )}
