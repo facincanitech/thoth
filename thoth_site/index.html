@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="Thoth Messenger: escrita ao vivo, chamar atenção, winks, comunidades, canais de voz e muito mais. Baixe para Android ou Windows." />
+  <meta name="theme-color" content="#03101f" />
+  <title>Thoth Messenger — Toda conversa tem vida</title>
+  <link rel="icon" href="../public/favicon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="noise" aria-hidden="true"></div>
+  <header class="topbar">
+    <a class="brand" href="#inicio" aria-label="Thoth Messenger — início"><img src="../logo/toth_chat.png" alt="" /><strong>THOTH <span>MESSENGER</span></strong></a>
+    <nav aria-label="Navegação principal"><a href="#diferenciais">Por que é diferente</a><a href="#modos">O que tem no Thoth</a><a href="#download">Download</a></nav>
+    <div class="online-pill"><i></i> serviço online</div>
+  </header>
+
+  <main>
+    <section class="hero" id="inicio">
+      <div class="hero-copy">
+        <p class="overline"><span>●</span> MENSAGEIRO INDEPENDENTE • V1.3.324</p>
+        <h1>A conversa<br />voltou a ter<br /><em>personalidade.</em></h1>
+        <p class="hero-text">O que você digita aparece ao vivo. Chame a atenção de um contato quando ele sumir. Winks invadem a conversa. Comunidades juntam a sua galera. <strong>Como a internet deveria ser.</strong></p>
+        <div class="hero-downloads" id="download">
+          <a class="download download--android" href="https://github.com/facincanitech/thothchat/releases/download/latest/thothchat.apk"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 8h10v9a1 1 0 0 1-1 1h-1v3h-2v-3h-2v3H9v-3H8a1 1 0 0 1-1-1V8Zm-2 1h1v7H5V9Zm13 0h1v7h-1V9ZM8 7a4 4 0 0 1 1.2-2.9L8.4 3l.7-.5.9 1.1a5 5 0 0 1 4 0l.9-1.1.7.5-.8 1.1A4 4 0 0 1 16 7H8Zm2-1.5a.5.5 0 1 0 0 1 .5.5 0 0 0 0-1Zm4 0a.5.5 0 1 0 0 1 .5.5 0 0 0 0-1Z"/></svg><span><small>BAIXAR AGORA</small>Android APK</span><b>↓</b></a>
+          <a class="download download--windows" href="https://github.com/facincanitech/thothchat/releases/download/latest/ThothChat-Messenger-Setup.exe"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 5 8-1v8H3V5Zm9-1.2L21 2.5V12h-9V3.8ZM3 13h8v8l-8-1v-7Zm9 0h9v9.5l-9-1.3V13Z"/></svg><span><small>BAIXAR AGORA</small>Windows</span><b>↓</b></a>
+          <a class="download download--web" href="../index.html"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3.5 9h17M3.5 15h17M12 3c2.2 2.4 3.2 5.4 3.2 9S14.2 18.6 12 21M12 3C9.8 5.4 8.8 8.4 8.8 12s1 6.6 3.2 9"/></svg><span><small>ABRIR AGORA</small>Usar no navegador</span><b>↗</b></a>
+        </div>
+        <p class="platform-note">Grátis • Android 8+ • Windows 10/11 • atualizações automáticas</p>
+      </div>
+
+      <div class="hero-stage" aria-label="Thoth Messenger em funcionamento">
+        <div class="retro-window">
+          <div class="window-titlebar"><div><img src="../logo/toth_chat.png" alt="" /><span>Thoth - Messenger</span></div><div class="win-controls"><button aria-label="Minimizar">—</button><button aria-label="Maximizar">□</button><button aria-label="Fechar">×</button></div></div>
+          <div class="contact-head"><div class="avatar pixel-avatar">L</div><div><strong>Lívia</strong><span><i></i> Online</span><small>“grandes conversas tornam tudo mais interessante.”</small></div><div class="head-actions"><button>☎<span>Chamada</span></button><button>◉<span>Vídeo</span></button></div></div>
+          <div class="live-chat"><div class="chat-line chat-line--mine"><div><b>Você</b><time>14:20</time></div><span>essa é a melhor parte do app:</span></div><div class="chat-line"><div><b class="green">Lívia</b><time>14:20</time></div><span class="typing-live"><span id="heroTyping"></span><i class="caret"></i></span></div><div class="nudge-pop">🔔 Lívia chamou sua atenção!</div></div>
+          <div class="composer-tools" aria-label="Ferramentas da conversa">
+            <button aria-label="Emoji"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M8.5 14.5s1.2 2 3.5 2 3.5-2 3.5-2M9 10h.01M15 10h.01"/></svg></button>
+            <button aria-label="Anexar"><svg viewBox="0 0 24 24"><path d="m8.5 12.8 6.1-6.1a3 3 0 0 1 4.2 4.2l-7.4 7.4a5 5 0 0 1-7.1-7.1l7.1-7.1"/></svg></button>
+            <button aria-label="Gravar áudio"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M6.5 11a5.5 5.5 0 0 0 11 0M12 16.5V21M9 21h6"/></svg></button>
+            <button aria-label="Chamar atenção"><svg viewBox="0 0 24 24"><path d="M8 17h8M10 20h4M7 14V9a5 5 0 0 1 10 0v5l2 2H5l2-2ZM5 7 3 3M19 7l3 3M4 4l-2 2M20 4l2 2"/></svg></button>
+            <button aria-label="Winks"><svg viewBox="0 0 24 24"><path d="M12 20S4 15.5 4 9.5A4.5 4.5 0 0 1 12 7a4.5 4.5 0 0 1 8 2.5C20 15.5 12 20 12 20Z"/></svg></button>
+          </div><div class="composer"><span>Digite uma mensagem</span><button>Enviar</button></div>
+        </div>
+        <div class="float-card float-card--nudge"><span>🔔</span><div><b>CHAMAR ATENÇÃO</b><small>cutuca aquele contato sumido</small></div></div>
+        <div class="float-card float-card--live"><span class="live-dot"></span><div><b>ESCRITA AO VIVO</b><small>sem esconder, sem ensaiar</small></div></div>
+        <div class="sticker sticker--one">:P</div><div class="sticker sticker--two">★</div>
+      </div>
+    </section>
+
+    <div class="ticker" aria-hidden="true"><div>ESCRITA AO VIVO ✦ WINKS ✦ CHAMAR ATENÇÃO ✦ COMUNIDADES ✦ STATUS 24H ✦ CHAMADAS ✦ THOTH PLAY ✦ RÁDIO EM GRUPO ✦ ESCRITA AO VIVO ✦ WINKS ✦ CHAMAR ATENÇÃO ✦</div></div>
+
+    <section class="difference" id="diferenciais">
+      <div class="section-intro"><div><p class="overline">NÃO É SÓ MAIS UM CHAT</p><h2>Tem coisa que você<br />só encontra <em>aqui.</em></h2></div></div>
+      <div class="feature-list">
+        <article class="feature feature--live"><div class="feature-index">01 / AO VIVO</div><div class="feature-art live-demo"><div class="demo-rec"><span></span> DEMONSTRAÇÃO AO VIVO</div><div class="demo-conversation"><div class="demo-message demo-message--mine"><b>Você</b><p>qual filme a gente vai ver hoje?</p></div><div class="demo-message"><b>Lívia está escrevendo…</b><p><span id="featureTyping"></span><i class="caret"></i></p></div></div><div class="demo-progress"><i></i></div></div><div class="feature-copy"><h3>Veja a mensagem nascer.</h3><p>No Thoth, a digitação aparece palavra por palavra. A demonstração reinicia sozinha para mostrar exatamente como acontece.</p></div></article>
+        <article class="feature feature--chaos"><div class="feature-index">02 / CAOS DO BEM</div><div class="feature-art chaos-demo"><span class="boom">EI!</span><span class="heart">♥</span><span class="bell">🔔</span><span class="wink-face">;)</span></div><div class="feature-copy"><h3>Chame a atenção do seu contato.</h3><p>Se alguém sumiu da conversa, use “chamar atenção”. E com winks de imagem e som — inclusive criados por você — a conversa ganha personalidade.</p></div></article>
+        <article class="feature feature--identity"><div class="feature-index">03 / SEU JEITO</div><div class="feature-art identity-demo"><div class="profile-mini"><span>T</span><div><b class="prism-name">thoth_user</b><small>online • São Paulo</small></div></div><div class="theme-swatches"><i></i><i></i><i></i><i></i><i></i></div><p>nome com efeito • banner • cores • tema</p></div><div class="feature-copy"><h3>Seu perfil não é um crachá.</h3><p>Personalize nome, efeito, cor, banner, fundo, cards e tamanho do texto. Seu espaço tem que parecer seu.</p></div></article>
+      </div>
+    </section>
+
+    <section class="modes" id="modos">
+      <div class="mode-card"><span>01</span><div class="mode-icon">↔</div><h3>Messenger</h3><p>Conversa direta, grupos orgânicos, escrita ao vivo, chamadas, winks e aquele contato que aparece online.</p></div>
+      <div class="mode-card mode-card--play"><span>02</span><div class="mode-icon">#</div><h3>Thoth Play</h3><p>Canais de texto e voz, compartilhamento de tela, cargos e bots para a sua turma ficar no mesmo lugar.</p></div>
+      <div class="mode-card"><span>03</span><div class="mode-icon">◎</div><h3>Comunidades</h3><p>Um espaço para publicar, comentar, reagir e encontrar gente em torno do mesmo assunto.</p></div>
+    </section>
+
+    <section class="more-features">
+      <article><span>☎</span><h3>Voz e vídeo</h3><p>Chamada direta, troca de câmera e salas de voz no Play.</p></article><article><span>◉</span><h3>Status 24h</h3><p>Foto, vídeo ou texto que desaparece no dia seguinte.</p></article><article><span>📻</span><h3>Bot Sonor</h3><p>Uma rádio real tocando sincronizada dentro do grupo.</p></article><article><span>👁</span><h3>Ver uma vez</h3><p>Mídia temporária com controle de abertura e download.</p></article><article><span>#</span><h3>Comunidades</h3><p>Feed, tópicos, comentários, reações e convites.</p></article><article><span>✦</span><h3>Grupos orgânicos</h3><p>Adicione alguém e deixe a conversa crescer naturalmente.</p></article>
+    </section>
+
+    <section class="final-download"><div class="final-eye"><img src="../logo/toth_chat.png" alt="Logo do Thoth Messenger" /></div><div class="final-copy"><p class="overline">FEITO POR GENTE. PARA GENTE.</p><h2>Menos algoritmo.<br /><em>Mais conversa.</em></h2><p>Um projeto independente, evoluindo com quem usa.</p></div><div class="final-actions"><a href="https://github.com/facincanitech/thothchat/releases/download/latest/thothchat.apk">ANDROID APK <span>↓</span></a><a href="https://github.com/facincanitech/thothchat/releases/download/latest/ThothChat-Messenger-Setup.exe">WINDOWS <span>↓</span></a><a href="../index.html">USAR NO NAVEGADOR <span>↗</span></a></div></section>
+  </main>
+
+  <footer><div class="brand"><img src="../logo/toth_chat.png" alt="" /><strong>THOTH <span>MESSENGER</span></strong></div><p>© <span id="year"></span> Thoth Messenger • versão 1.3.324</p><div><a href="../public/privacidade.html">Privacidade</a><a href="../public/exclusao-conta.html">Excluir conta</a></div></footer>
+  <script src="script.js"></script>
+</body>
+</html>
