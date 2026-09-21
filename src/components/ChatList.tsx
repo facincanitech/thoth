@@ -44,7 +44,7 @@ import {
 } from './icons'
 import type { Community, ContactCategory, Conversation, PanelView, Profile } from '../types'
 
-type AccountView = 'root' | 'profile' | 'appearance' | 'store' | 'account' | 'privacy' | 'blocked' | 'terms' | 'privacy-policy'
+type AccountView = 'root' | 'profile' | 'appearance' | 'library' | 'store' | 'account' | 'privacy' | 'blocked' | 'terms' | 'privacy-policy'
 
 export type GroupsView =
   | 'group-root' | 'group-create' | 'group-search' | 'group-trending' | 'group-mine'
@@ -1743,6 +1743,8 @@ export function ChatList({
           ? 'Aparência'
         : accountView === 'store'
           ? 'Loja Thoth'
+        : accountView === 'library'
+          ? 'Minha coleção'
         : accountView === 'account'
           ? 'Configurações'
           : accountView === 'privacy'
@@ -2672,6 +2674,10 @@ export function ChatList({
                   <div className="option-subtitle">Temas, sons, winks, stickers, emojis e bots</div>
                 </div>
               </div>
+              <div className="new-conv-option" onClick={() => setAccountView('library')}>
+                <div className="option-icon"><IconHeart size={20} /></div>
+                <div><div>Minha coleção</div><div className="option-subtitle">Seus temas, sons, winks e stickers</div></div>
+              </div>
               <div className="new-conv-option" onClick={() => setAccountView('account')}>
                 <div className="option-icon"><IconKey size={20} /></div>
                 <div>
@@ -2749,7 +2755,8 @@ export function ChatList({
           </div>
         )}
 
-        {accountView === 'store' && me && <ThothStore me={me} />}
+        {accountView === 'store' && me && <ThothStore me={me} onProfileChange={onProfileChange} />}
+        {accountView === 'library' && me && <ThothStore me={me} mode="library" onProfileChange={onProfileChange} onOpenStore={() => setAccountView('store')} />}
 
         {accountView === 'appearance' && me && (
           <div className="new-conv-form">
@@ -2895,60 +2902,15 @@ export function ChatList({
 
             <div className="appearance-separator" />
 
-            <>
-                <label style={{ marginTop: 14 }}>Tema</label>
-                <div className="theme-picker">
-                  <button
-                    type="button"
-                    className={`theme-option${theme === 'messenger' ? ' active' : ''}`}
-                    onClick={() => onThemeChange('messenger')}
-                  >
-                    Frutiger Aero
-                  </button>
-                  <button
-                    type="button"
-                    className={`theme-option${theme === 'dark' ? ' active' : ''}`}
-                    onClick={() => onThemeChange('dark')}
-                  >
-                    Escuro
-                  </button>
-                  <button
-                    type="button"
-                    className={`theme-option${theme === 'light' ? ' active' : ''}`}
-                    onClick={() => onThemeChange('light')}
-                  >
-                    Retro
-                  </button>
-                  <button
-                    type="button"
-                    className={`theme-option theme-option-cyberpunk${theme === 'cyberpunk' ? ' active' : ''}`}
-                    onClick={() => onThemeChange('cyberpunk')}
-                  >
-                    Cyberpunk
-                  </button>
-                  <button
-                    type="button"
-                    className={`theme-option theme-option-matrix${theme === 'matrix' ? ' active' : ''}`}
-                    onClick={() => onThemeChange('matrix')}
-                  >
-                    Matrix
-                  </button>
-                  <button
-                    type="button"
-                    className={`theme-option theme-option-wood${theme === 'wood' ? ' active' : ''}`}
-                    onClick={() => onThemeChange('wood')}
-                  >
-                    Madeira
-                  </button>
-                  <button
-                    type="button"
-                    className={`theme-option${theme === 'contrast' ? ' active' : ''}`}
-                    onClick={() => onThemeChange('contrast')}
-                  >
-                    Alto contraste
-                  </button>
-                </div>
-            </>
+            <label style={{ marginTop: 14 }}>Tema principal</label>
+            <button type="button" className={`theme-option${theme === 'messenger' ? ' active' : ''}`} onClick={async () => {
+              onThemeChange('messenger')
+              const { data } = await supabase.from('store_preferences').select('installed_builtin_themes').eq('user_id', me.id).maybeSingle()
+              await supabase.from('store_preferences').upsert({ user_id: me.id, active_theme_id: null, builtin_theme: 'messenger', installed_builtin_themes: Array.from(new Set([...(data?.installed_builtin_themes || []), 'messenger'])), updated_at: new Date().toISOString() })
+              window.dispatchEvent(new CustomEvent('thoth-store-theme', { detail: 'messenger' }))
+            }}>Frutiger Aero</button>
+            <button type="button" onClick={() => setAccountView('library')}>Escolher tema da minha coleção</button>
+            <button type="button" onClick={() => setAccountView('store')}>Explorar temas na Loja Thoth</button>
           </div>
         )}
 

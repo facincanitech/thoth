@@ -25,7 +25,8 @@ import { useHeartbeat } from './lib/useHeartbeat'
 import { ensureCallWindow, openChatWindow, openPlayWindow, requestCall } from './lib/desktopWindows'
 import { DesktopTitleBar } from './components/DesktopChrome'
 import { showDesktopToast } from './lib/desktopToast'
-import { applyCommunityTheme, type StoreItem } from './lib/store'
+import { applyCommunityTheme, hydrateInstalledMedia, type StoreItem } from './lib/store'
+import { isBuiltInTheme } from './lib/storeDefaults'
 import './App.css'
 
 type Theme = 'dark' | 'light' | 'contrast' | 'frutiger' | 'messenger' | 'cyberpunk' | 'matrix' | 'wood'
@@ -177,20 +178,34 @@ function App() {
 
   useEffect(() => {
     if (!profile) { applyCommunityTheme(null); return }
+    hydrateInstalledMedia(profile.id).catch(() => {})
     let cancelled = false
     async function syncStorePreferences() {
       const { data: preferences } = await supabase.from('store_preferences').select('*').eq('user_id', profile!.id).maybeSingle()
-      if (cancelled || !preferences) return
+      if (cancelled) return
+      if (!preferences) {
+        const previousTheme = localStorage.getItem('ferus-theme')
+        const initialTheme = isBuiltInTheme(previousTheme) ? previousTheme : 'messenger'
+        await supabase.from('store_preferences').upsert({
+          user_id: profile!.id,
+          builtin_theme: initialTheme,
+          installed_builtin_themes: Array.from(new Set(['messenger', initialTheme])),
+          updated_at: new Date().toISOString(),
+        })
+        return
+      }
       const ids = [preferences.active_theme_id, preferences.message_sound_id, preferences.nudge_sound_id].filter(Boolean) as string[]
-      if (!ids.length) { applyCommunityTheme(null); return }
-      const { data } = await supabase.from('store_items').select('*').in('id', ids)
+      const { data } = ids.length ? await supabase.from('store_items').select('*').in('id', ids) : { data: [] }
       if (cancelled) return
       const items = (data || []) as StoreItem[]
       applyCommunityTheme(items.find((item) => item.id === preferences.active_theme_id) || null)
+      if (!preferences.active_theme_id && isBuiltInTheme(preferences.builtin_theme)) setTheme(preferences.builtin_theme)
       const messageSound = items.find((item) => item.id === preferences.message_sound_id)
       const nudgeSound = items.find((item) => item.id === preferences.nudge_sound_id)
       if (messageSound?.asset_url) localStorage.setItem('thoth-message-sound', messageSound.asset_url)
       if (nudgeSound?.asset_url) localStorage.setItem('thoth-nudge-sound', nudgeSound.asset_url)
+      if (!preferences.message_sound_id) localStorage.removeItem('thoth-message-sound')
+      if (!preferences.nudge_sound_id) localStorage.removeItem('thoth-nudge-sound')
     }
     syncStorePreferences()
     const channel = supabase.channel(`store-preferences:${profile.id}`)
@@ -198,6 +213,15 @@ function App() {
       .subscribe()
     return () => { cancelled = true; supabase.removeChannel(channel) }
   }, [profile?.id])
+
+  useEffect(() => {
+    const onStoreTheme = (event: Event) => {
+      const id = (event as CustomEvent<string>).detail
+      if (isBuiltInTheme(id)) setTheme(id)
+    }
+    window.addEventListener('thoth-store-theme', onStoreTheme)
+    return () => window.removeEventListener('thoth-store-theme', onStoreTheme)
+  }, [])
   useEffect(() => {
     // Personalizacao livre de cores/tamanho foi removida (so temas prontos) - limpa
     // qualquer variavel que uma versao anterior tenha deixado aplicada.

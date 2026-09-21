@@ -3,6 +3,7 @@ import { isTauriDesktop } from '../lib/platform'
 
 export const NAME_FONTS = [
   { id: 'default', label: 'Padrão', family: 'inherit' },
+  { id: 'arial-italic', label: 'Arial Itálico', family: 'Arial, Helvetica, sans-serif' },
   { id: 'righteous', label: 'Righteous', family: "'Righteous', cursive" },
   { id: 'bebas', label: 'Bebas Neue', family: "'Bebas Neue', cursive" },
   { id: 'pacifico', label: 'Pacifico', family: "'Pacifico', cursive" },
@@ -82,7 +83,7 @@ export function StyledName({ name, font, effect, color: rawColor, className }: P
   })
   const color = rawColor && (effect === 'solid' || effect === 'neon') ? readable(rawColor, lightUi) : rawColor
   const fontDef = NAME_FONTS.find((f) => f.id === font)
-  const style: React.CSSProperties = fontDef && fontDef.id !== 'default' ? { fontFamily: fontDef.family, ...(fontDef.id === 'pixel' ? { fontSize: '0.7em' } : {}) } : {}
+  const style: React.CSSProperties = fontDef && fontDef.id !== 'default' ? { fontFamily: fontDef.family, ...(fontDef.id === 'pixel' ? { fontSize: '0.7em' } : {}), ...(fontDef.id === 'arial-italic' ? { fontStyle: 'italic' } : {}) } : {}
 
   if (effect === 'neon' && color) {
     style.color = color

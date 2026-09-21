@@ -40,6 +40,22 @@ export async function loadInstalledIds(userId: string) {
   return new Set((data || []).map((row) => row.item_id as string))
 }
 
+export async function hydrateInstalledMedia(userId: string) {
+  const { data, error } = await supabase.from('store_installs')
+    .select('item:store_items(*)').eq('user_id', userId)
+  if (error) return
+  for (const row of data || []) {
+    const item = row.item as unknown as StoreItem | null
+    if (!item?.asset_url) continue
+    if (item.kind === 'wink') {
+      await saveCustomWink({ id: `store:${item.id}`, label: item.name, imageData: item.asset_url, soundData: String(item.manifest.soundUrl || '') || null, fromUser: null })
+    } else if (item.kind === 'sticker' || item.kind === 'emoji') {
+      await saveCustomSticker({ id: `store:${item.id}`, label: item.name, imageData: item.asset_url })
+    }
+  }
+  window.dispatchEvent(new CustomEvent('thoth-store-library-changed'))
+}
+
 async function cacheAsset(url: string | null) {
   if (!url || !('caches' in window)) return
   try { await (await caches.open('thoth-store-v1')).add(url) } catch { /* cache e best-effort */ }

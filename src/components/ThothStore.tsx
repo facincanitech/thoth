@@ -6,8 +6,12 @@ import {
   activateStoreItem, installStoreItem, loadInstalledIds, loadStoreItems, publishStoreItem,
   uninstallStoreItem, uploadStoreAsset, type StoreItem, type StoreKind, type StoreManifest,
 } from '../lib/store'
+import { builtInSounds, builtInThemes, type BuiltInTheme } from '../lib/storeDefaults'
+import { applyCommunityTheme } from '../lib/store'
+import { StoreNameStudio } from './StoreNameStudio'
 
-type Category = StoreKind | 'bot' | 'mine'
+type Category = StoreKind | 'bot'
+type StoreSection = 'home' | 'themes' | 'name' | 'fun' | 'bots'
 type Bot = { id: string; slug: string; name: string; description: string; command_prefix: string }
 type Target = { id: string; name: string; type: 'messenger' | 'play' }
 
@@ -18,15 +22,29 @@ const categories: { id: Category; label: string; glyph: string }[] = [
   { id: 'sticker', label: 'Stickers', glyph: '▣' },
   { id: 'emoji', label: 'Emojis', glyph: '☺' },
   { id: 'bot', label: 'Bots', glyph: '⚙' },
-  { id: 'mine', label: 'Meus itens', glyph: '★' },
 ]
+
+const sections: { id: StoreSection | 'mine'; label: string; description: string; glyph: string }[] = [
+  { id: 'themes', label: 'Temas', description: 'Aparência e sons', glyph: '◈' },
+  { id: 'name', label: 'Nome', description: 'Fontes, estilos e cores', glyph: '✎' },
+  { id: 'fun', label: 'Diversão', description: 'Winks, stickers e emojis', glyph: '✦' },
+  { id: 'bots', label: 'Bots', description: 'Para grupos e Play', glyph: '⚙' },
+  { id: 'mine', label: 'Meus itens', description: 'Sua biblioteca', glyph: '★' },
+]
+
+const themeCategories = categories.filter((entry) => entry.id === 'theme' || entry.id === 'sound')
+const funCategories = categories.filter((entry) => entry.id === 'wink' || entry.id === 'sticker' || entry.id === 'emoji')
 
 const kindNames: Record<StoreKind, string> = { theme: 'tema', sound: 'som', wink: 'wink', sticker: 'sticker', emoji: 'emoji' }
 
-export function ThothStore({ me }: { me: Profile }) {
-  const [category, setCategory] = useState<Category>('theme')
+export function ThothStore({ me, mode = 'store', onOpenStore, onProfileChange }: { me: Profile; mode?: 'store' | 'library'; onOpenStore?: () => void; onProfileChange: (patch: Partial<Profile>) => void }) {
+  const [section, setSection] = useState<StoreSection>('home')
+  const [category, setCategory] = useState<Category | null>(null)
+  const [libraryOpen, setLibraryOpen] = useState(mode === 'library')
+  const [libraryCategory, setLibraryCategory] = useState<Category | null>(null)
   const [items, setItems] = useState<StoreItem[]>([])
   const [bots, setBots] = useState<Bot[]>([])
+  const [installedBots, setInstalledBots] = useState<Set<string>>(new Set())
   const [installed, setInstalled] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -34,33 +52,84 @@ export function ThothStore({ me }: { me: Profile }) {
   const [botTarget, setBotTarget] = useState<Bot | null>(null)
   const [targets, setTargets] = useState<Target[]>([])
   const [busyId, setBusyId] = useState<string | null>(null)
+  const [builtInLibrary, setBuiltInLibrary] = useState<string[]>(['messenger'])
+  const [activeTheme, setActiveTheme] = useState<string>('messenger')
+  const [activeSounds, setActiveSounds] = useState({ message: 'message', nudge: 'nudge' })
+  const activeCategory = libraryOpen ? libraryCategory : category
+
+  const loadPreferences = useCallback(async () => {
+    const { data } = await supabase.from('store_preferences').select('*').eq('user_id', me.id).maybeSingle()
+    if (!data) return
+    setBuiltInLibrary(data.installed_builtin_themes || ['messenger'])
+    setActiveTheme(data.active_theme_id || data.builtin_theme || 'messenger')
+    setActiveSounds({ message: data.message_sound_id || data.message_builtin_sound || 'message', nudge: data.nudge_sound_id || data.nudge_builtin_sound || 'nudge' })
+  }, [me.id])
 
   const reload = useCallback(async () => {
     setLoading(true); setError('')
     try {
-      if (category === 'bot') {
-        const { data, error: botError } = await supabase.from('bots').select('*').order('name')
+      if (activeCategory === 'bot') {
+        const [{ data, error: botError }, { data: groupBots }, { data: playBots }] = await Promise.all([
+          supabase.from('bots').select('*').order('name'),
+          supabase.from('group_bots').select('bot_id').eq('installed_by', me.id),
+          supabase.from('play_group_bots').select('bot_id').eq('installed_by', me.id),
+        ])
         if (botError) throw botError
         setBots((data || []) as Bot[])
+        setInstalledBots(new Set([...(groupBots || []), ...(playBots || [])].map((row) => row.bot_id as string)))
       } else {
         const [catalog, library] = await Promise.all([
-          loadStoreItems(category === 'mine' ? undefined : category), loadInstalledIds(me.id),
+          loadStoreItems(activeCategory === null ? undefined : activeCategory), loadInstalledIds(me.id),
         ])
         setInstalled(library)
-        setItems(category === 'mine' ? catalog.filter((item) => library.has(item.id) || item.creator_id === me.id) : catalog)
+        setItems(catalog)
       }
     } catch (cause) { setError(getErrorMessage(cause)) }
     finally { setLoading(false) }
-  }, [category, me.id])
+  }, [activeCategory, me.id])
 
   useEffect(() => { reload() }, [reload])
+  useEffect(() => { loadPreferences() }, [loadPreferences])
   useEffect(() => {
     const channel = supabase.channel(`store:${me.id}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'store_items' }, reload)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'store_installs', filter: `user_id=eq.${me.id}` }, reload)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'store_preferences', filter: `user_id=eq.${me.id}` }, loadPreferences)
       .subscribe()
     return () => { supabase.removeChannel(channel) }
-  }, [me.id, reload])
+  }, [me.id, reload, loadPreferences])
+
+  async function activateBuiltInTheme(id: BuiltInTheme) {
+    setBusyId(id); setError('')
+    try {
+      const library = Array.from(new Set([...builtInLibrary, id, 'messenger']))
+      const { error: saveError } = await supabase.from('store_preferences').upsert({ user_id: me.id, active_theme_id: null, builtin_theme: id, installed_builtin_themes: library, updated_at: new Date().toISOString() })
+      if (saveError) throw saveError
+      setBuiltInLibrary(library); setActiveTheme(id)
+      window.dispatchEvent(new CustomEvent('thoth-store-theme', { detail: id }))
+      window.dispatchEvent(new CustomEvent('thoth-store-library-changed'))
+      applyCommunityTheme(null)
+    } catch (cause) { setError(getErrorMessage(cause)) }
+    finally { setBusyId(null) }
+  }
+
+  async function removeBuiltInTheme(id: BuiltInTheme) {
+    if (id === 'messenger') return
+    if (activeTheme === id) await activateBuiltInTheme('messenger')
+    const library = builtInLibrary.filter((item) => item !== id)
+    const { error: saveError } = await supabase.from('store_preferences').upsert({ user_id: me.id, installed_builtin_themes: library, updated_at: new Date().toISOString() })
+    if (saveError) { setError(getErrorMessage(saveError)); return }
+    setBuiltInLibrary(library)
+  }
+
+  async function activateBuiltInSound(type: 'message' | 'nudge') {
+    setBusyId(type); setError('')
+    const update = type === 'message' ? { message_sound_id: null, message_builtin_sound: 'message' } : { nudge_sound_id: null, nudge_builtin_sound: 'nudge' }
+    const { error: saveError } = await supabase.from('store_preferences').upsert({ user_id: me.id, ...update, updated_at: new Date().toISOString() })
+    if (saveError) setError(getErrorMessage(saveError))
+    else { localStorage.removeItem(type === 'message' ? 'thoth-message-sound' : 'thoth-nudge-sound'); setActiveSounds((old) => ({ ...old, [type]: type })) }
+    setBusyId(null)
+  }
 
   async function toggleInstall(item: StoreItem) {
     setBusyId(item.id); setError('')
@@ -78,6 +147,8 @@ export function ThothStore({ me }: { me: Profile }) {
       if (!installed.has(item.id)) await installStoreItem(me.id, item)
       await activateStoreItem(me.id, item)
       setInstalled((old) => new Set(old).add(item.id))
+      if (item.kind === 'theme') setActiveTheme(item.id)
+      if (item.kind === 'sound') setActiveSounds((old) => ({ ...old, [item.manifest.soundType === 'nudge' ? 'nudge' : 'message']: item.id }))
     } catch (cause) { setError(getErrorMessage(cause)) }
     finally { setBusyId(null) }
   }
@@ -113,33 +184,61 @@ export function ThothStore({ me }: { me: Profile }) {
         : await supabase.from('play_group_bots').upsert({ group_id: target.id, bot_id: botTarget.id, installed_by: me.id })
       if (result.error) throw result.error
       setBotTarget(null)
+      setInstalledBots((old) => new Set(old).add(botTarget.id))
     } catch (cause) { setError(getErrorMessage(cause)) }
     finally { setBusyId(null) }
   }
 
-  const title = categories.find((entry) => entry.id === category)?.label || 'Loja'
-  const canCreate = category !== 'mine'
+  const title = libraryOpen ? libraryCategory ? categories.find((entry) => entry.id === libraryCategory)?.label || 'Meus itens' : 'Meus itens' : category ? categories.find((entry) => entry.id === category)?.label || 'Loja' : sections.find((entry) => entry.id === section)?.label || 'Loja Thoth'
+  const canCreate = !libraryOpen && !!category
+  const visibleItems = libraryOpen ? items.filter((item) => installed.has(item.id)) : items
+
+  function openLibrary() { setLibraryCategory(null); setLibraryOpen(true) }
+  function leaveLibrary() {
+    if (libraryCategory) { setLibraryCategory(null); return }
+    if (mode === 'library' && onOpenStore) { onOpenStore(); return }
+    setLibraryOpen(false)
+  }
+  function openSection(id: StoreSection | 'mine') {
+    if (id === 'mine') { openLibrary(); return }
+    setSection(id)
+    setCategory(id === 'bots' ? 'bot' : null)
+  }
+  function goBack() {
+    if (libraryOpen) { leaveLibrary(); return }
+    if (category && section !== 'bots') { setCategory(null); return }
+    setSection('home'); setCategory(null)
+  }
 
   return (
     <div className="thoth-store">
       <div className="store-hero">
-        <div><span className="store-kicker">LOJA THOTH</span><h2>{title}</h2><p>Feito pela comunidade. Seu acervo acompanha sua conta.</p></div>
+        <div><span className="store-kicker">{libraryOpen ? 'SUA BIBLIOTECA' : 'LOJA THOTH'}</span><h2>{title}</h2><p>{libraryOpen ? 'Seus downloads e escolhas, organizados por categoria.' : 'Feito pela comunidade. Seu acervo acompanha sua conta.'}</p></div>
         {canCreate && <button className="store-create" type="button" onClick={() => setCreatorOpen(true)}>＋ Criar</button>}
-      </div>
-      <div className="store-tabs">
-        {categories.map((entry) => <button key={entry.id} className={category === entry.id ? 'active' : ''} onClick={() => setCategory(entry.id)}><b>{entry.glyph}</b><span>{entry.label}</span></button>)}
+        {(libraryOpen || section !== 'home') && <button className="store-create" type="button" onClick={goBack}>← Voltar</button>}
       </div>
       {error && <div className="store-error">{error}</div>}
-      {loading ? <div className="store-empty">Abrindo o acervo…</div> : category === 'bot' ? (
-        <div className="store-grid">{bots.map((bot) => <article className="store-card bot" key={bot.id}>
+      {!libraryOpen && section === 'home' ? <div className="store-category-grid">{sections.map((entry) => <button key={entry.id} className="store-category-tile" onClick={() => openSection(entry.id)}><b>{entry.glyph}</b><span>{entry.label}</span><small>{entry.description}</small></button>)}</div>
+      : !libraryOpen && (section === 'themes' || section === 'fun') && !category ? <div className="store-category-grid">{(section === 'themes' ? themeCategories : funCategories).map((entry) => <button key={entry.id} className="store-category-tile" onClick={() => setCategory(entry.id)}><b>{entry.glyph}</b><span>{entry.label}</span><small>{entry.id === 'theme' ? 'Visuais do app' : entry.id === 'sound' ? 'Mensagem e chamar atenção' : 'Explore o acervo'}</small></button>)}</div>
+      : !libraryOpen && section === 'name' ? <StoreNameStudio me={me} onProfileChange={onProfileChange} />
+      : libraryOpen && !libraryCategory ? <div className="store-category-grid">{categories.map((entry) => <button key={entry.id} className="store-category-tile" onClick={() => setLibraryCategory(entry.id)}><b>{entry.glyph}</b><span>{entry.label}</span><small>{entry.id === 'theme' ? `${builtInLibrary.length + items.filter((item) => item.kind === 'theme' && installed.has(item.id)).length} salvos` : entry.id === 'sound' ? `${builtInSounds.length + items.filter((item) => item.kind === 'sound' && installed.has(item.id)).length} disponíveis` : entry.id === 'bot' ? 'Ver instalados' : `${items.filter((item) => item.kind === entry.id && installed.has(item.id)).length} salvos`}</small></button>)}</div>
+      : loading ? <div className="store-empty">Abrindo o acervo…</div> : activeCategory === 'bot' ? (
+        <div className="store-grid">{bots.filter((bot) => !libraryOpen || installedBots.has(bot.id)).map((bot) => <article className="store-card bot" key={bot.id}>
           <div className="store-preview store-bot-preview"><span>⚙</span><small>{bot.command_prefix}</small></div>
           <div className="store-card-body"><span className="store-kind">BOT</span><h3>{bot.name}</h3><p>{bot.description}</p><div className="store-author">Thoth Bots</div>
             <button onClick={() => chooseBot(bot)}>Adicionar ao grupo ou Play</button></div>
-        </article>)}</div>
-      ) : items.length ? (
-        <div className="store-grid">{items.map((item) => <StoreCard key={item.id} item={item} installed={installed.has(item.id)} busy={busyId === item.id} onToggle={() => toggleInstall(item)} onUse={() => activateItem(item)} />)}</div>
-      ) : <div className="store-empty">Ainda não há nada nesta prateleira. Seja a primeira pessoa a publicar.</div>}
-      {creatorOpen && <CreatorModal me={me} initialKind={category === 'bot' || category === 'mine' ? 'theme' : category} botSubmission={category === 'bot'} onClose={() => setCreatorOpen(false)} onDone={() => { setCreatorOpen(false); reload() }} />}
+        </article>)}{libraryOpen && !installedBots.size && <div className="store-empty">Você ainda não instalou bots em grupos ou servidores.</div>}</div>
+      ) : <div className="store-grid">
+        {activeCategory === 'theme' && builtInThemes.filter((theme) => !libraryOpen || builtInLibrary.includes(theme.id)).map((theme) => <article className="store-card" key={theme.id}>
+          <div className={`store-preview builtin-theme-preview builtin-${theme.id}`}><div className="theme-mini"><i/><i/><i/></div></div>
+          <div className="store-card-body"><span className="store-kind">{theme.id === 'messenger' ? 'TEMA PRINCIPAL' : 'TEMA OFICIAL'}</span><h3>{theme.name}</h3><p>{theme.description}</p><div className="store-author">por Thoth Messenger</div>
+            <div className="store-card-actions">{libraryOpen && theme.id !== 'messenger' && <button className="secondary" onClick={() => removeBuiltInTheme(theme.id)}>Remover</button>}<button disabled={busyId === theme.id || activeTheme === theme.id} onClick={() => activateBuiltInTheme(theme.id)}>{activeTheme === theme.id ? 'Em uso' : libraryOpen || builtInLibrary.includes(theme.id) ? 'Usar' : 'Salvar e usar'}</button></div></div>
+        </article>)}
+        {activeCategory === 'sound' && builtInSounds.map((sound) => <article className="store-card" key={sound.id}><div className="store-preview sound"><span className="store-preview-glyph">♫</span></div><div className="store-card-body"><span className="store-kind">SOM PADRÃO · {sound.type === 'message' ? 'MENSAGEM' : 'CHAMAR ATENÇÃO'}</span><h3>{sound.name}</h3><p>{sound.description}</p><div className="store-author">por Thoth Messenger</div><div className="store-card-actions"><button className="secondary" onClick={() => new Audio(`${import.meta.env.BASE_URL}${sound.url}`).play().catch(() => {})}>Ouvir</button><button disabled={busyId === sound.id || activeSounds[sound.type] === sound.id} onClick={() => activateBuiltInSound(sound.type)}>{activeSounds[sound.type] === sound.id ? 'Em uso' : 'Usar'}</button></div></div></article>)}
+        {visibleItems.map((item) => <StoreCard key={item.id} item={item} installed={installed.has(item.id)} busy={busyId === item.id} active={activeTheme === item.id || activeSounds.message === item.id || activeSounds.nudge === item.id} onToggle={() => toggleInstall(item)} onUse={() => activateItem(item)} />)}
+        {!visibleItems.length && activeCategory !== 'theme' && activeCategory !== 'sound' && <div className="store-empty">{libraryOpen ? 'Nada salvo nesta categoria ainda. Explore a Loja Thoth.' : 'Ainda não há itens nesta categoria.'}</div>}
+      </div>}
+      {creatorOpen && <CreatorModal me={me} initialKind={category === 'bot' || !category ? 'theme' : category} botSubmission={category === 'bot'} onClose={() => setCreatorOpen(false)} onDone={() => { setCreatorOpen(false); reload() }} />}
       {botTarget && <div className="store-modal-backdrop" onMouseDown={() => setBotTarget(null)}><div className="store-modal" onMouseDown={(event) => event.stopPropagation()}>
         <button className="store-modal-close" onClick={() => setBotTarget(null)}>×</button><span className="store-kicker">INSTALAR {botTarget.name.toUpperCase()}</span><h2>Onde ele vai morar?</h2>
         <p>Escolha um grupo do Messenger ou servidor do Play que você administra.</p><div className="store-targets">
@@ -150,7 +249,7 @@ export function ThothStore({ me }: { me: Profile }) {
   )
 }
 
-function StoreCard({ item, installed, busy, onToggle, onUse }: { item: StoreItem; installed: boolean; busy: boolean; onToggle: () => void; onUse: () => void }) {
+function StoreCard({ item, installed, busy, active, onToggle, onUse }: { item: StoreItem; installed: boolean; busy: boolean; active: boolean; onToggle: () => void; onUse: () => void }) {
   const previewStyle = item.kind === 'theme' ? {
     background: `linear-gradient(145deg, ${item.manifest.background || '#08131c'}, ${item.manifest.surface || '#172936'})`,
     color: String(item.manifest.text || '#fff'), '--card-accent': item.manifest.accent || '#22d3ee',
@@ -161,7 +260,7 @@ function StoreCard({ item, installed, busy, onToggle, onUse }: { item: StoreItem
     </div>
     <div className="store-card-body"><span className="store-kind">{kindNames[item.kind]}</span><h3>{item.name}</h3><p>{item.description || 'Uma criação da comunidade Thoth.'}</p>
       <div className="store-author">{item.creator?.avatar_url ? <img src={item.creator.avatar_url} alt="" /> : <i /> }<span>por {item.creator?.display_name || item.creator?.username || 'comunidade'}</span></div>
-      <div className="store-card-actions"><button className="secondary" disabled={busy} onClick={onToggle}>{installed ? 'Remover' : 'Baixar'}</button>{(item.kind === 'theme' || item.kind === 'sound') && <button disabled={busy} onClick={onUse}>Usar</button>}</div>
+      <div className="store-card-actions"><button className="secondary" disabled={busy || active} onClick={onToggle}>{installed ? 'Remover' : 'Baixar'}</button>{(item.kind === 'theme' || item.kind === 'sound') && <button disabled={busy || active} onClick={onUse}>{active ? 'Em uso' : 'Usar'}</button>}</div>
       <small>{item.installs_count} instalações · {item.likes_count} curtidas</small>
     </div></article>
 }
@@ -173,7 +272,7 @@ function CreatorModal({ me, initialKind, botSubmission, onClose, onDone }: { me:
   const [file, setFile] = useState<File | null>(null)
   const [soundFile, setSoundFile] = useState<File | null>(null)
   const [soundType, setSoundType] = useState<'message' | 'nudge'>('message')
-  const [colors, setColors] = useState({ primary: '#0b1720', accent: '#22d3ee', background: '#071017', surface: '#122531', text: '#f4fbff', incoming: '#173746', outgoing: '#164e63' })
+  const [colors, setColors] = useState({ primary: '#0b1720', accent: '#22d3ee', background: '#071017', surface: '#122531', text: '#f4fbff', muted: '#b4c3cc', incoming: '#173746', outgoing: '#164e63' })
   const [busy, setBusy] = useState(false); const [error, setError] = useState('')
   const accepts = kind === 'sound' ? 'audio/*' : 'image/png,image/jpeg,image/webp,image/gif'
   const needsFile = kind !== 'theme'
@@ -203,7 +302,7 @@ function CreatorModal({ me, initialKind, botSubmission, onClose, onDone }: { me:
     {!botSubmission && <label>Categoria<select value={kind} onChange={(event) => setKind(event.target.value as StoreKind)}>{Object.entries(kindNames).map(([id, label]) => <option key={id} value={id}>{label}</option>)}</select></label>}
     <label>Nome da criação<input maxLength={60} value={name} onChange={(event) => setName(event.target.value)} placeholder="Ex.: Noite em Neo Thoth" /></label>
     <label>Descrição<textarea maxLength={500} value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Conte a ideia e o que torna isso especial" /></label>
-    {!botSubmission && kind === 'theme' && <div className="store-color-grid">{Object.entries(colors).map(([key, value]) => <label key={key}>{key}<input type="color" value={value} onChange={(event) => setColors((old) => ({ ...old, [key]: event.target.value }))} /></label>)}</div>}
+    {!botSubmission && kind === 'theme' && <><p className="store-color-help">Essas cores controlam áreas gerais do app; os temas oficiais ainda podem ter detalhes próprios.</p><div className="store-color-grid">{Object.entries(colors).map(([key, value]) => <label key={key}>{({ primary: 'Cor principal', accent: 'Destaque e botões', background: 'Fundo', surface: 'Painéis', text: 'Texto principal', muted: 'Texto secundário', incoming: 'Mensagem recebida', outgoing: 'Mensagem enviada' } as Record<string, string>)[key]}<input type="color" value={value} onChange={(event) => setColors((old) => ({ ...old, [key]: event.target.value }))} /></label>)}</div></>}
     {!botSubmission && kind === 'sound' && <label>Usar para<select value={soundType} onChange={(event) => setSoundType(event.target.value as 'message' | 'nudge')}><option value="message">Nova mensagem</option><option value="nudge">Chamar atenção</option></select></label>}
     {!botSubmission && (needsFile || kind === 'theme') && <label>{kind === 'theme' ? 'Imagem da barra/fundo (opcional)' : 'Arquivo'}<input type="file" accept={accepts} onChange={(event) => setFile(event.target.files?.[0] || null)} /></label>}
     {!botSubmission && kind === 'wink' && <label>Som do wink (opcional)<input type="file" accept="audio/*" onChange={(event) => setSoundFile(event.target.files?.[0] || null)} /></label>}
