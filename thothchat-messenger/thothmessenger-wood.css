@@ -441,8 +441,11 @@
 body{background:#1b0f09 url('../src/assets/themes/walnut-grain.png') center/420px auto fixed!important;color:#f5e4c9!important}
 .app,.desktop-window-shell{background:rgb(24 13 8 / 70%)!important}
 .titlebar{background:linear-gradient(#3b2417,#201109)!important;border-bottom-color:#b9874f!important}
-.rail{background:linear-gradient(rgb(35 18 10 / 20%),rgb(20 10 6 / 38%)),url('../src/assets/themes/walnut-grain.png') center/360px auto!important;border-right:2px solid #b9874f!important;box-shadow:inset -5px 0 12px #160a05aa!important}
-.rail-link[aria-current="page"]{background:#e3c18f!important;color:#3b1f0d!important;border-color:#f3d9ac!important;box-shadow:0 2px 8px #13080399!important}
+.desktop-window-shell .rail{background:linear-gradient(rgb(35 18 10 / 10%),rgb(20 10 6 / 28%)),url('../src/assets/themes/walnut-grain.png') center/320px auto!important;border-right:2px solid #b9874f!important;box-shadow:inset -7px 0 13px #160a05aa,5px 0 18px #0b050399!important}
+.desktop-window-shell .rail:before{background:linear-gradient(90deg,#f2d2a71c,transparent 18% 72%,#12070355)!important}
+.desktop-window-shell .rail:after{width:34%!important;height:145%!important;top:-18%!important;left:32%!important;background:linear-gradient(100deg,transparent 38%,#f0d09b2e 48%,transparent 60%)!important}
+.desktop-window-shell .rail-link{border-radius:5px!important;color:#e4c69f!important}
+.desktop-window-shell .rail-link[aria-current="page"]{background:#e3c18f!important;color:#3b1f0d!important;border-color:#f3d9ac!important;box-shadow:0 2px 8px #13080399!important}
 .chat-header,.top,.msn-identity-card{background:linear-gradient(#4e2e1d,#2b170e)!important;color:#f5e4c9!important;border-color:#9a704b!important}
 .chats,.chat-list,.msn-contacts-window,.msn-contact-list,.new-conv-panel{background:#2a180ff2!important;color:#f5e4c9!important}
 .msn-search-row,.composer,.composer-icons{background:#321d12!important;border-color:#795438!important}

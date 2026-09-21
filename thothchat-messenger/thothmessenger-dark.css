@@ -441,8 +441,8 @@
 html,body,#root{background:#070b10!important;color:#eef4ff!important}
 .desktop-window-shell{background:#0b1018!important;border-color:#34475e!important;box-shadow:inset 0 0 0 1px #ffffff0b,0 18px 45px #0009!important}
 .titlebar{background:linear-gradient(#182332,#0b111a)!important;border-bottom-color:#40526a!important;color:#eef4ff!important}
-.rail{background:linear-gradient(120deg,#26384d33,transparent 42%),linear-gradient(#162332,#0c131d)!important;border-right-color:#40526a!important}
-.rail-link[aria-current="page"]{background:linear-gradient(#324b66,#21374d)!important;color:#dff5ff!important;border-color:#65bdec!important;box-shadow:inset 0 1px #ffffff22,0 0 12px #56b7e933!important}
+.desktop-window-shell .rail{background:linear-gradient(120deg,#26384d33,transparent 42%),linear-gradient(#162332,#0c131d)!important;border-right-color:#40526a!important}
+.desktop-window-shell .rail-link[aria-current="page"]{background:linear-gradient(#324b66,#21374d)!important;color:#dff5ff!important;border-color:#65bdec!important;box-shadow:inset 0 1px #ffffff22,0 0 12px #56b7e933!important}
 .chat-header,.top,.msn-identity-card{background:linear-gradient(135deg,#202d3d,#111923)!important;color:#eef4ff!important;border-color:#40526a!important}
 .messages{background:radial-gradient(circle at 82% 8%,#1a2a3a 0,transparent 38%),#090e15!important;color:#eef4ff!important}
 .chats,.chat-list,.msn-contacts-window,.msn-contact-list,.new-conv-panel{background:#0d141dee!important;color:#eef4ff!important}

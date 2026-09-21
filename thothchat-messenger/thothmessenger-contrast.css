@@ -441,7 +441,7 @@
 html,body,#root,.app,.desktop-window-shell{background:#000!important;color:#fff!important}
 .desktop-window-shell{border:2px solid #fff!important;box-shadow:none!important}
 .titlebar,.rail,.chat-header,.top,.msn-identity-card,.composer,.composer-icons,.msn-search-row{background:#000!important;color:#fff!important;border-color:#fff!important}
-.rail{border-right:2px solid #fff!important}.rail-link[aria-current="page"]{background:#fff!important;color:#000!important;border:2px solid #fff!important;box-shadow:none!important}
+.desktop-window-shell .rail{border-right:2px solid #fff!important;background:#000!important}.desktop-window-shell .rail-link[aria-current="page"]{background:#fff!important;color:#000!important;border:2px solid #fff!important;box-shadow:none!important}
 .chats,.chat-list,.msn-contacts-window,.msn-contact-list,.messages,.new-conv-panel{background:#000!important;color:#fff!important}
 .search,.input,.msn-search-row input{background:#000!important;color:#fff!important;border:2px solid #fff!important}
 .chat,.msn-contact{color:#fff!important;border-bottom:1px solid #fff!important}.chat.selected,.msn-contact:hover,.msn-contact:active{background:#fff!important;color:#000!important;border-color:#fff!important}

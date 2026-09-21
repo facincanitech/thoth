@@ -2233,7 +2233,7 @@ body{
   --rail-icon:#77cb88;--shadow:0 12px 36px rgb(0 0 0 / 48%);
 }
 [data-theme="matrix"] body{font-family:"Courier New",monospace;background:#010502}
-[data-theme="matrix"] .rail{background:#010502 url('/themes/matrix-rain.svg') center top/180px 360px repeat-y;border-right:1px solid #18c947;animation:matrixRailRain 9s linear infinite}
+[data-theme="matrix"] .rail{background:#010502 url('/themes/matrix-rain.svg') center top/180px 360px repeat-y;border-right:1px solid #18c947;animation:matrixRailRain 24s linear infinite}
 [data-theme="matrix"] .brand-image{filter:grayscale(1) sepia(1) saturate(8) hue-rotate(75deg) drop-shadow(0 0 6px #2fff60)}
 [data-theme="matrix"] .rail-wordmark,[data-theme="matrix"] .brand{color:#43ff6d;text-shadow:0 0 7px #18d94a}
 [data-theme="matrix"] .rail-link{border-radius:0}

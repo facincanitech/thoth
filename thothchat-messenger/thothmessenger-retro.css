@@ -440,10 +440,10 @@
 :root{--bg-deep:#d9e6f5;--bg-panel:#fff;--bg-surface:#fff;--bg-surface-2:#edf3fa;--bg-selected:#e1ebf7;--line:#9fb8d4;--line-2:#c4d3e5;--text:#30405a;--text-base:#30405a;--text-secondary:#4d6380;--muted:#70839a;--accent-text:#315d9b;--input:#fff;--rail-bg:#d5e3f3;--rail-icon:#315d9b;--green:#315d9b;--on-button:#fff}
 .play-window-shell .titlebar{background:linear-gradient(#7599c8,#4f75aa)!important}
 .titlebar{background:linear-gradient(#7599c8,#4f75aa)!important}
-.rail{background:#d7e5f5!important;border-right-color:#9db6d5!important;box-shadow:none!important}
+.desktop-window-shell .rail{background:linear-gradient(180deg,#eaf2fb,#c6d8ec)!important;border-right-color:#9db6d5!important;box-shadow:inset -1px 0 #fff!important}
 .rail-wordmark,.brand{color:#db2f86!important;text-shadow:none!important}
-.rail-link{border-radius:2px!important;color:#315d9b!important;text-shadow:none!important}
-.rail-link[aria-current="page"]{background:#fff!important;color:#315d9b!important;border-color:#9db6d5!important;box-shadow:none!important}
+.desktop-window-shell .rail-link{border-radius:2px!important;color:#315d9b!important;text-shadow:none!important}
+.desktop-window-shell .rail-link[aria-current="page"]{background:#fff!important;color:#315d9b!important;border-color:#9db6d5!important;border-bottom:3px solid #db2f86!important;box-shadow:none!important}
 .top,.chat-header,.msn-identity-card{background:#d9e6f5!important;border-color:#9fb8d4!important}
 .chat-list,.messages,.msn-contacts-window,.msn-contact-list{background:#fff!important}
 .chat,.bubble,.input,.search,.msn-contact,.msn-search-row input{border-radius:2px!important;box-shadow:none!important}

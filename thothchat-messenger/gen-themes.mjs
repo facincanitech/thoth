@@ -63,8 +63,8 @@ const extras = {
 html,body,#root{background:#070b10!important;color:#eef4ff!important}
 .desktop-window-shell{background:#0b1018!important;border-color:#34475e!important;box-shadow:inset 0 0 0 1px #ffffff0b,0 18px 45px #0009!important}
 .titlebar{background:linear-gradient(#182332,#0b111a)!important;border-bottom-color:#40526a!important;color:#eef4ff!important}
-.rail{background:linear-gradient(120deg,#26384d33,transparent 42%),linear-gradient(#162332,#0c131d)!important;border-right-color:#40526a!important}
-.rail-link[aria-current="page"]{background:linear-gradient(#324b66,#21374d)!important;color:#dff5ff!important;border-color:#65bdec!important;box-shadow:inset 0 1px #ffffff22,0 0 12px #56b7e933!important}
+.desktop-window-shell .rail{background:linear-gradient(120deg,#26384d33,transparent 42%),linear-gradient(#162332,#0c131d)!important;border-right-color:#40526a!important}
+.desktop-window-shell .rail-link[aria-current="page"]{background:linear-gradient(#324b66,#21374d)!important;color:#dff5ff!important;border-color:#65bdec!important;box-shadow:inset 0 1px #ffffff22,0 0 12px #56b7e933!important}
 .chat-header,.top,.msn-identity-card{background:linear-gradient(135deg,#202d3d,#111923)!important;color:#eef4ff!important;border-color:#40526a!important}
 .messages{background:radial-gradient(circle at 82% 8%,#1a2a3a 0,transparent 38%),#090e15!important;color:#eef4ff!important}
 .chats,.chat-list,.msn-contacts-window,.msn-contact-list,.new-conv-panel{background:#0d141dee!important;color:#eef4ff!important}
@@ -77,10 +77,10 @@ html,body,#root{background:#070b10!important;color:#eef4ff!important}
 :root{--bg-deep:#d9e6f5;--bg-panel:#fff;--bg-surface:#fff;--bg-surface-2:#edf3fa;--bg-selected:#e1ebf7;--line:#9fb8d4;--line-2:#c4d3e5;--text:#30405a;--text-base:#30405a;--text-secondary:#4d6380;--muted:#70839a;--accent-text:#315d9b;--input:#fff;--rail-bg:#d5e3f3;--rail-icon:#315d9b;--green:#315d9b;--on-button:#fff}
 .play-window-shell .titlebar{background:linear-gradient(#7599c8,#4f75aa)!important}
 .titlebar{background:linear-gradient(#7599c8,#4f75aa)!important}
-.rail{background:#d7e5f5!important;border-right-color:#9db6d5!important;box-shadow:none!important}
+.desktop-window-shell .rail{background:linear-gradient(180deg,#eaf2fb,#c6d8ec)!important;border-right-color:#9db6d5!important;box-shadow:inset -1px 0 #fff!important}
 .rail-wordmark,.brand{color:#db2f86!important;text-shadow:none!important}
-.rail-link{border-radius:2px!important;color:#315d9b!important;text-shadow:none!important}
-.rail-link[aria-current="page"]{background:#fff!important;color:#315d9b!important;border-color:#9db6d5!important;box-shadow:none!important}
+.desktop-window-shell .rail-link{border-radius:2px!important;color:#315d9b!important;text-shadow:none!important}
+.desktop-window-shell .rail-link[aria-current="page"]{background:#fff!important;color:#315d9b!important;border-color:#9db6d5!important;border-bottom:3px solid #db2f86!important;box-shadow:none!important}
 .top,.chat-header,.msn-identity-card{background:#d9e6f5!important;border-color:#9fb8d4!important}
 .chat-list,.messages,.msn-contacts-window,.msn-contact-list{background:#fff!important}
 .chat,.bubble,.input,.search,.msn-contact,.msn-search-row input{border-radius:2px!important;box-shadow:none!important}
@@ -99,7 +99,7 @@ html,body,#root{background:#070b10!important;color:#eef4ff!important}
 html,body,#root,.app,.desktop-window-shell{background:#000!important;color:#fff!important}
 .desktop-window-shell{border:2px solid #fff!important;box-shadow:none!important}
 .titlebar,.rail,.chat-header,.top,.msn-identity-card,.composer,.composer-icons,.msn-search-row{background:#000!important;color:#fff!important;border-color:#fff!important}
-.rail{border-right:2px solid #fff!important}.rail-link[aria-current="page"]{background:#fff!important;color:#000!important;border:2px solid #fff!important;box-shadow:none!important}
+.desktop-window-shell .rail{border-right:2px solid #fff!important;background:#000!important}.desktop-window-shell .rail-link[aria-current="page"]{background:#fff!important;color:#000!important;border:2px solid #fff!important;box-shadow:none!important}
 .chats,.chat-list,.msn-contacts-window,.msn-contact-list,.messages,.new-conv-panel{background:#000!important;color:#fff!important}
 .search,.input,.msn-search-row input{background:#000!important;color:#fff!important;border:2px solid #fff!important}
 .chat,.msn-contact{color:#fff!important;border-bottom:1px solid #fff!important}.chat.selected,.msn-contact:hover,.msn-contact:active{background:#fff!important;color:#000!important;border-color:#fff!important}
@@ -112,8 +112,11 @@ html,body,#root,.app,.desktop-window-shell{background:#000!important;color:#fff!
 body{background:#050710 url('../src/assets/themes/cyberpunk-city.png') center bottom/auto 100% fixed!important;color:#f4f7ff!important}
 .app,.desktop-window-shell{background:linear-gradient(rgb(5 7 16 / 38%),rgb(8 5 18 / 52%)),url('../src/assets/themes/cyberpunk-city.png') center bottom/auto 100% fixed!important}
 .titlebar{background:linear-gradient(#141328,#070914)!important;border-bottom-color:#20e7ff!important}
-.rail{background:linear-gradient(rgb(7 8 19 / 58%),rgb(12 8 27 / 72%)),url('../src/assets/themes/cyberpunk-city.png') 18% bottom/auto 100% fixed!important;border-right:1px solid #20e7ff!important}
-.rail-link[aria-current="page"]{background:#20e7ff!important;color:#061019!important;box-shadow:0 0 16px #20e7ff88!important}
+.desktop-window-shell .rail{background:linear-gradient(rgb(7 8 19 / 48%),rgb(12 8 27 / 62%)),url('../src/assets/themes/cyberpunk-city.png') 18% bottom/auto 100% fixed!important;border-right:1px solid #20e7ff!important;box-shadow:inset -1px 0 #20e7ff66,5px 0 18px #20e7ff1f!important}
+.desktop-window-shell .rail:before{background:linear-gradient(180deg,#20e7ff1f,transparent 28%,#ff3cac24 75%,transparent)!important}
+.desktop-window-shell .rail:after{width:2px!important;height:100%!important;top:0!important;left:auto!important;right:2px!important;transform:none!important;background:linear-gradient(transparent,#20e7ff 30%,#ff3cac 72%,transparent)!important;box-shadow:0 0 10px #20e7ff!important}
+.desktop-window-shell .rail-link{border-radius:0!important}
+.desktop-window-shell .rail-link[aria-current="page"]{background:#20e7ff!important;color:#061019!important;border-color:#8affff!important;box-shadow:0 0 16px #20e7ff88!important}
 .chat-header,.top,.msn-identity-card{background:linear-gradient(135deg,#11142bee,#21113aee)!important;color:#f4f7ff!important;border-color:#2a3865!important}
 .messages{background:linear-gradient(#0507107a,#050710b3),url('../src/assets/themes/cyberpunk-city.png') center bottom/auto 100% fixed!important;color:#f4f7ff!important}
 .chats,.chat-list,.new-conv-panel{background:#080a17b8!important;color:#f4f7ff!important}
@@ -133,9 +136,12 @@ body{background:#050710 url('../src/assets/themes/cyberpunk-city.png') center bo
 html,body,#root{background:#010502!important;color:#caffd4!important}
 .app,.desktop-window-shell{background:#010502!important;color:#caffd4!important}
 .titlebar{background:#020703!important;color:#5cff7d!important;border-bottom:1px solid #18c947!important}
-.rail{background:#010502 url('../src/assets/themes/matrix-rain.svg') center top/180px 360px repeat-y!important;border-right:1px solid #00ff55!important;animation:matrixRain 9s linear infinite!important}
+.desktop-window-shell .rail{background:#010502 url('../src/assets/themes/matrix-rain.svg') center top/180px 360px repeat-y!important;border-right:1px solid #00ff55!important;animation:matrixRain 24s linear infinite!important;box-shadow:inset -1px 0 #00ff5566,5px 0 18px #00ff5517!important}
 @keyframes matrixRain{to{background-position:center 360px}}
-.rail-link[aria-current="page"]{background:#00d747!important;color:#001406!important;box-shadow:0 0 14px #00ff5577!important}
+.desktop-window-shell .rail:before{background:linear-gradient(90deg,#00ff550a,transparent 46%,#00ff5510)!important}
+.desktop-window-shell .rail:after{display:none!important}
+.desktop-window-shell .rail-link{border-radius:0!important}
+.desktop-window-shell .rail-link[aria-current="page"]{background:#00d747!important;color:#001406!important;border-color:#68ff91!important;box-shadow:0 0 14px #00ff5577!important}
 .chat-header,.top,.msn-identity-card{background:linear-gradient(#06170b,#020904)!important;color:#caffd4!important;border-color:#125224!important}
 .chats,.chat-list,.msn-contacts-window,.msn-contact-list,.new-conv-panel{background:#020904!important;color:#caffd4!important}
 .messages{background:repeating-linear-gradient(0deg,#010502 0,#010502 27px,#06180b 28px)!important;color:#d5ffdc!important}
@@ -156,8 +162,11 @@ html,body,#root{background:#010502!important;color:#caffd4!important}
 body{background:#1b0f09 url('../src/assets/themes/walnut-grain.png') center/420px auto fixed!important;color:#f5e4c9!important}
 .app,.desktop-window-shell{background:rgb(24 13 8 / 70%)!important}
 .titlebar{background:linear-gradient(#3b2417,#201109)!important;border-bottom-color:#b9874f!important}
-.rail{background:linear-gradient(rgb(35 18 10 / 20%),rgb(20 10 6 / 38%)),url('../src/assets/themes/walnut-grain.png') center/360px auto!important;border-right:2px solid #b9874f!important;box-shadow:inset -5px 0 12px #160a05aa!important}
-.rail-link[aria-current="page"]{background:#e3c18f!important;color:#3b1f0d!important;border-color:#f3d9ac!important;box-shadow:0 2px 8px #13080399!important}
+.desktop-window-shell .rail{background:linear-gradient(rgb(35 18 10 / 10%),rgb(20 10 6 / 28%)),url('../src/assets/themes/walnut-grain.png') center/320px auto!important;border-right:2px solid #b9874f!important;box-shadow:inset -7px 0 13px #160a05aa,5px 0 18px #0b050399!important}
+.desktop-window-shell .rail:before{background:linear-gradient(90deg,#f2d2a71c,transparent 18% 72%,#12070355)!important}
+.desktop-window-shell .rail:after{width:34%!important;height:145%!important;top:-18%!important;left:32%!important;background:linear-gradient(100deg,transparent 38%,#f0d09b2e 48%,transparent 60%)!important}
+.desktop-window-shell .rail-link{border-radius:5px!important;color:#e4c69f!important}
+.desktop-window-shell .rail-link[aria-current="page"]{background:#e3c18f!important;color:#3b1f0d!important;border-color:#f3d9ac!important;box-shadow:0 2px 8px #13080399!important}
 .chat-header,.top,.msn-identity-card{background:linear-gradient(#4e2e1d,#2b170e)!important;color:#f5e4c9!important;border-color:#9a704b!important}
 .chats,.chat-list,.msn-contacts-window,.msn-contact-list,.new-conv-panel{background:#2a180ff2!important;color:#f5e4c9!important}
 .msn-search-row,.composer,.composer-icons{background:#321d12!important;border-color:#795438!important}

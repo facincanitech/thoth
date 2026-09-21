@@ -441,9 +441,12 @@
 html,body,#root{background:#010502!important;color:#caffd4!important}
 .app,.desktop-window-shell{background:#010502!important;color:#caffd4!important}
 .titlebar{background:#020703!important;color:#5cff7d!important;border-bottom:1px solid #18c947!important}
-.rail{background:#010502 url('../src/assets/themes/matrix-rain.svg') center top/180px 360px repeat-y!important;border-right:1px solid #00ff55!important;animation:matrixRain 9s linear infinite!important}
+.desktop-window-shell .rail{background:#010502 url('../src/assets/themes/matrix-rain.svg') center top/180px 360px repeat-y!important;border-right:1px solid #00ff55!important;animation:matrixRain 24s linear infinite!important;box-shadow:inset -1px 0 #00ff5566,5px 0 18px #00ff5517!important}
 @keyframes matrixRain{to{background-position:center 360px}}
-.rail-link[aria-current="page"]{background:#00d747!important;color:#001406!important;box-shadow:0 0 14px #00ff5577!important}
+.desktop-window-shell .rail:before{background:linear-gradient(90deg,#00ff550a,transparent 46%,#00ff5510)!important}
+.desktop-window-shell .rail:after{display:none!important}
+.desktop-window-shell .rail-link{border-radius:0!important}
+.desktop-window-shell .rail-link[aria-current="page"]{background:#00d747!important;color:#001406!important;border-color:#68ff91!important;box-shadow:0 0 14px #00ff5577!important}
 .chat-header,.top,.msn-identity-card{background:linear-gradient(#06170b,#020904)!important;color:#caffd4!important;border-color:#125224!important}
 .chats,.chat-list,.msn-contacts-window,.msn-contact-list,.new-conv-panel{background:#020904!important;color:#caffd4!important}
 .messages{background:repeating-linear-gradient(0deg,#010502 0,#010502 27px,#06180b 28px)!important;color:#d5ffdc!important}

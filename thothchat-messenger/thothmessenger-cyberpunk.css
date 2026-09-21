@@ -441,8 +441,11 @@
 body{background:#050710 url('../src/assets/themes/cyberpunk-city.png') center bottom/auto 100% fixed!important;color:#f4f7ff!important}
 .app,.desktop-window-shell{background:linear-gradient(rgb(5 7 16 / 38%),rgb(8 5 18 / 52%)),url('../src/assets/themes/cyberpunk-city.png') center bottom/auto 100% fixed!important}
 .titlebar{background:linear-gradient(#141328,#070914)!important;border-bottom-color:#20e7ff!important}
-.rail{background:linear-gradient(rgb(7 8 19 / 58%),rgb(12 8 27 / 72%)),url('../src/assets/themes/cyberpunk-city.png') 18% bottom/auto 100% fixed!important;border-right:1px solid #20e7ff!important}
-.rail-link[aria-current="page"]{background:#20e7ff!important;color:#061019!important;box-shadow:0 0 16px #20e7ff88!important}
+.desktop-window-shell .rail{background:linear-gradient(rgb(7 8 19 / 48%),rgb(12 8 27 / 62%)),url('../src/assets/themes/cyberpunk-city.png') 18% bottom/auto 100% fixed!important;border-right:1px solid #20e7ff!important;box-shadow:inset -1px 0 #20e7ff66,5px 0 18px #20e7ff1f!important}
+.desktop-window-shell .rail:before{background:linear-gradient(180deg,#20e7ff1f,transparent 28%,#ff3cac24 75%,transparent)!important}
+.desktop-window-shell .rail:after{width:2px!important;height:100%!important;top:0!important;left:auto!important;right:2px!important;transform:none!important;background:linear-gradient(transparent,#20e7ff 30%,#ff3cac 72%,transparent)!important;box-shadow:0 0 10px #20e7ff!important}
+.desktop-window-shell .rail-link{border-radius:0!important}
+.desktop-window-shell .rail-link[aria-current="page"]{background:#20e7ff!important;color:#061019!important;border-color:#8affff!important;box-shadow:0 0 16px #20e7ff88!important}
 .chat-header,.top,.msn-identity-card{background:linear-gradient(135deg,#11142bee,#21113aee)!important;color:#f4f7ff!important;border-color:#2a3865!important}
 .messages{background:linear-gradient(#0507107a,#050710b3),url('../src/assets/themes/cyberpunk-city.png') center bottom/auto 100% fixed!important;color:#f4f7ff!important}
 .chats,.chat-list,.new-conv-panel{background:#080a17b8!important;color:#f4f7ff!important}
