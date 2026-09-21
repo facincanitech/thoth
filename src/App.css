@@ -2455,3 +2455,7 @@ html .desktop-window-shell.desktop-web-shell{border:0;border-radius:0;box-shadow
 .play-customize-toggle{margin-top:14px;width:100%;display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--bg-surface);color:var(--text);font-size:13px;font-weight:600;cursor:pointer}
 .play-customize-toggle.open,.play-customize-toggle:hover{background:var(--bg-selected)}
 .play-customize-body{display:flex;flex-direction:column;padding-top:6px}
+
+/* radio do Sonor no topo do servidor, perto do nome (no celular continua flutuante embaixo) */
+.play-group-topbar .play-sonor-bar{position:static;transform:none;box-shadow:none;margin-left:14px;padding:5px 12px;max-width:min(460px,42vw);min-width:0;flex:0 1 auto}
+.play-group-topbar .play-sonor-bar-title{max-width:16vw}

@@ -899,6 +899,7 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
   const [sonorBusy, setSonorBusy] = useState(false)
   const [sonorNotice, setSonorNotice] = useState<string | null>(null)
   const sonorAudioRef = useRef<HTMLAudioElement>(null)
+  const isMobile = useIsMobile()
   const sonorHlsRef = useRef<{ destroy: () => void } | null>(null)
   const [sonorVolume, setSonorVolume] = useState(() => {
     const v = parseFloat(localStorage.getItem('ferus-sonor-volume') || '')
@@ -1460,6 +1461,15 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
     window.addEventListener('mouseup', onUp)
   }
 
+  // Barra da radio (Sonor): toca pra todo mundo que estiver com este servidor aberto, nao depende de canal de voz
+  const sonorBar = sonorSession ? (
+    <div className="play-sonor-bar">
+      <span className="play-sonor-bar-title">Tocando: {sonorSession.title}</span>
+      <input type="range" min="0" max="1" step="0.05" value={sonorVolume} onChange={(e) => setSonorVolume(Number(e.target.value))} />
+      <button type="button" onClick={() => supabase.rpc('play_sonor_stop', { p_group_id: group.id })}>Parar</button>
+    </div>
+  ) : null
+
   return (
     <main className="play-group-view">
       <div className="play-group-main">
@@ -1503,6 +1513,7 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
             </div>
             {group.description && <span>{group.description}</span>}
           </div>
+          {sonorSession && !isMobile && sonorBar}
         </header>
 
         {showInvite && (
@@ -1876,13 +1887,7 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
         pipWin.document.body,
       )}
       <audio ref={sonorAudioRef} hidden />
-      {sonorSession && (
-        <div className="play-sonor-bar">
-          <span className="play-sonor-bar-title">Tocando: {sonorSession.title}</span>
-          <input type="range" min="0" max="1" step="0.05" value={sonorVolume} onChange={(e) => setSonorVolume(Number(e.target.value))} />
-          <button type="button" onClick={() => supabase.rpc('play_sonor_stop', { p_group_id: group.id })}>Parar</button>
-        </div>
-      )}
+      {sonorSession && isMobile && sonorBar}
       {sonorModal && (
         <div className="modal-backdrop" onClick={() => setSonorModal(null)}>
           <div className="modal-card play-channel-modal" onClick={(e) => e.stopPropagation()}>
