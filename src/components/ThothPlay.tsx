@@ -20,6 +20,7 @@ import {
 import { BANNER_COLORS } from './ChatList'
 import { fetchRandomStation, searchPublicStations, isHlsStream, type RadioStation } from '../lib/sonor'
 import { DEFAULT_PLAY_THEME, PLAY_THEMES, normalizePlayTheme, type PlayThemeId } from '../lib/playThemes'
+import { openDirectMessage } from '../lib/directMessage'
 import type { Bot, PlayBotButton, PlaySonorSession, PlayCategory, PlayChannel, PlayGroup, PlayMessage, PlayProfile, PlayRole, Profile } from '../types'
 
 function useIsMobile() {
@@ -59,11 +60,15 @@ const PLAY_PERMISSIONS: { group: string; items: { key: string; label: string }[]
     { key: 'assign_roles', label: 'Dar e tirar cargos' },
     { key: 'kick_members', label: 'Expulsar membros' },
     { key: 'ban_members', label: 'Banir membros' },
+    { key: 'approve_members', label: 'Aprovar pedidos de entrada (servidor com senha)' },
   ] },
   { group: 'Chamada de voz', items: [
     { key: 'voice_speak', label: 'Falar na chamada' },
     { key: 'voice_camera', label: 'Ligar a câmera' },
     { key: 'voice_screen', label: 'Compartilhar tela' },
+  ] },
+  { group: 'Administrador', items: [
+    { key: 'administrator', label: 'Administrador — libera tudo deste cargo' },
   ] },
 ]
 const DEFAULT_MEMBER_PERMS = ['voice_speak', 'voice_camera', 'voice_screen', 'use_commands']
@@ -179,6 +184,7 @@ export function ThothPlay({ me, onBack }: Props) {
   const [joinCode, setJoinCode] = useState('')
   const [joinPassword, setJoinPassword] = useState('')
   const [joinError, setJoinError] = useState<string | null>(null)
+  const [joinPending, setJoinPending] = useState(false)
 
   async function loadGroups() {
     setLoading(true)
@@ -413,16 +419,22 @@ export function ThothPlay({ me, onBack }: Props) {
 
   async function handleJoinGroup() {
     setJoinError(null)
-    const { data, error } = await supabase.rpc('join_play_group', { p_invite_code: joinCode.trim(), p_password: joinPassword || null })
+    const { data, error } = await supabase.rpc('request_play_group_join', { p_invite_code: joinCode.trim(), p_password: joinPassword || null })
     if (error) {
-      setJoinError(error.message.includes('senha') ? 'Senha incorreta.' : 'Servidor não encontrado.')
+      setJoinError(error.message.includes('banido') ? 'Você foi banido deste servidor.' : error.message.includes('senha') ? 'Senha incorreta.' : 'Servidor não encontrado.')
+      return
+    }
+    const result = data as { status: 'joined' | 'pending'; group?: PlayGroup }
+    if (result.status === 'pending') {
+      setJoinError(null)
+      setJoinPending(true)
       return
     }
     setShowJoin(false)
     setJoinCode('')
     setJoinPassword('')
     await loadGroups()
-    if (data) openGroup(data as PlayGroup)
+    if (result.group) openGroup(result.group)
   }
 
   function goHome() {
@@ -492,7 +504,7 @@ export function ThothPlay({ me, onBack }: Props) {
           </header>
           <div className="play-home-actions">
             <button type="button" className="google-btn" onClick={() => setShowCreate(true)}><IconPlus size={16} /> Criar servidor</button>
-            <button type="button" className="google-btn" onClick={() => setShowJoin(true)}>Entrar com código</button>
+            <button type="button" className="google-btn" onClick={() => { setJoinPending(false); setJoinError(null); setShowJoin(true) }}>Entrar com código</button>
           </div>
 
           {loading ? (
@@ -538,7 +550,8 @@ export function ThothPlay({ me, onBack }: Props) {
                 <input placeholder="Código do convite" value={joinCode} onChange={(e) => setJoinCode(e.target.value)} />
                 <input placeholder="Senha (se o servidor for fechado)" type="password" value={joinPassword} onChange={(e) => setJoinPassword(e.target.value)} style={{ marginTop: 8 }} />
                 {joinError && <p className="auth-error">{joinError}</p>}
-                <button type="button" className="google-btn" style={{ marginTop: 10 }} onClick={handleJoinGroup}>Entrar</button>
+                {joinPending && <p className="play-invite-hint">Senha certa! Seu pedido foi enviado — é só esperar alguém do servidor aprovar a sua entrada.</p>}
+                <button type="button" className="google-btn" style={{ marginTop: 10 }} disabled={joinPending} onClick={handleJoinGroup}>Entrar</button>
                 <button type="button" className="modal-close" onClick={() => setShowJoin(false)}>fechar</button>
               </div>
             </div>
@@ -792,13 +805,75 @@ function PlayProfileCard({ profile, roles, userRoleIds, canAssign, onToggleRole,
   )
 }
 
-function ServerInfoScreen({ group, members, onClose, onConfigure, onJoin }: {
-  group: PlayGroup; members?: GroupMember[]; onClose: () => void; onConfigure?: () => void; onJoin?: () => void
+// Pedidos de entrada (servidor com senha): nome + email da pessoa e botao de mensagem privada (Messenger)
+function PlayJoinRequests({ groupId, me }: { groupId: string; me: Profile }) {
+  type Req = { user_id: string; username: string | null; display_name: string | null; email: string | null; avatar_url: string | null }
+  const [reqs, setReqs] = useState<Req[]>([])
+  const [error, setError] = useState<string | null>(null)
+
+  async function load() {
+    const { data, error: err } = await supabase.rpc('list_play_join_requests', { p_group_id: groupId })
+    if (err) { console.error('list join requests failed', err); return }
+    setReqs((data || []) as Req[])
+  }
+
+  useEffect(() => {
+    load()
+    const ch = supabase
+      .channel('play-join-requests:' + groupId)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'play_join_requests', filter: 'group_id=eq.' + groupId }, () => load())
+      .subscribe()
+    return () => { supabase.removeChannel(ch) }
+  }, [groupId])
+
+  async function approve(userId: string) {
+    setError(null)
+    const { error: err } = await supabase.rpc('approve_play_join_request', { p_group_id: groupId, p_user_id: userId })
+    if (err) { setError(err.message); return }
+    setReqs((prev) => prev.filter((r) => r.user_id !== userId))
+  }
+  async function reject(userId: string) {
+    setError(null)
+    const { error: err } = await supabase.from('play_join_requests').delete().eq('group_id', groupId).eq('user_id', userId)
+    if (err) { setError(err.message); return }
+    setReqs((prev) => prev.filter((r) => r.user_id !== userId))
+  }
+  async function message(r: Req) {
+    const ok = await openDirectMessage(me.id, r.user_id, r.display_name || r.username || 'Conversa')
+    if (!ok) setError('Não consegui abrir a conversa agora.')
+  }
+
+  return (
+    <div className="play-approvals">
+      <label className="play-channel-modal-label">Pedidos de entrada ({reqs.length})</label>
+      {reqs.length === 0 && <p className="play-empty">nenhum pedido no momento</p>}
+      {reqs.map((r) => (
+        <div key={r.user_id} className="play-approval-row">
+          <AvatarBox src={r.avatar_url} id={r.user_id} fallbackLetter={(r.display_name || r.username || '?')[0]?.toUpperCase()} className="avatar-sm" />
+          <div className="play-approval-info">
+            <strong>{r.display_name || r.username}</strong>
+            <span>{r.email}</span>
+          </div>
+          <div className="play-approval-actions">
+            <button type="button" onClick={() => approve(r.user_id)}>Aprovar</button>
+            <button type="button" className="danger" onClick={() => reject(r.user_id)}>Recusar</button>
+            <button type="button" onClick={() => message(r)}>Mensagem privada</button>
+          </div>
+        </div>
+      ))}
+      {error && <p className="auth-error">{error}</p>}
+    </div>
+  )
+}
+
+function ServerInfoScreen({ group, members, me, canApprove, onClose, onConfigure, onJoin }: {
+  group: PlayGroup; members?: GroupMember[]; me?: Profile; canApprove?: boolean; onClose: () => void; onConfigure?: () => void; onJoin?: () => void
 }) {
   const online = members ? members.filter((m) => getPresenceColor(m.profile.last_seen_at, m.profile.is_idle) !== 'offline').length : null
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal-card play-server-info" onClick={(e) => e.stopPropagation()}>
+        <div className="play-server-info-banner" style={group.banner_image_url ? { backgroundImage: 'url(' + group.banner_image_url + ')', backgroundSize: 'cover', backgroundPosition: '50% 50%' } : { background: group.banner_color || 'var(--green)' }} />
         <AvatarBox src={group.image_url} id={group.id} fallbackLetter={group.name[0]?.toUpperCase()} className="play-group-avatar play-server-info-avatar" />
         <h2>{group.name}</h2>
         {group.description && <p className="play-server-info-desc">{group.description}</p>}
@@ -810,6 +885,7 @@ function ServerInfoScreen({ group, members, onClose, onConfigure, onJoin }: {
             {group.tags.map((t) => <span key={t} className="play-group-tag">{t}</span>)}
           </div>
         )}
+        {canApprove && me && <PlayJoinRequests groupId={group.id} me={me} />}
         {onJoin && <button type="button" className="google-btn" style={{ marginTop: 16 }} onClick={onJoin}>Entrar</button>}
         {onConfigure && <button type="button" className="google-btn" style={{ marginTop: 16 }} onClick={onConfigure}>Configurar</button>}
         <button type="button" className="modal-close" onClick={onClose}>fechar</button>
@@ -1050,10 +1126,10 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
   const myRole = members.find((m) => m.profile.id === me.id)?.role || null
   const membersById = Object.fromEntries(members.map((m) => [m.profile.id, m.profile]))
   const isStaff = myRole === 'owner' || myRole === 'admin'
-  const can = (perm: string) => isStaff || (myRolePerms === null ? DEFAULT_MEMBER_PERMS.includes(perm) : myRolePerms.includes(perm))
+  const can = (perm: string) => isStaff || (myRolePerms === null ? DEFAULT_MEMBER_PERMS.includes(perm) : (myRolePerms.includes('administrator') || myRolePerms.includes(perm)))
   const canManage = can('manage_channels')
   const canAssign = can('assign_roles')
-  const canConfigure = ['manage_server', 'manage_privacy', 'manage_bots', 'manage_roles', 'assign_roles', 'kick_members', 'ban_members'].some(can)
+  const canConfigure = ['manage_server', 'manage_privacy', 'manage_bots', 'manage_roles', 'assign_roles', 'kick_members', 'ban_members', 'approve_members'].some(can)
   const channelsByCategory = (categoryId: string) => channels.filter((c) => c.category_id === categoryId).sort((a, b) => a.position - b.position)
   const uncategorized = channels.filter((c) => !c.category_id || !categories.some((cat) => cat.id === c.category_id)).sort((a, b) => a.position - b.position)
 
@@ -2065,6 +2141,8 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
         <ServerInfoScreen
           group={group}
           members={members}
+          me={me}
+          canApprove={can('approve_members')}
           onClose={() => setShowServerInfo(false)}
           onConfigure={canConfigure ? () => { setShowServerInfo(false); setShowGroupInfo(true) } : undefined}
         />

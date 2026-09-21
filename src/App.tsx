@@ -207,6 +207,21 @@ function App() {
   const [groupsSection, setGroupsSection] = useState<'groups' | 'communities'>('groups')
   const [statusOpen, setStatusOpen] = useState(false)
   const [playOpen, setPlayOpen] = useState(false)
+
+  useEffect(() => {
+    const handler = async (e: Event) => {
+      const id = (e as CustomEvent<{ id: string }>).detail?.id
+      if (!id) return
+      const { data } = await supabase.from('conversations').select('*').eq('id', id).maybeSingle()
+      if (!data) return
+      setPlayOpen(false)
+      setSelectedCommunity(null)
+      setPanelOpen(false)
+      setSelected(data as Conversation)
+    }
+    window.addEventListener('thoth-open-conversation', handler)
+    return () => window.removeEventListener('thoth-open-conversation', handler)
+  }, [])
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [blockedIds, setBlockedIds] = useState<Set<string>>(new Set())
 

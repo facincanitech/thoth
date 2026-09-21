@@ -8,6 +8,7 @@ import { getCustomStickers, saveCustomSticker, deleteCustomSticker, uploadSticke
 import { searchGifs, type GifResult } from '../lib/gifSearch'
 import { getPresenceColor } from '../lib/presence'
 import { useDesktopLayout } from '../lib/useDesktopLayout'
+import { openDirectMessage } from '../lib/directMessage'
 import { getErrorMessage } from '../lib/errors'
 import { displayName } from '../lib/displayName'
 import { SettingsRow } from './SettingsRow'
@@ -384,7 +385,7 @@ export function MainPanel({ me, conversation, onBack, onConversationUpdate, bloc
   const [inviteFriends, setInviteFriends] = useState<{ id: string; username: string; display_name: string | null; avatar_url: string | null; email: string }[]>([])
   const [inviteLinkBusy, setInviteLinkBusy] = useState(false)
   const [inviteLinkCopied, setInviteLinkCopied] = useState(false)
-  const [joinRequests, setJoinRequests] = useState<{ user_id: string; username: string; display_name: string | null; avatar_url: string | null }[]>([])
+  const [joinRequests, setJoinRequests] = useState<{ user_id: string; username: string; display_name: string | null; email: string | null; avatar_url: string | null }[]>([])
   const [addError, setAddError] = useState<string | null>(null)
   const [addBusy, setAddBusy] = useState(false)
   const [expandedImage, setExpandedImage] = useState<string | null>(null)
@@ -1070,12 +1071,12 @@ export function MainPanel({ me, conversation, onBack, onConversationUpdate, bloc
     if (!conversation) return
     const { data } = await supabase
       .from('conversation_join_requests')
-      .select('user_id, profile:profiles!conversation_join_requests_user_id_fkey(username, display_name, avatar_url)')
+      .select('user_id, profile:profiles!conversation_join_requests_user_id_fkey(username, display_name, email, avatar_url)')
       .eq('conversation_id', conversation.id)
     setJoinRequests(
       (data || []).map((r) => {
-        const p = r.profile as unknown as { username: string; display_name: string | null; avatar_url: string | null }
-        return { user_id: r.user_id as string, username: p?.username, display_name: p?.display_name ?? null, avatar_url: p?.avatar_url ?? null }
+        const p = r.profile as unknown as { username: string; display_name: string | null; email: string | null; avatar_url: string | null }
+        return { user_id: r.user_id as string, username: p?.username, display_name: p?.display_name ?? null, email: p?.email ?? null, avatar_url: p?.avatar_url ?? null }
       }),
     )
   }
@@ -2395,13 +2396,15 @@ export function MainPanel({ me, conversation, onBack, onConversationUpdate, bloc
                               <div className="photo" style={{ width: 32, height: 32, flexShrink: 0 }}>
                                 {r.avatar_url ? <img src={r.avatar_url} alt="" /> : (r.username?.[0] || '?').toUpperCase()}
                               </div>
-                              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'flex', flexDirection: 'column' }}>
                                 {r.display_name || r.username}
+                                {r.email && <small style={{ color: 'var(--muted)', fontSize: 11 }}>{r.email}</small>}
                               </span>
                             </div>
                             <div className="chat-config-actions">
                               <button type="button" onClick={() => acceptJoinRequest(r.user_id)}>aceitar</button>
                               <button type="button" onClick={() => rejectJoinRequest(r.user_id)}>recusar</button>
+                              <button type="button" onClick={() => openDirectMessage(me.id, r.user_id, r.display_name || r.username || 'Conversa')}>msg privada</button>
                             </div>
                           </div>
                         ))}
