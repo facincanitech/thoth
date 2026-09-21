@@ -1341,7 +1341,7 @@ body{
 
 @media(prefers-reduced-motion:reduce){
   .rail-link,.chat,.new-conv-panel{transition:none}
-  .app.nudging,.nudge-indicator,.compose-btn.recording,.name-effect-prism{animation:none}
+  .app.nudging,.nudge-indicator,.compose-btn.recording{animation:none}
   .wink-character,.wink-character.wink-bounce{animation:none;left:50%;top:50%;transform:translate(-50%,-50%);opacity:1}
   .wink-particle{animation:none;top:50%}
   .wink-mark{animation:none;opacity:.15;transform:translate(-50%,-50%)}
@@ -2213,14 +2213,23 @@ body{
 
 /* CYBERPUNK REWORK ------------------------------------------------ */
 [data-theme="cyberpunk"] body{background:#050710 url('/themes/cyberpunk-city.png') center/cover fixed}
-[data-theme="cyberpunk"] .app:not(.play-open){background:rgb(5 7 16 / 38%);backdrop-filter:blur(1px)}
+[data-theme="cyberpunk"] .app:not(.play-open){background:linear-gradient(90deg,rgb(3 10 16 / 72%),rgb(5 7 16 / 18%),rgb(3 10 16 / 68%));backdrop-filter:blur(.4px)}
 [data-theme="cyberpunk"] .rail{background:linear-gradient(rgb(7 8 19 / 62%),rgb(16 8 31 / 76%)),url('/themes/cyberpunk-city.png') 18% bottom/auto 100% fixed;border-right-color:#20e7ff}
-[data-theme="cyberpunk"] .chats{background:rgb(7 9 20 / 68%);backdrop-filter:blur(10px)}
-[data-theme="cyberpunk"] .top{background:linear-gradient(135deg,rgb(17 20 43 / 94%),rgb(33 17 58 / 94%))}
-[data-theme="cyberpunk"] .messages{background:linear-gradient(rgb(5 7 16 / 48%),rgb(5 7 16 / 70%)),url('/themes/cyberpunk-city.png') center bottom/auto 100% fixed}
+[data-theme="cyberpunk"] .chats{background:rgb(3 11 18 / 82%);backdrop-filter:blur(8px)}
+[data-theme="cyberpunk"] .top{background:linear-gradient(135deg,rgb(5 16 25 / 96%),rgb(16 11 30 / 94%));border-bottom-color:#20e7ff70}
+[data-theme="cyberpunk"] .messages{background:linear-gradient(rgb(2 9 15 / 30%),rgb(2 8 14 / 64%)),linear-gradient(90deg,#20e7ff0a 1px,transparent 1px),linear-gradient(#20e7ff08 1px,transparent 1px),url('/themes/cyberpunk-city.png') center bottom/auto 100% fixed;background-size:auto,38px 38px,38px 38px,auto 100%}
 [data-theme="cyberpunk"] .chat-header,[data-theme="cyberpunk"] .composer{backdrop-filter:blur(18px)}
 [data-theme="cyberpunk"] .rail-link[aria-current="page"]{clip-path:polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px)}
 [data-theme="cyberpunk"] .bubble{clip-path:polygon(7px 0,100% 0,100% calc(100% - 7px),calc(100% - 7px) 100%,0 100%,0 7px);border-radius:0}
+[data-theme="cyberpunk"] .in .bubble{color:#fff;background:linear-gradient(135deg,rgb(69 13 47 / 94%),rgb(24 12 31 / 96%));border-color:#ff2384;box-shadow:0 7px 20px #0009,0 0 13px #ff238429}
+[data-theme="cyberpunk"] .out .bubble{color:#fff;background:linear-gradient(135deg,rgb(62 68 10 / 94%),rgb(24 27 9 / 96%));border-color:#e8ee17;box-shadow:0 7px 20px #0009,0 0 13px #e8ee1724}
+[data-theme="cyberpunk"] .out .bubble .message-time,[data-theme="cyberpunk"] .out .bubble .checks{color:#e8ee17}
+[data-theme="cyberpunk"] .date{color:#9fc8d4;background:#06131dcc;border-color:#20e7ff66;box-shadow:0 0 12px #20e7ff12}
+[data-theme="cyberpunk"] .chat-header{background:linear-gradient(90deg,rgb(4 14 23 / 96%),rgb(7 18 28 / 78%)),url('/themes/cyberpunk-city.png') center 35%/cover;border-bottom-color:#20e7ff80;box-shadow:inset 0 -1px #ff3cac38}
+[data-theme="cyberpunk"] .header-photo,[data-theme="cyberpunk"] .photo,[data-theme="cyberpunk"] .avatar-sm{clip-path:polygon(7px 0,100% 0,100% calc(100% - 7px),calc(100% - 7px) 100%,0 100%,0 7px);border-color:#20e7ff;box-shadow:0 0 11px #20e7ff4f}
+[data-theme="cyberpunk"] .composer{background:linear-gradient(180deg,rgb(6 18 28 / 96%),rgb(3 10 17 / 98%));border-top-color:#20e7ff70;box-shadow:0 -5px 24px #0008}
+[data-theme="cyberpunk"] .composer-icons{border-color:#20e7ff55;background:linear-gradient(90deg,#07141e,#101024);box-shadow:inset 0 1px #20e7ff24}
+[data-theme="cyberpunk"] .send,[data-theme="cyberpunk"] .send-text{background:#e8ee17;color:#071015;border-color:#ffff62;box-shadow:0 0 18px #e8ee174c}
 
 /* MATRIX ---------------------------------------------------------- */
 [data-theme="matrix"]{
@@ -2328,14 +2337,14 @@ body{
 [data-theme="light"] .msn-unread{border-radius:2px;background:var(--retro-pink)}
 
 [data-theme="cyberpunk"] .msn-contacts-window{background:linear-gradient(rgb(5 7 16 / 42%),rgb(12 7 25 / 62%)),url('/themes/cyberpunk-city.png') center bottom/auto 100% fixed;backdrop-filter:blur(3px)}
-[data-theme="cyberpunk"] .msn-identity-card{background:linear-gradient(135deg,rgb(13 28 48 / 78%),rgb(42 14 55 / 80%));border-bottom-color:#20e7ff;box-shadow:inset 0 -1px #ff3cac66}
+[data-theme="cyberpunk"] .msn-identity-card{background:linear-gradient(90deg,rgb(4 17 26 / 90%),rgb(25 11 35 / 78%)),url('/themes/cyberpunk-city.png') center 34%/cover;border-bottom-color:#20e7ff;box-shadow:inset 0 -1px #ff3cac66,0 5px 22px #0008}
 [data-theme="cyberpunk"] .msn-search-row{background:#090c1df2;border-bottom-color:#253b68}
 [data-theme="cyberpunk"] .msn-search-row input{color:#f4f7ff;background:#080d20;border-color:#20e7ff;border-radius:0;box-shadow:0 0 10px #20e7ff20}
 [data-theme="cyberpunk"] .msn-contact-list{background:linear-gradient(rgb(5 7 16 / 48%),rgb(11 8 25 / 70%)),url('/themes/cyberpunk-city.png') center bottom/auto 100% fixed}
 [data-theme="cyberpunk"] .msn-contact-list details summary{color:#20e7ff;text-shadow:0 0 7px #20e7ff77}
-[data-theme="cyberpunk"] .msn-contact{border-radius:0;border-bottom:1px solid #25305a}
-[data-theme="cyberpunk"] .msn-contact:active{background:#182b4d;border-color:#20e7ff}
-[data-theme="cyberpunk"] .msn-avatar-me,[data-theme="cyberpunk"] .msn-contact-avatar{border-radius:0;border-color:#20e7ff;background:#101329;box-shadow:0 0 10px #20e7ff55}
+[data-theme="cyberpunk"] .msn-contact{border-radius:0;border-bottom:1px solid #174554;clip-path:polygon(6px 0,100% 0,100% calc(100% - 6px),calc(100% - 6px) 100%,0 100%,0 6px)}
+[data-theme="cyberpunk"] .msn-contact:active{background:linear-gradient(90deg,#e8ee172e,#0b1822dd);border-color:#e8ee17;box-shadow:inset 3px 0 #e8ee17,0 0 14px #e8ee1717}
+[data-theme="cyberpunk"] .msn-avatar-me,[data-theme="cyberpunk"] .msn-contact-avatar{border-radius:0;border-color:#20e7ff;background:#101329;box-shadow:0 0 10px #20e7ff55;clip-path:polygon(6px 0,100% 0,100% calc(100% - 6px),calc(100% - 6px) 100%,0 100%,0 6px)}
 [data-theme="cyberpunk"] .msn-unread{border-radius:0;color:#110518;background:#ff3cac;box-shadow:0 0 8px #ff3cac88}
 
 [data-theme="matrix"] .msn-contacts-window{background:#010502}
@@ -2503,3 +2512,12 @@ html .desktop-window-shell.desktop-web-shell{border:0;border-radius:0;box-shadow
 
 .play-server-info-banner{margin-left:-28px;margin-right:-28px}
 @media(max-width:760px){.play-server-info-banner{margin-left:-20px;margin-right:-20px}}
+
+/* Nome com prisma/degrade: o texto e transparente (mostra o degrade por tras). Sombra de texto herdada do cabecalho
+   (ex.: "0 1px #fff" do skin do desktop) aparecia como um nome branco/borrado e escondia o degrade. */
+.styled-name.name-effect-prism,.styled-name.name-effect-gradient{text-shadow:none!important;-webkit-text-fill-color:transparent}
+/* O prisma e um deslocamento lento de cor (20 s) - nao e movimento agressivo, entao continua animado mesmo com "reduzir animacoes" do Windows ligado (antes ficava parado) */
+
+/* mic/fone da chamada: ligado = normal, desligado = icone riscado e vermelho */
+.play-voice-controls .icon-btn.off{background:#e5484d;color:#fff;border-color:transparent}
+.play-voice-controls .icon-btn.off:hover{background:#d33f44}

@@ -24,6 +24,7 @@ import { useDesktopLayout } from './lib/useDesktopLayout'
 import { useHeartbeat } from './lib/useHeartbeat'
 import { ensureCallWindow, openChatWindow, openPlayWindow, requestCall } from './lib/desktopWindows'
 import { DesktopTitleBar } from './components/DesktopChrome'
+import { showDesktopToast } from './lib/desktopToast'
 import './App.css'
 
 type Theme = 'dark' | 'light' | 'contrast' | 'frutiger' | 'messenger' | 'cyberpunk' | 'matrix' | 'wood'
@@ -387,6 +388,7 @@ function App() {
         if (conversationId && mutedIdsRef.current.has(conversationId)) return
         triggerNudgeShake()
         playNudgeSound()
+        showDesktopToast({ senderId: userId, conversationId, message: 'chamou sua atencao!', kind: 'nudge' }).catch(() => {})
         if (!conversationId) return
         setNudgers((prev) => {
           if (prev.some((n) => n.conversationId === conversationId)) return prev
@@ -397,9 +399,10 @@ function App() {
         }, 600000)
       })
       .on('broadcast', { event: 'wink' }, ({ payload }) => {
-        const { conversationId, winkId } = payload as { userId: string; conversationId?: string; winkId?: string }
+        const { userId, conversationId, winkId } = payload as { userId: string; conversationId?: string; winkId?: string }
         if (conversationId && mutedIdsRef.current.has(conversationId)) return
         if (winkId) playWinkEffect(winkId)
+        showDesktopToast({ senderId: userId, conversationId, message: 'enviou um wink', kind: 'wink' }).catch(() => {})
       })
       .on('broadcast', { event: 'customWink' }, ({ payload }) => {
         const { userId, conversationId, label, imageData, soundData } = payload as {
@@ -411,6 +414,7 @@ function App() {
         }
         if (conversationId && mutedIdsRef.current.has(conversationId)) return
         playCustomWinkEffect(imageData, soundData)
+        showDesktopToast({ senderId: userId, conversationId, message: `enviou o wink ${label}`, kind: 'wink' }).catch(() => {})
         const wink: CustomWink = { id: crypto.randomUUID(), label, imageData, soundData, fromUser: userId }
         saveCustomWink(wink).catch(() => {})
       })

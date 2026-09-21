@@ -6,6 +6,7 @@ import { DesktopChatWindow } from './components/DesktopChatWindow.tsx'
 import { DesktopPlayWindow } from './components/DesktopPlayWindow.tsx'
 import { DesktopCallWindow } from './components/DesktopCallWindow.tsx'
 import { DesktopPipWindow } from './components/DesktopPipWindow.tsx'
+import { DesktopToastWindow } from './components/DesktopToastWindow.tsx'
 import { isTauriDesktop } from './lib/platform.ts'
 import { applyDesktopTheme, followDesktopTheme, readStoredDesktopTheme } from './lib/desktopTheme.ts'
 
@@ -20,12 +21,13 @@ const tauriChatId = searchParams?.get('tauriChat') ?? null
 const isTauriPlay = searchParams?.get('tauriPlay') === '1'
 const isTauriCall = searchParams?.get('tauriCall') === '1'
 const isTauriPip = searchParams?.get('tauriPip') === '1'
+const isTauriToast = searchParams?.get('tauriToast') === '1'
 
 async function boot() {
   // ThothChat Messenger (versao desktop) tem visual proprio e fixo, sem sistema
   // de tema - o CSS dele fica isolado em thothchat-messenger/thothmessenger.css, carregado
   // so quando o app roda dentro do Tauri. Nunca usa data-theme nem Frutiger/Retro.
-  if (isTauriDesktop) {
+  if (isTauriDesktop && !isTauriToast) {
     // Play/chamada/PiP mantem o skin sempre; janela principal e conversas seguem o tema escolhido.
     if (isTauriPlay || isTauriCall || isTauriPip) await import('../thothchat-messenger/thothmessenger.css')
     else {
@@ -36,7 +38,7 @@ async function boot() {
 
   createRoot(document.getElementById('root')!).render(
     <StrictMode>
-      {isTauriPip ? <DesktopPipWindow /> : isTauriCall ? <DesktopCallWindow /> : isTauriPlay ? <DesktopPlayWindow /> : tauriChatId ? <DesktopChatWindow conversationId={tauriChatId} /> : <App />}
+      {isTauriToast ? <DesktopToastWindow /> : isTauriPip ? <DesktopPipWindow /> : isTauriCall ? <DesktopCallWindow /> : isTauriPlay ? <DesktopPlayWindow /> : tauriChatId ? <DesktopChatWindow conversationId={tauriChatId} /> : <App />}
     </StrictMode>,
   )
 }

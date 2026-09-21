@@ -14,7 +14,7 @@ import { StyledName, NAME_FONTS, NAME_EFFECTS, PRISM_PALETTES } from './StyledNa
 import { uploadImage } from '../lib/uploadImage'
 import {
   IconArrowLeft, IconChat, IconChevronDown, IconCopy, IconEdit, IconGamepad, IconGrip, IconHash, IconHeadphones,
-  IconLock, IconLockOpen, IconLogout, IconMic, IconMicOff, IconMonitorShare, IconPanelLeft, IconFolder, IconMore, IconPause, IconPlay, IconFullscreen, IconShrink, IconVolume, IconVolumeOff, IconPhoneOff, IconPlus,
+  IconLock, IconLockOpen, IconLogout, IconMic, IconMicOff, IconHeadphonesOff, IconMonitorShare, IconPanelLeft, IconFolder, IconMore, IconPause, IconPlay, IconFullscreen, IconShrink, IconVolume, IconVolumeOff, IconPhoneOff, IconPlus,
   IconAttach, IconSearch, IconSend, IconSmile, IconSettingsGear, IconTrash, IconUser, IconMinusCircle, IconVideo, IconVideoOff,
 } from './icons'
 import { BANNER_COLORS } from './ChatList'
@@ -3389,10 +3389,10 @@ function VoiceChannel({ allow, me, membersById, channel, onParticipantsChange, o
   const [participants, setParticipants] = useState<ParticipantTile[]>([])
   const [screenAudio, setScreenAudio] = useState<Record<string, HTMLMediaElement>>({})
   const shareStart = useRef<Record<string, number>>({})
-  // Modo fone: liga o microfone SEM cancelamento de eco/supressao/ganho automatico. No Windows
-  // essas funcoes colocam o dispositivo em modo "comunicacao" e deixam o som dos outros apps
-  // abafado; com fone (sem retorno do alto-falante pro mic) nao precisam.
-  const [headphoneMode, setHeadphoneMode] = useState(() => localStorage.getItem('play-headphone-mode') === '1')
+  // Fone (ensurdecer): silencia o audio de todo mundo pra voce e tambem o seu microfone (igual Discord).
+  const [deafened, setDeafened] = useState(false)
+  const deafenedRef = useRef(false)
+  const micBeforeDeafen = useRef(true)
   const [shareMenuOpen, setShareMenuOpen] = useState(false)
   const [shareQuality, setShareQuality] = useState<'480' | '720'>('720')
   const [shareLimit, setShareLimit] = useState<10 | 20 | 30>(30)
@@ -3424,11 +3424,7 @@ function VoiceChannel({ allow, me, membersById, channel, onParticipantsChange, o
 
   useEffect(() => {
     let cancelled = false
-    const room = new Room({
-      audioCaptureDefaults: headphoneMode
-        ? { echoCancellation: false, noiseSuppression: false, autoGainControl: false }
-        : undefined,
-    })
+    const room = new Room()
     roomRef.current = room
 
     room
@@ -3438,6 +3434,7 @@ function VoiceChannel({ allow, me, membersById, channel, onParticipantsChange, o
         if (track.kind === Track.Kind.Audio) {
           const el = track.attach()
           el.style.display = 'none'
+          el.muted = deafenedRef.current
           document.body.appendChild(el)
           attachedAudio.current.push(el)
           if (pub.source === Track.Source.ScreenShareAudio) setScreenAudio((prev) => ({ ...prev, [participant.identity]: el }))
@@ -3484,23 +3481,42 @@ function VoiceChannel({ allow, me, membersById, channel, onParticipantsChange, o
     }
   }, [channel.id])
 
+  function applyDeafen(next: boolean) {
+    deafenedRef.current = next
+    setDeafened(next)
+    attachedAudio.current.forEach((el) => { el.muted = next })
+    Object.values(screenAudio).forEach((el) => { el.muted = next })
+  }
+
   async function toggleMic() {
     const room = roomRef.current
     if (!room) return
     const next = !micEnabled
+    // ligar o microfone estando ensurdecido tambem volta a ouvir (como no Discord)
+    if (next && deafenedRef.current) applyDeafen(false)
     await room.localParticipant.setMicrophoneEnabled(next)
     setMicEnabled(next)
     syncParticipants(room)
   }
 
-  async function toggleHeadphoneMode() {
-    const next = !headphoneMode
-    setHeadphoneMode(next)
-    try { localStorage.setItem('play-headphone-mode', next ? '1' : '0') } catch { /* ignore */ }
-    const track = roomRef.current?.localParticipant.getTrackPublication(Track.Source.Microphone)?.audioTrack
-    await track?.restartTrack(next
-      ? { echoCancellation: false, noiseSuppression: false, autoGainControl: false }
-      : { echoCancellation: true, noiseSuppression: true, autoGainControl: true }).catch(() => {})
+  async function toggleDeafen() {
+    const room = roomRef.current
+    if (!room) return
+    if (!deafenedRef.current) {
+      micBeforeDeafen.current = micEnabled
+      applyDeafen(true)
+      if (micEnabled) {
+        await room.localParticipant.setMicrophoneEnabled(false)
+        setMicEnabled(false)
+      }
+    } else {
+      applyDeafen(false)
+      if (micBeforeDeafen.current && allow.speak) {
+        await room.localParticipant.setMicrophoneEnabled(true)
+        setMicEnabled(true)
+      }
+    }
+    syncParticipants(room)
   }
 
   async function toggleCamera() {
@@ -3586,11 +3602,11 @@ function VoiceChannel({ allow, me, membersById, channel, onParticipantsChange, o
             ))}
           </div>
           <div className="play-voice-controls">
-            <button type="button" className={'icon-btn' + (micEnabled ? ' active' : '')} onClick={toggleMic} disabled={!allow.speak} title={!allow.speak ? 'Seu cargo não pode falar na chamada' : micEnabled ? 'Mutar' : 'Ativar microfone'}>
+            <button type="button" className={'icon-btn' + (micEnabled ? '' : ' off')} onClick={toggleMic} disabled={!allow.speak} title={!allow.speak ? 'Seu cargo não pode falar na chamada' : micEnabled ? 'Mutar microfone' : 'Ativar microfone'}>
               {micEnabled ? <IconMic size={20} /> : <IconMicOff size={20} />}
             </button>
-            <button type="button" className={'icon-btn' + (headphoneMode ? ' active' : '')} onClick={toggleHeadphoneMode} title={headphoneMode ? 'Modo fone ligado (sem cancelamento de eco)' : 'Modo fone: use com fone, evita o som do PC ficar abafado'}>
-              <IconHeadphones size={20} />
+            <button type="button" className={'icon-btn' + (deafened ? ' off' : '')} onClick={toggleDeafen} title={deafened ? 'Voltar a ouvir a chamada' : 'Parar de ouvir a chamada (fone)'}>
+              {deafened ? <IconHeadphonesOff size={20} /> : <IconHeadphones size={20} />}
             </button>
             <button type="button" className={'icon-btn' + (cameraEnabled ? ' active' : '')} onClick={toggleCamera} disabled={!allow.camera} title={!allow.camera ? 'Seu cargo não pode ligar a câmera' : cameraEnabled ? 'Desligar câmera' : 'Ligar câmera'}>
               {cameraEnabled ? <IconVideo size={20} /> : <IconVideoOff size={20} />}

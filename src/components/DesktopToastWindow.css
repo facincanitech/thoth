@@ -1,0 +1,25 @@
+:root { background: transparent !important; }
+html, body, #root { width: 100%; height: 100%; margin: 0; overflow: hidden; background: transparent !important; }
+.desktop-toast {
+  box-sizing: border-box; position: absolute; inset: 4px; width: calc(100% - 8px); height: calc(100% - 8px);
+  display: flex; align-items: center; gap: 12px; padding: 13px 34px 13px 13px; overflow: hidden;
+  border: 1px solid #377bb8; border-radius: 10px; color: #10243a; text-align: left; cursor: pointer;
+  background: linear-gradient(135deg, #fafdff 0%, #e5f4ff 58%, #c7e8ff 100%);
+  box-shadow: 0 8px 25px rgb(0 28 55 / 38%), inset 0 1px #fff;
+  animation: msn-toast-in .38s cubic-bezier(.2,.85,.25,1) both;
+  font-family: "Segoe UI", Tahoma, sans-serif;
+}
+.desktop-toast::after { content: ''; position: absolute; inset: auto 0 0; height: 4px; background: linear-gradient(90deg,#37a4e7,#79d34b); }
+.desktop-toast.leaving { animation: msn-toast-out .28s ease-in both; }
+.desktop-toast-icon { width: 50px; height: 50px; flex: 0 0 50px; display: grid; place-items: center; border-radius: 9px; background: linear-gradient(#fff,#bde6ff); border: 1px solid #61a9d8; box-shadow: inset 0 0 0 2px #fff, 0 2px 6px #4b7ca455; }
+.desktop-toast-icon.nudge { animation: toast-nudge .18s linear 4; }
+.desktop-toast-icon.wink { background: linear-gradient(#fff8ca,#ffd45e); border-color: #e7a829; }
+.desktop-toast-icon img { width: 36px; height: 36px; object-fit: contain; }
+.desktop-toast-copy { display: flex; min-width: 0; flex: 1; flex-direction: column; gap: 2px; }
+.desktop-toast-brand { color: #3977a8; font-size: 9px; font-weight: 800; letter-spacing: .12em; }
+.desktop-toast-copy strong { overflow: hidden; font-size: 14px; line-height: 18px; text-overflow: ellipsis; white-space: nowrap; }
+.desktop-toast-message { overflow: hidden; color: #3c5267; font-size: 12px; line-height: 17px; text-overflow: ellipsis; white-space: nowrap; }
+.desktop-toast-close { position: absolute; top: 7px; right: 10px; color: #5b7184; font-size: 18px; line-height: 20px; }
+@keyframes msn-toast-in { from { opacity: 0; transform: translateY(105%); } to { opacity: 1; transform: translateY(0); } }
+@keyframes msn-toast-out { to { opacity: 0; transform: translateY(110%); } }
+@keyframes toast-nudge { 25% { transform: translateX(-3px) rotate(-2deg); } 75% { transform: translateX(3px) rotate(2deg); } }

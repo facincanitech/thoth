@@ -540,3 +540,15 @@ export function IconFolder({ size = 18 }: IconProps) {
     </svg>
   )
 }
+
+export function IconHeadphonesOff({ size = 20 }: IconProps) {
+  return (
+    <svg {...base} width={size} height={size}>
+      <path d="M4 13v-1a8 8 0 0 1 12.5-6.6" />
+      <path d="M20 12v1" />
+      <rect x="2" y="13" width="5" height="7" rx="2" />
+      <rect x="17" y="13" width="5" height="7" rx="2" />
+      <line x1="2" y1="2" x2="22" y2="22" />
+    </svg>
+  )
+}

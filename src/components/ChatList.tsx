@@ -19,6 +19,7 @@ import { isTauriDesktop } from '../lib/platform'
 import { startDesktopGoogleLogin } from '../lib/desktopLogin'
 import { getPresenceColor } from '../lib/presence'
 import { playMessageSound } from '../lib/notificationSound'
+import { messagePreview, showDesktopToast } from '../lib/desktopToast'
 import {
   IconArchive,
   IconArrowLeft,
@@ -846,13 +847,22 @@ export function ChatList({
         { event: 'INSERT', schema: 'public', table: 'messages' },
         (payload) => {
           loadConversations()
-          const row = payload.new as { author_id?: string; conversation_id?: string }
+          const row = payload.new as { author_id?: string; conversation_id?: string; content?: string; kind?: string }
           if (!row.author_id || row.author_id === me.id) return
-          if (row.conversation_id && row.conversation_id === selectedIdRef.current) return
+          if (row.conversation_id && row.conversation_id === selectedIdRef.current && (!isTauriDesktop || document.hasFocus())) return
           if (isTauriDesktop && row.conversation_id) {
             import('@tauri-apps/api/webviewWindow').then(async ({ WebviewWindow }) => {
               const w = await WebviewWindow.getByLabel('chat-' + row.conversation_id)
-              if (!w) playMessageSound()
+              const chatIsFocused = w ? await w.isFocused().catch(() => false) : false
+              if (!chatIsFocused) {
+                playMessageSound()
+                showDesktopToast({
+                  senderId: row.author_id,
+                  conversationId: row.conversation_id,
+                  message: messagePreview(row.kind, row.content),
+                  kind: 'message',
+                }).catch(() => {})
+              }
             }).catch(() => playMessageSound())
             return
           }
