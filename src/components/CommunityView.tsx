@@ -312,7 +312,8 @@ export function CommunityView({ me, community, activeTab, onTabChange, onCommuni
   }
 
   async function removeParticipant(userId: string) {
-    await supabase.from('community_members').delete().eq('community_id', community.id).eq('user_id', userId)
+    const { data: removed, error } = await supabase.from('community_members').delete().eq('community_id', community.id).eq('user_id', userId).select('user_id')
+    if (error || !removed?.length) { console.error('remove participant failed', error); return }
     setMemberList((prev) => prev.filter((m) => m.id !== userId))
     setMemberCount((n) => Math.max(0, n - 1))
     if (userId === me.id) setIsMember(false)

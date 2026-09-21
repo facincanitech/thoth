@@ -1549,11 +1549,14 @@ export function MainPanel({ me, conversation, onBack, onConversationUpdate, bloc
   async function removeMember(targetId: string) {
     if (!conversation || !me) return
     const targetMeta = members[targetId]
-    await supabase
+    const { data: removed, error: removeError } = await supabase
       .from('conversation_members')
       .delete()
       .eq('conversation_id', conversation.id)
       .eq('user_id', targetId)
+      .select('user_id')
+    // RLS que barra (ex.: dono/admin) devolve 0 linhas sem erro - nao finge que removeu
+    if (removeError || !removed?.length) { console.error('remove member failed', removeError); return }
     const remaining = Object.keys(members).filter((id) => id !== targetId)
     setMembers((prev) => {
       const next = { ...prev }
