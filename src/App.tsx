@@ -21,6 +21,7 @@ import { readCache, writeCache } from './lib/cache'
 import { isTauriDesktop } from './lib/platform'
 import { applyDesktopTheme, removeDesktopSkin } from './lib/desktopTheme'
 import { useDesktopLayout } from './lib/useDesktopLayout'
+import { useHeartbeat } from './lib/useHeartbeat'
 import { ensureCallWindow, openChatWindow, openPlayWindow, requestCall } from './lib/desktopWindows'
 import { DesktopTitleBar } from './components/DesktopChrome'
 import './App.css'
@@ -294,35 +295,7 @@ function App() {
     return () => document.removeEventListener('visibilitychange', onVisible)
   }, [])
 
-  const lastActivityRef = useRef(Date.now())
-
-  useEffect(() => {
-    if (!session) return
-    const IDLE_THRESHOLD_MS = 120000
-
-    function markActive() {
-      lastActivityRef.current = Date.now()
-    }
-    const activityEvents = ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll']
-    activityEvents.forEach((ev) => window.addEventListener(ev, markActive, { passive: true }))
-
-    const heartbeat = () => {
-      const isIdle = Date.now() - lastActivityRef.current > IDLE_THRESHOLD_MS
-      supabase
-        .from('profiles')
-        .update({ last_seen_at: new Date().toISOString(), is_idle: isIdle })
-        .eq('id', session.user.id)
-        .then()
-    }
-    heartbeat()
-    const interval = setInterval(heartbeat, 30000)
-    document.addEventListener('visibilitychange', heartbeat)
-    return () => {
-      clearInterval(interval)
-      activityEvents.forEach((ev) => window.removeEventListener(ev, markActive))
-      document.removeEventListener('visibilitychange', heartbeat)
-    }
-  }, [session])
+  useHeartbeat(session?.user.id)
 
   useEffect(() => {
     if (!profile) {

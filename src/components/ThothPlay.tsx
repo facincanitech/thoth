@@ -933,6 +933,8 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
   const [dragCategoryId, setDragCategoryId] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
   const [members, setMembers] = useState<GroupMember[]>([])
+  const membersIdsRef = useRef<string[]>([])
+  membersIdsRef.current = members.map((m) => m.profile.id)
   const [memberTab, setMemberTab] = useState<'group' | 'voice'>('group')
   const [voiceParticipants, setVoiceParticipants] = useState<VoiceParticipantInfo[]>([])
   const [groupRoles, setGroupRoles] = useState<PlayRole[]>([])
@@ -972,6 +974,15 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
       )
     }
     loadMembers()
+    // presenca so muda em profiles.last_seen_at (sem realtime): rele a cada 30s pra ninguem ficar "offline" por dado velho
+    const presenceTimer = setInterval(async () => {
+      const ids = membersIdsRef.current
+      if (!ids.length) return
+      const { data } = await supabase.from('profiles').select('id, last_seen_at, is_idle').in('id', ids)
+      if (cancelled || !data) return
+      const byId = Object.fromEntries(data.map((p) => [p.id as string, p]))
+      setMembers((prev) => prev.map((m) => (byId[m.profile.id] ? { ...m, profile: { ...m.profile, last_seen_at: byId[m.profile.id].last_seen_at, is_idle: byId[m.profile.id].is_idle } } : m)))
+    }, 30000)
     const channel = supabase
       .channel(`play-profiles-refresh:${group.id}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'play_profiles' }, () => loadMembers())
@@ -979,16 +990,18 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
       .subscribe()
     return () => {
       cancelled = true
+      clearInterval(presenceTimer)
       supabase.removeChannel(channel)
     }
   }, [group.id])
 
-  const onlineMembers = members.filter((m) => getPresenceColor(m.profile.last_seen_at, m.profile.is_idle) !== 'offline')
-  const offlineMembers = members.filter((m) => getPresenceColor(m.profile.last_seen_at, m.profile.is_idle) === 'offline')
+  const memberOnline = (m: GroupMember) => m.profile.id === me.id || getPresenceColor(m.profile.last_seen_at, m.profile.is_idle) !== 'offline'
+  const onlineMembers = members.filter(memberOnline)
+  const offlineMembers = members.filter((m) => !memberOnline(m))
   const inVoiceIds = new Set(voiceParticipants.map((p) => p.id))
   // Cargos com "mostrar separado": quem tem mais de um cai no de cima (ordem = prioridade)
   const hoistedRoles = groupRoles.filter((r) => r.hoisted).sort((a, b) => a.position - b.position)
-  const isOnline = (m: GroupMember) => getPresenceColor(m.profile.last_seen_at, m.profile.is_idle) !== 'offline'
+  const isOnline = memberOnline
   const renderMemberRow = (m: GroupMember, offline: boolean) => (
     <div key={m.profile.id} className={'play-member-row' + (offline ? ' offline' : '')}>
       <AvatarBox src={m.profile.avatar_url} id={m.profile.id} fallbackLetter={displayName(m.profile)[0]?.toUpperCase()} className="avatar-sm" />
@@ -1188,22 +1201,65 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
     sonorHlsRef.current?.destroy()
     sonorHlsRef.current = null
     if (!sonorSession) { audio.pause(); audio.removeAttribute('src'); audio.load(); return }
-    if (sonorSession.is_hls) {
-      import('hls.js').then(({ default: Hls }) => {
-        if (Hls.isSupported()) {
-          const hls = new Hls()
-          hls.loadSource(sonorSession.stream_url)
-          hls.attachMedia(audio)
-          sonorHlsRef.current = hls
+    const session = sonorSession
+    let cancelled = false
+    let retries = 0
+    let timer: ReturnType<typeof setTimeout> | null = null
+
+    const start = () => {
+      if (cancelled) return
+      sonorHlsRef.current?.destroy()
+      sonorHlsRef.current = null
+      if (session.is_hls) {
+        import('hls.js').then(({ default: Hls }) => {
+          if (cancelled) return
+          if (Hls.isSupported()) {
+            const hls = new Hls()
+            hls.loadSource(session.stream_url)
+            hls.attachMedia(audio)
+            hls.on(Hls.Events.ERROR, (_evt: unknown, data: { fatal?: boolean; type?: string }) => {
+              if (!data.fatal) return
+              if (data.type === 'networkError') hls.startLoad()
+              else if (data.type === 'mediaError') hls.recoverMediaError()
+              else scheduleReconnect()
+            })
+            hls.on(Hls.Events.FRAG_LOADED, () => { retries = 0 })
+            sonorHlsRef.current = hls
+          } else {
+            audio.src = session.stream_url
+          }
           audio.play().catch(() => {})
-        } else {
-          audio.src = sonorSession.stream_url
-          audio.play().catch(() => {})
-        }
-      })
-    } else {
-      audio.src = sonorSession.stream_url
-      audio.play().catch(() => {})
+        })
+      } else {
+        audio.src = session.stream_url
+        audio.play().catch(() => {})
+      }
+    }
+
+    // A conexao com a radio cai de vez em quando (rede, emissora): tenta de novo, com espera crescente
+    const scheduleReconnect = () => {
+      if (timer || cancelled || retries >= 10) return
+      retries += 1
+      timer = setTimeout(() => { timer = null; start() }, Math.min(1500 * retries, 15000))
+    }
+    const onPlaying = () => { retries = 0 }
+    const onStalled = () => {
+      setTimeout(() => { if (!cancelled && (audio.paused || audio.readyState < 3)) scheduleReconnect() }, 8000)
+    }
+    audio.addEventListener('error', scheduleReconnect)
+    audio.addEventListener('ended', scheduleReconnect)
+    audio.addEventListener('stalled', onStalled)
+    audio.addEventListener('waiting', onStalled)
+    audio.addEventListener('playing', onPlaying)
+    start()
+    return () => {
+      cancelled = true
+      if (timer) clearTimeout(timer)
+      audio.removeEventListener('error', scheduleReconnect)
+      audio.removeEventListener('ended', scheduleReconnect)
+      audio.removeEventListener('stalled', onStalled)
+      audio.removeEventListener('waiting', onStalled)
+      audio.removeEventListener('playing', onPlaying)
     }
   }, [sonorSession?.stream_url, sonorSession?.is_hls])
 

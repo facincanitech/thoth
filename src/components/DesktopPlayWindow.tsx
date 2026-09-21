@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import { ThothPlay } from './ThothPlay'
 import { DesktopTitleBar } from './DesktopChrome'
 import { currentWindow } from '../lib/desktopWindows'
+import { useHeartbeat } from '../lib/useHeartbeat'
 import type { Profile } from '../types'
 
 export function DesktopPlayWindow() {
@@ -15,6 +16,8 @@ export function DesktopPlayWindow() {
     const { data: sub } = supabase.auth.onAuthStateChange((_event, s) => setSession(s))
     return () => sub.subscription.unsubscribe()
   }, [])
+
+  useHeartbeat(session?.user.id)
 
   useEffect(() => {
     if (!session) return
