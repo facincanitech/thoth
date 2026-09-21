@@ -2213,11 +2213,11 @@ body{
 
 /* CYBERPUNK REWORK ------------------------------------------------ */
 [data-theme="cyberpunk"] body{background:#050710 url('/themes/cyberpunk-city.png') center/cover fixed}
-[data-theme="cyberpunk"] .app:not(.play-open){background:rgb(5 7 16 / 72%);backdrop-filter:blur(1px)}
-[data-theme="cyberpunk"] .rail{background:linear-gradient(rgb(7 8 19 / 88%),rgb(16 8 31 / 92%)),url('/themes/cyberpunk-city.png') left bottom/auto 100% fixed;border-right-color:#20e7ff}
-[data-theme="cyberpunk"] .chats{background:rgb(7 9 20 / 90%);backdrop-filter:blur(16px)}
+[data-theme="cyberpunk"] .app:not(.play-open){background:rgb(5 7 16 / 38%);backdrop-filter:blur(1px)}
+[data-theme="cyberpunk"] .rail{background:linear-gradient(rgb(7 8 19 / 62%),rgb(16 8 31 / 76%)),url('/themes/cyberpunk-city.png') 18% bottom/auto 100% fixed;border-right-color:#20e7ff}
+[data-theme="cyberpunk"] .chats{background:rgb(7 9 20 / 68%);backdrop-filter:blur(10px)}
 [data-theme="cyberpunk"] .top{background:linear-gradient(135deg,rgb(17 20 43 / 94%),rgb(33 17 58 / 94%))}
-[data-theme="cyberpunk"] .messages{background:linear-gradient(rgb(5 7 16 / 82%),rgb(5 7 16 / 90%)),url('/themes/cyberpunk-city.png') center/cover fixed}
+[data-theme="cyberpunk"] .messages{background:linear-gradient(rgb(5 7 16 / 48%),rgb(5 7 16 / 70%)),url('/themes/cyberpunk-city.png') center bottom/auto 100% fixed}
 [data-theme="cyberpunk"] .chat-header,[data-theme="cyberpunk"] .composer{backdrop-filter:blur(18px)}
 [data-theme="cyberpunk"] .rail-link[aria-current="page"]{clip-path:polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px)}
 [data-theme="cyberpunk"] .bubble{clip-path:polygon(7px 0,100% 0,100% calc(100% - 7px),calc(100% - 7px) 100%,0 100%,0 7px);border-radius:0}
@@ -2327,11 +2327,11 @@ body{
 [data-theme="light"] .msn-avatar-me,[data-theme="light"] .msn-contact-avatar{border-color:#b1c7df;border-radius:2px;background:#edf3fa;box-shadow:0 1px 3px #315d9b24}
 [data-theme="light"] .msn-unread{border-radius:2px;background:var(--retro-pink)}
 
-[data-theme="cyberpunk"] .msn-contacts-window{background:rgb(7 9 20 / 92%);backdrop-filter:blur(16px)}
-[data-theme="cyberpunk"] .msn-identity-card{background:linear-gradient(135deg,rgb(13 28 48 / 94%),rgb(42 14 55 / 94%));border-bottom-color:#20e7ff;box-shadow:inset 0 -1px #ff3cac66}
+[data-theme="cyberpunk"] .msn-contacts-window{background:linear-gradient(rgb(5 7 16 / 42%),rgb(12 7 25 / 62%)),url('/themes/cyberpunk-city.png') center bottom/auto 100% fixed;backdrop-filter:blur(3px)}
+[data-theme="cyberpunk"] .msn-identity-card{background:linear-gradient(135deg,rgb(13 28 48 / 78%),rgb(42 14 55 / 80%));border-bottom-color:#20e7ff;box-shadow:inset 0 -1px #ff3cac66}
 [data-theme="cyberpunk"] .msn-search-row{background:#090c1df2;border-bottom-color:#253b68}
 [data-theme="cyberpunk"] .msn-search-row input{color:#f4f7ff;background:#080d20;border-color:#20e7ff;border-radius:0;box-shadow:0 0 10px #20e7ff20}
-[data-theme="cyberpunk"] .msn-contact-list{background:linear-gradient(rgb(5 7 16 / 88%),rgb(11 8 25 / 94%)),url('/themes/cyberpunk-city.png') center bottom/cover fixed}
+[data-theme="cyberpunk"] .msn-contact-list{background:linear-gradient(rgb(5 7 16 / 48%),rgb(11 8 25 / 70%)),url('/themes/cyberpunk-city.png') center bottom/auto 100% fixed}
 [data-theme="cyberpunk"] .msn-contact-list details summary{color:#20e7ff;text-shadow:0 0 7px #20e7ff77}
 [data-theme="cyberpunk"] .msn-contact{border-radius:0;border-bottom:1px solid #25305a}
 [data-theme="cyberpunk"] .msn-contact:active{background:#182b4d;border-color:#20e7ff}
@@ -2386,7 +2386,7 @@ body{
   [data-theme="light"] .rail-account .avatar-sm{border-radius:2px}
 
   [data-theme="cyberpunk"] .rail{
-    background:linear-gradient(rgb(8 8 22 / 86%),rgb(18 8 34 / 94%)),url('/themes/cyberpunk-city.png') center bottom/cover;
+    background:linear-gradient(rgb(8 8 22 / 58%),rgb(18 8 34 / 74%)),url('/themes/cyberpunk-city.png') center bottom/auto 260%;
     border-top:1px solid #20e7ff;box-shadow:0 -5px 22px rgb(11 214 234 / 11%);
   }
   [data-theme="cyberpunk"] .rail-link{border-radius:0;clip-path:none}

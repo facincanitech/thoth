@@ -1,32 +1,40 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="180" height="360" viewBox="0 0 180 360">
   <rect width="180" height="360" fill="#010502"/>
-  <g fill="#18d94a" font-family="monospace" font-size="11" opacity=".28">
-    <text x="8" y="12">010011010101101001001</text>
-    <text x="31" y="38">110010011010</text>
-    <text x="94" y="24">00110101101</text>
-    <text x="145" y="58">1011001</text>
-    <text x="12" y="82">10110100110101</text>
-    <text x="74" y="108">00101101001</text>
-    <text x="132" y="91">110101101</text>
-    <text x="21" y="139">010011010101</text>
-    <text x="105" y="158">101101001</text>
-    <text x="151" y="132">00101</text>
-    <text x="5" y="190">110101100101</text>
-    <text x="67" y="215">00110101101</text>
-    <text x="126" y="199">101001101</text>
-    <text x="26" y="247">0110100101</text>
-    <text x="91" y="265">1101001011</text>
-    <text x="149" y="239">01011</text>
-    <text x="9" y="298">101100101101</text>
-    <text x="72" y="326">011010011</text>
-    <text x="137" y="310">110101</text>
+  <!-- Easter eggs: cada linha guarda ate 3 caracteres ASCII em binario. -->
+  <g fill="#18d94a" font-family="monospace" font-size="9" opacity=".3">
+    <!-- THOTH ESTA VENDO VOCE -->
+    <text x="7" y="13">010101000100100001001111</text>
+    <text x="34" y="29">010101000100100000100000</text>
+    <text x="15" y="45">010001010101001101010100</text>
+    <text x="42" y="61">010000010010000001010110</text>
+    <text x="5" y="77">010001010100111001000100</text>
+    <text x="30" y="93">010011110010000001010110</text>
+    <text x="18" y="109">010011110100001101000101</text>
+
+    <!-- NAO CONFIE NO DIGITANDO -->
+    <text x="40" y="129">010011100100000101001111</text>
+    <text x="9" y="145">001000000100001101001111</text>
+    <text x="27" y="161">010011100100011001001001</text>
+    <text x="4" y="177">010001010010000001001110</text>
+    <text x="36" y="193">010011110010000001000100</text>
+    <text x="14" y="209">010010010100011101001001</text>
+    <text x="43" y="225">010101000100000101001110</text>
+    <text x="22" y="241">0100010001001111</text>
+
+    <!-- SIGA O COELHO AZUL -->
+    <text x="6" y="261">010100110100100101000111</text>
+    <text x="33" y="277">010000010010000001001111</text>
+    <text x="12" y="293">001000000100001101001111</text>
+    <text x="39" y="309">010001010100110001001000</text>
+    <text x="4" y="325">010011110010000001000001</text>
+    <text x="25" y="341">010110100101010101001100</text>
   </g>
   <g fill="#7bff9b" font-family="monospace" font-size="12" opacity=".72">
-    <text x="30" y="64">1</text><text x="93" y="48">0</text><text x="144" y="82">1</text>
-    <text x="12" y="113">0</text><text x="73" y="134">1</text><text x="131" y="119">0</text>
-    <text x="21" y="171">1</text><text x="105" y="188">0</text><text x="151" y="161">1</text>
-    <text x="5" y="224">0</text><text x="67" y="249">1</text><text x="126" y="232">0</text>
-    <text x="26" y="281">1</text><text x="91" y="303">0</text><text x="149" y="275">1</text>
-    <text x="9" y="341">0</text><text x="137" y="348">1</text>
+    <text x="9" y="19">0</text><text x="78" y="35">1</text><text x="151" y="51">0</text>
+    <text x="35" y="83">1</text><text x="118" y="99">0</text><text x="162" y="115">1</text>
+    <text x="13" y="151">0</text><text x="91" y="167">1</text><text x="148" y="183">0</text>
+    <text x="39" y="215">1</text><text x="112" y="231">0</text><text x="164" y="247">1</text>
+    <text x="8" y="283">1</text><text x="82" y="299">0</text><text x="153" y="315">1</text>
+    <text x="31" y="347">0</text><text x="128" y="355">1</text>
   </g>
 </svg>

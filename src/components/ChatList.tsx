@@ -2885,13 +2885,6 @@ export function ChatList({
                   </button>
                   <button
                     type="button"
-                    className={`theme-option${theme === 'contrast' ? ' active' : ''}`}
-                    onClick={() => onThemeChange('contrast')}
-                  >
-                    Alto contraste
-                  </button>
-                  <button
-                    type="button"
                     className={`theme-option theme-option-cyberpunk${theme === 'cyberpunk' ? ' active' : ''}`}
                     onClick={() => onThemeChange('cyberpunk')}
                   >
@@ -2910,6 +2903,13 @@ export function ChatList({
                     onClick={() => onThemeChange('wood')}
                   >
                     Madeira
+                  </button>
+                  <button
+                    type="button"
+                    className={`theme-option${theme === 'contrast' ? ' active' : ''}`}
+                    onClick={() => onThemeChange('contrast')}
+                  >
+                    Alto contraste
                   </button>
                 </div>
             </>
