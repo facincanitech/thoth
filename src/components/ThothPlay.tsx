@@ -268,6 +268,9 @@ export function ThothPlay({ me, onBack }: Props) {
         { event: '*', schema: 'public', table: 'play_categories', filter: `group_id=eq.${selectedGroup.id}` },
         () => fetchCategories(selectedGroup.id),
       )
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'play_channel_role_access' }, () => { fetchChannels(selectedGroup.id); fetchCategories(selectedGroup.id) })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'play_category_role_access' }, () => { fetchChannels(selectedGroup.id); fetchCategories(selectedGroup.id) })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'play_role_members' }, () => { fetchChannels(selectedGroup.id); fetchCategories(selectedGroup.id) })
       .subscribe()
     return () => {
       supabase.removeChannel(channel)
@@ -926,7 +929,7 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
   const [newCategoryName, setNewCategoryName] = useState('')
   const [catMenu, setCatMenu] = useState<{ categoryId: string; x: number; y: number } | null>(null)
   const [chanMenu, setChanMenu] = useState<{ channelId: string; x: number; y: number } | null>(null)
-  const [accessModal, setAccessModal] = useState<{ channelId: string; roleIds: string[] } | null>(null)
+  const [accessModal, setAccessModal] = useState<{ kind: 'channel' | 'category'; id: string; roleIds: string[] } | null>(null)
   const [nowTick, setNowTick] = useState(() => Date.now())
   useEffect(() => {
     const t = setInterval(() => setNowTick(Date.now()), 5000)
@@ -1109,20 +1112,26 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
     onCategoriesChange()
   }
 
-  async function openChannelAccess(channelId: string) {
-    const { data } = await supabase.from('play_channel_role_access').select('role_id').eq('channel_id', channelId)
-    setAccessModal({ channelId, roleIds: (data || []).map((r) => r.role_id as string) })
+  // acesso por cargo: vale pra canal e pra categoria (categoria restrita esconde ela e os canais dentro)
+  async function openAccess(kind: 'channel' | 'category', id: string) {
+    const { data } = kind === 'channel'
+      ? await supabase.from('play_channel_role_access').select('role_id').eq('channel_id', id)
+      : await supabase.from('play_category_role_access').select('role_id').eq('category_id', id)
+    setAccessModal({ kind, id, roleIds: (data || []).map((r) => r.role_id as string) })
   }
 
-  async function toggleChannelAccess(roleId: string) {
+  async function toggleAccess(roleId: string) {
     if (!accessModal) return
     const has = accessModal.roleIds.includes(roleId)
+    const table = accessModal.kind === 'channel' ? 'play_channel_role_access' : 'play_category_role_access'
+    const col = accessModal.kind === 'channel' ? 'channel_id' : 'category_id'
     const { error } = has
-      ? await supabase.from('play_channel_role_access').delete().eq('role_id', roleId).eq('channel_id', accessModal.channelId)
-      : await supabase.from('play_channel_role_access').insert({ role_id: roleId, channel_id: accessModal.channelId })
-    if (error) { console.error('channel access failed', error); return }
+      ? await supabase.from(table).delete().eq('role_id', roleId).eq(col, accessModal.id)
+      : await supabase.from(table).insert({ role_id: roleId, [col]: accessModal.id })
+    if (error) { console.error('access failed', error); return }
     setAccessModal({ ...accessModal, roleIds: has ? accessModal.roleIds.filter((x) => x !== roleId) : [...accessModal.roleIds, roleId] })
     onChannelsChange()
+    onCategoriesChange()
   }
 
   async function renameChannelSave() {
@@ -1730,7 +1739,7 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
                       <IconEdit size={14} /> Renomear canal
                     </button>
                     {can('manage_roles') && (
-                      <button type="button" onClick={() => { const id = chanMenu.channelId; setChanMenu(null); openChannelAccess(id) }}>
+                      <button type="button" onClick={() => { const id = chanMenu.channelId; setChanMenu(null); openAccess('channel', id) }}>
                         <IconLock size={14} /> Acesso por cargo
                       </button>
                     )}
@@ -1762,6 +1771,11 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
                     >
                       <IconEdit size={14} /> Renomear
                     </button>
+                    {can('manage_roles') && (
+                      <button type="button" onClick={() => { const id = catMenu.categoryId; setCatMenu(null); openAccess('category', id) }}>
+                        <IconLock size={14} /> Acesso por cargo
+                      </button>
+                    )}
                     <button type="button" className="danger" onClick={() => { deleteCategory(catMenu.categoryId); setCatMenu(null) }}>
                       <IconTrash size={14} /> Excluir categoria
                     </button>
@@ -2089,11 +2103,11 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
         <div className="modal-backdrop" onClick={() => setAccessModal(null)}>
           <div className="modal-card play-channel-modal" onClick={(e) => e.stopPropagation()} style={{ maxHeight: '86vh', overflowY: 'auto' }}>
             <h2>Acesso por cargo</h2>
-            <p className="play-invite-hint">#{channels.find((c) => c.id === accessModal.channelId)?.name} — só os cargos marcados enxergam este canal. Nenhum marcado = todo mundo vê. Dono e admin sempre veem.</p>
+            <p className="play-invite-hint">{accessModal.kind === 'channel' ? '#' + (channels.find((c) => c.id === accessModal.id)?.name || '') + ' — só os cargos marcados enxergam este canal.' : (categories.find((c) => c.id === accessModal.id)?.name || '') + ' — só os cargos marcados enxergam esta categoria e os canais dentro dela.'} Nenhum marcado = todo mundo vê. Dono e admin sempre veem.</p>
             {groupRoles.length === 0 && <p className="play-empty">nenhum cargo criado ainda</p>}
             {groupRoles.map((r) => (
               <label key={r.id} className="play-role-check-row">
-                <input type="checkbox" checked={accessModal.roleIds.includes(r.id)} onChange={() => toggleChannelAccess(r.id)} />
+                <input type="checkbox" checked={accessModal.roleIds.includes(r.id)} onChange={() => toggleAccess(r.id)} />
                 {r.emoji ? r.emoji + ' ' : ''}{r.name}
               </label>
             ))}
