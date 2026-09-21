@@ -32,6 +32,7 @@ export async function openChatWindow(conversationId: string, title: string) {
     minWidth: 520,
     minHeight: 420,
     decorations: false,
+    dragDropEnabled: false,
   })
 }
 
@@ -68,6 +69,7 @@ export async function openPlayWindow() {
     minWidth: 800,
     minHeight: 480,
     decorations: false,
+    dragDropEnabled: false,
   })
 }
 
@@ -85,6 +87,7 @@ export async function ensureCallWindow() {
     minWidth: 420,
     minHeight: 460,
     decorations: false,
+    dragDropEnabled: false,
     visible: false,
   })
 }

@@ -2459,3 +2459,16 @@ html .desktop-window-shell.desktop-web-shell{border:0;border-radius:0;box-shadow
 /* radio do Sonor no topo do servidor, perto do nome (no celular continua flutuante embaixo) */
 .play-group-topbar .play-sonor-bar{position:static;transform:none;box-shadow:none;margin-left:14px;padding:5px 12px;max-width:min(460px,42vw);min-width:0;flex:0 1 auto}
 .play-group-topbar .play-sonor-bar-title{max-width:16vw}
+
+/* Presenca so pela borda do avatar (sem bolinha): verde = online (app aberto), amarela = ausente (ligado mas em outro app),
+   e offline (app fechado) = avatar a 50% (regra .presence-offline acima). */
+.avatar-sm.presence-online,.avatar-sm.presence-afk,.avatar-sm.presence-offline{border:2px solid;box-sizing:border-box}
+.presence-online{border-color:#31c76a!important}
+.presence-afk{border-color:#f5c518!important}
+.presence-offline{border-color:#9aa5b1!important}
+.play-member-row .presence-offline{opacity:1}
+
+/* categoria do Play: seta que recolhe/expande */
+.play-channel-group-title .play-category-toggle{width:16px;height:16px;align-items:center;justify-content:center;transition:transform .15s}
+.play-channel-group-title .play-category-toggle.collapsed{transform:rotate(-90deg)}
+.play-channel-group-title .play-category-name{cursor:pointer;user-select:none}

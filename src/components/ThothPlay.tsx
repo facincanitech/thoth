@@ -940,6 +940,18 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
   const [renameCategoryDraft, setRenameCategoryDraft] = useState('')
   const [dragChannelId, setDragChannelId] = useState<string | null>(null)
   const [dragCategoryId, setDragCategoryId] = useState<string | null>(null)
+  const [collapsedCats, setCollapsedCats] = useState<Set<string>>(() => {
+    try { return new Set(JSON.parse(localStorage.getItem('play-collapsed-cats') || '[]') as string[]) } catch { return new Set() }
+  })
+  function toggleCategoryCollapsed(id: string) {
+    setCollapsedCats((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      try { localStorage.setItem('play-collapsed-cats', JSON.stringify([...next])) } catch { /* ignore */ }
+      return next
+    })
+  }
   const [copied, setCopied] = useState(false)
   const [members, setMembers] = useState<GroupMember[]>([])
   const membersIdsRef = useRef<string[]>([])
@@ -1013,7 +1025,7 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
   const isOnline = memberOnline
   const renderMemberRow = (m: GroupMember, offline: boolean) => (
     <div key={m.profile.id} className={'play-member-row' + (offline ? ' offline' : '')}>
-      <AvatarBox src={m.profile.avatar_url} id={m.profile.id} fallbackLetter={displayName(m.profile)[0]?.toUpperCase()} className="avatar-sm" />
+      <AvatarBox src={m.profile.avatar_url} id={m.profile.id} fallbackLetter={displayName(m.profile)[0]?.toUpperCase()} className={'avatar-sm presence-' + (m.profile.id === me.id ? 'online' : getPresenceColor(m.profile.last_seen_at, m.profile.is_idle))} />
       <span
         className="play-name-clickable"
         onContextMenu={(e) => { e.preventDefault(); openRoleQuickMenu(m.profile.id, displayName(m.profile), e.clientX, e.clientY) }}
@@ -1653,9 +1665,20 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
                   <div
                     className="play-channel-group-title"
                     onContextMenu={(e) => { if (!canManage) return; e.preventDefault(); setCatMenu({ categoryId: cat.id, x: e.clientX, y: e.clientY }) }}
+                    onDragOver={(e) => { if (dragChannelId) { e.preventDefault(); e.stopPropagation() } }}
+                    onDrop={(e) => { if (dragChannelId) { e.preventDefault(); e.stopPropagation(); moveChannel(dragChannelId, cat.id, null); setDragChannelId(null) } }}
                   >
                     {canManage && <span className="play-category-grip"><IconGrip size={12} /></span>}
-                    <span>{cat.name}</span>
+                    <button
+                      type="button"
+                      className={'play-category-toggle' + (collapsedCats.has(cat.id) ? ' collapsed' : '')}
+                      aria-expanded={!collapsedCats.has(cat.id)}
+                      title={collapsedCats.has(cat.id) ? 'Expandir categoria' : 'Recolher categoria'}
+                      onClick={() => toggleCategoryCollapsed(cat.id)}
+                    >
+                      <IconChevronDown size={13} />
+                    </button>
+                    <span className="play-category-name" onClick={() => toggleCategoryCollapsed(cat.id)}>{cat.name}</span>
                     {canManage && (
                       <button type="button" onClick={() => openNewChannelModal(cat.id)} title="Criar canal"><IconPlus size={14} /></button>
                     )}
@@ -1664,7 +1687,7 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
                     onDragOver={(e) => { if (dragChannelId) e.preventDefault() }}
                     onDrop={(e) => { e.preventDefault(); if (dragChannelId) moveChannel(dragChannelId, cat.id, null); setDragChannelId(null) }}
                   >
-                    {channelsByCategory(cat.id).map((c) => (
+                    {channelsByCategory(cat.id).filter((c) => !collapsedCats.has(cat.id) || c.id === selectedChannel?.id || joinedVoiceChannel?.id === c.id).map((c) => (
                       <div
                         key={c.id}
                         draggable={canManage}
