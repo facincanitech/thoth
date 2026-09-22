@@ -22,6 +22,7 @@ import { fetchRandomStation, searchPublicStations, isHlsStream, type RadioStatio
 import { DEFAULT_PLAY_THEME, PLAY_THEMES, normalizePlayTheme, type PlayThemeId } from '../lib/playThemes'
 import { openDirectMessage } from '../lib/directMessage'
 import { ensurePlayBotPanel } from '../lib/playBotPanels'
+import { playInviteUrl } from '../lib/inviteLink'
 import type { Bot, PlaySonorSession, PlayCategory, PlayChannel, PlayGroup, PlayMessage, PlayProfile, PlayRole, Profile } from '../types'
 
 function useIsMobile() {
@@ -158,11 +159,12 @@ const REPLAY_WINDOW_MS = 20000
 type Props = {
   me: Profile
   onBack: () => void
+  initialInviteCode?: string | null
 }
 
 type ChannelMessage = PlayMessage & { author?: Profile }
 
-export function ThothPlay({ me, onBack }: Props) {
+export function ThothPlay({ me, onBack, initialInviteCode }: Props) {
   const [myPlayProfile, setMyPlayProfile] = useState<Profile>(me)
   const [playTheme, setPlayTheme] = useState<PlayThemeId>(DEFAULT_PLAY_THEME)
   const [showProfile, setShowProfile] = useState(false)
@@ -437,6 +439,32 @@ export function ThothPlay({ me, onBack }: Props) {
     await loadGroups()
     if (result.group) openGroup(result.group)
   }
+
+  const initialInviteConsumedRef = useRef(false)
+  useEffect(() => {
+    if (!initialInviteCode || initialInviteConsumedRef.current) return
+    initialInviteConsumedRef.current = true
+    setJoinCode(initialInviteCode)
+    ;(async () => {
+      const { data, error } = await supabase.rpc('request_play_group_join', {
+        p_invite_code: initialInviteCode,
+        p_password: null,
+      })
+      if (error) {
+        setShowJoin(true)
+        setJoinError(error.message.includes('senha') ? 'Este servidor precisa de senha.' : error.message.includes('banido') ? 'Você foi banido deste servidor.' : 'Servidor não encontrado.')
+        return
+      }
+      const result = data as { status: 'joined' | 'pending'; group?: PlayGroup }
+      if (result.status === 'pending') {
+        setShowJoin(true)
+        setJoinPending(true)
+        return
+      }
+      await loadGroups()
+      if (result.group) openGroup(result.group)
+    })()
+  }, [initialInviteCode, me.id])
 
   function goHome() {
     setSelectedGroup(null)
@@ -1612,7 +1640,7 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
   }
 
   function copyInvite() {
-    navigator.clipboard?.writeText(group.invite_code)
+    navigator.clipboard?.writeText(playInviteUrl(group.invite_code))
     setCopied(true)
     setTimeout(() => setCopied(false), 1500)
   }
@@ -1722,9 +1750,9 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
           <div className="modal-backdrop" onClick={() => setShowInvite(false)}>
             <div className="modal-card" onClick={(e) => e.stopPropagation()}>
               <h2>Convidar para {group.name}</h2>
-              <p className="play-invite-hint">Compartilhe o código com quem você quer chamar pro servidor.</p>
+              <p className="play-invite-hint">Compartilhe o link. Depois do login, a pessoa cai direto neste servidor.</p>
               <div className="play-invite-code-row">
-                <input readOnly value={group.invite_code} onFocus={(e) => e.target.select()} />
+                <input readOnly value={playInviteUrl(group.invite_code)} onFocus={(e) => e.target.select()} />
                 <button type="button" className="google-btn" style={{ width: 'auto' }} onClick={copyInvite}>
                   <IconCopy size={14} /> {copied ? 'copiado!' : 'Copiar'}
                 </button>

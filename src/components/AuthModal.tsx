@@ -25,7 +25,7 @@ export function AuthModal({ onClose }: Props) {
     }
     const redirectTo = Capacitor.isNativePlatform()
       ? 'thoth://callback'
-      : `${window.location.origin}${import.meta.env.BASE_URL}`
+      : `${window.location.origin}${import.meta.env.BASE_URL}${window.location.search}`
     const { error: oauthError } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: { redirectTo, queryParams: { prompt: 'select_account' } },

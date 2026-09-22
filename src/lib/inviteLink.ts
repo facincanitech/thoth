@@ -7,3 +7,7 @@ const BASE_URL = 'https://facincanitech.github.io/thoth/'
 export function inviteUrl(code: string): string {
   return `${BASE_URL}?invite=${code}`
 }
+
+export function playInviteUrl(code: string): string {
+  return `${BASE_URL}?play=${code}`
+}

@@ -249,6 +249,7 @@ function App() {
   const [selected, setSelected] = useState<Conversation | null>(null)
   const restoredSelectedRef = useRef(false)
   const [pendingInviteCode] = useState(() => new URLSearchParams(window.location.search).get('invite'))
+  const [pendingPlayInviteCode] = useState(() => new URLSearchParams(window.location.search).get('play'))
   const inviteConsumedRef = useRef(false)
   const [selectedCommunity, setSelectedCommunity] = useState<Community | null>(null)
   const [communityTab, setCommunityTab] = useState<'home' | 'info' | 'members' | 'settings'>('home')
@@ -540,6 +541,22 @@ function App() {
     })()
   }, [pendingInviteCode, session, profile?.id])
 
+  useEffect(() => {
+    if (!pendingPlayInviteCode) return
+    if (session === null) {
+      setAuthOpen(true)
+      return
+    }
+    if (!profile) return
+    setSelected(null)
+    setSelectedCommunity(null)
+    setPanelOpen(false)
+    setAccountOpen(false)
+    setGroupsOpen(false)
+    setStatusOpen(false)
+    setPlayOpen(true)
+  }, [pendingPlayInviteCode, session, profile?.id])
+
   async function openNudger() {
     if (nudgers.length === 0) {
       goHome()
@@ -698,7 +715,7 @@ function App() {
             : 'chats'
         }
       />}
-      {playOpen && profile ? <ThothPlay me={profile} onBack={goHome} /> : (
+      {playOpen && profile ? <ThothPlay me={profile} onBack={goHome} initialInviteCode={pendingPlayInviteCode} /> : (
       <>
       <ChatList
         me={profile}

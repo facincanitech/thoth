@@ -273,6 +273,7 @@ body{
 .presence-offline{opacity:.5}
 .header-text{min-width:0;flex:1}
 .header-name{font-weight:650;font-size:16px;display:flex;align-items:center;gap:6px;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;line-height:1.5}
+.header-last-seen{display:block;margin-top:-1px;color:var(--muted);font-size:11px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .header-sonor{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;color:var(--text-secondary);margin-top:2px}
 .header-sonor span{overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
 .header-sonor .icon-btn{width:44px;height:44px;flex-shrink:0}

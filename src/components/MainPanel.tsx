@@ -6,7 +6,7 @@ import { WINKS, playWinkEffect, playCustomWinkEffect } from '../lib/winks'
 import { getCustomWinks, saveCustomWink, deleteCustomWink, fileToDataUrl, type CustomWink } from '../lib/customWinks'
 import { getCustomStickers, saveCustomSticker, deleteCustomSticker, uploadStickerImage, resizeStickerImage, type CustomSticker } from '../lib/stickers'
 import { searchGifs, type GifResult } from '../lib/gifSearch'
-import { getPresenceColor } from '../lib/presence'
+import { formatLastSeenClock, getPresenceColor } from '../lib/presence'
 import { useDesktopLayout } from '../lib/useDesktopLayout'
 import { openDirectMessage } from '../lib/directMessage'
 import { getErrorMessage } from '../lib/errors'
@@ -2079,6 +2079,9 @@ export function MainPanel({ me, conversation, onBack, onConversationUpdate, bloc
               </span>
             )}
           </div>
+          {otherMember && getPresenceColor(otherMember.last_seen_at, otherMember.is_idle) === 'offline' && (
+            <span className="header-last-seen">{formatLastSeenClock(otherMember.last_seen_at)}</span>
+          )}
           {sonorSession && (
             <div className="header-sonor">
               <span
