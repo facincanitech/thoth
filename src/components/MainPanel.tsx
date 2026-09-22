@@ -1053,18 +1053,11 @@ export function MainPanel({ me, conversation, onBack, onConversationUpdate, bloc
     }
   }
 
-  async function toggleInviteApproval() {
-    if (!conversation) return
-    const next = !conversation.invite_requires_approval
-    const { error } = await supabase.from('conversations').update({ invite_requires_approval: next }).eq('id', conversation.id)
-    if (!error) onConversationUpdate({ invite_requires_approval: next })
-  }
-
   async function toggleGroupPublic() {
     if (!conversation) return
     const next = !conversation.is_public
-    const { error } = await supabase.from('conversations').update({ is_public: next }).eq('id', conversation.id)
-    if (!error) onConversationUpdate({ is_public: next })
+    const { error } = await supabase.from('conversations').update({ is_public: next, invite_requires_approval: !next }).eq('id', conversation.id)
+    if (!error) onConversationUpdate({ is_public: next, invite_requires_approval: !next })
   }
 
   async function loadJoinRequests() {
@@ -2257,8 +2250,9 @@ export function MainPanel({ me, conversation, onBack, onConversationUpdate, bloc
                         checked={!!conversation.is_public}
                         onChange={toggleGroupPublic}
                       />
-                      Grupo público (aparece na busca e em "grupos em alta")
+                      Grupo público (aparece na busca e permite entrada direta)
                     </label>
+                    <span className="invite-code">No grupo privado, quem abrir o convite envia uma solicitação para o dono aprovar.</span>
                   </div>
                 )}
                 {conversation.created_by === me?.id && !confirmDeleteGroup && (
@@ -2381,15 +2375,6 @@ export function MainPanel({ me, conversation, onBack, onConversationUpdate, bloc
                         {inviteLinkBusy ? 'gerando...' : 'gerar link de convite'}
                       </button>
                     )}
-                    <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '.8rem', marginTop: 6 }}>
-                      <input
-                        type="checkbox"
-                        style={{ width: 'auto' }}
-                        checked={!!conversation.invite_requires_approval}
-                        onChange={toggleInviteApproval}
-                      />
-                      Aprovar antes de entrar pelo link
-                    </label>
                     {joinRequests.length > 0 && (
                       <div className="chat-config-members" style={{ marginTop: 8 }}>
                         <span style={{ fontSize: '.75rem', color: 'var(--muted)' }}>pedidos pra entrar</span>

@@ -1387,7 +1387,7 @@ export function ChatList({
     try {
       const { data: conv, error: convErr } = await supabase
         .from('conversations')
-        .insert({ type: 'group', name, description: newGroupDesc.trim() || null, image_url: sanitizeImageUrl(newGroupImageUrl), is_public: newGroupIsPublic, created_by: me.id })
+        .insert({ type: 'group', name, description: newGroupDesc.trim() || null, image_url: sanitizeImageUrl(newGroupImageUrl), is_public: newGroupIsPublic, invite_requires_approval: !newGroupIsPublic, created_by: me.id })
         .select()
         .single()
       if (convErr) throw convErr

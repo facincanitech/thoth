@@ -62,7 +62,7 @@ const PLAY_PERMISSIONS: { group: string; items: { key: string; label: string }[]
     { key: 'assign_roles', label: 'Dar e tirar cargos' },
     { key: 'kick_members', label: 'Expulsar membros' },
     { key: 'ban_members', label: 'Banir membros' },
-    { key: 'approve_members', label: 'Aprovar pedidos de entrada (servidor com senha)' },
+    { key: 'approve_members', label: 'Aprovar pedidos de entrada em servidor privado' },
   ] },
   { group: 'Chamada de voz', items: [
     { key: 'voice_speak', label: 'Falar na chamada' },
@@ -185,7 +185,6 @@ export function ThothPlay({ me, onBack, initialInviteCode }: Props) {
   const [createError, setCreateError] = useState<string | null>(null)
   const [showJoin, setShowJoin] = useState(false)
   const [joinCode, setJoinCode] = useState('')
-  const [joinPassword, setJoinPassword] = useState('')
   const [joinError, setJoinError] = useState<string | null>(null)
   const [joinPending, setJoinPending] = useState(false)
 
@@ -390,13 +389,13 @@ export function ThothPlay({ me, onBack, initialInviteCode }: Props) {
     if (error) console.error('send play media failed', error)
   }
 
-  async function handleCreateGroup(name: string, description: string, isClosed: boolean, password: string) {
+  async function handleCreateGroup(name: string, description: string, isClosed: boolean) {
     setCreateError(null)
     const { data, error } = await supabase.rpc('create_play_group', {
       p_name: name,
       p_description: description || null,
       p_is_closed: isClosed,
-      p_password: isClosed ? password : null,
+      p_password: null,
     })
     if (error) {
       console.error('create_play_group failed', error)
@@ -422,9 +421,9 @@ export function ThothPlay({ me, onBack, initialInviteCode }: Props) {
 
   async function handleJoinGroup() {
     setJoinError(null)
-    const { data, error } = await supabase.rpc('request_play_group_join', { p_invite_code: joinCode.trim(), p_password: joinPassword || null })
+    const { data, error } = await supabase.rpc('request_play_group_join', { p_invite_code: joinCode.trim(), p_password: null })
     if (error) {
-      setJoinError(error.message.includes('banido') ? 'Você foi banido deste servidor.' : error.message.includes('senha') ? 'Senha incorreta.' : 'Servidor não encontrado.')
+      setJoinError(error.message.includes('banido') ? 'Você foi banido deste servidor.' : 'Servidor não encontrado.')
       return
     }
     const result = data as { status: 'joined' | 'pending'; group?: PlayGroup }
@@ -435,7 +434,6 @@ export function ThothPlay({ me, onBack, initialInviteCode }: Props) {
     }
     setShowJoin(false)
     setJoinCode('')
-    setJoinPassword('')
     await loadGroups()
     if (result.group) openGroup(result.group)
   }
@@ -452,7 +450,7 @@ export function ThothPlay({ me, onBack, initialInviteCode }: Props) {
       })
       if (error) {
         setShowJoin(true)
-        setJoinError(error.message.includes('senha') ? 'Este servidor precisa de senha.' : error.message.includes('banido') ? 'Você foi banido deste servidor.' : 'Servidor não encontrado.')
+        setJoinError(error.message.includes('banido') ? 'Você foi banido deste servidor.' : 'Servidor não encontrado.')
         return
       }
       const result = data as { status: 'joined' | 'pending'; group?: PlayGroup }
@@ -577,10 +575,9 @@ export function ThothPlay({ me, onBack, initialInviteCode }: Props) {
               <div className="modal-card" onClick={(e) => e.stopPropagation()}>
                 <h2>Entrar num servidor</h2>
                 <input placeholder="Código do convite" value={joinCode} onChange={(e) => setJoinCode(e.target.value)} />
-                <input placeholder="Senha (se o servidor for fechado)" type="password" value={joinPassword} onChange={(e) => setJoinPassword(e.target.value)} style={{ marginTop: 8 }} />
                 {joinError && <p className="auth-error">{joinError}</p>}
-                {joinPending && <p className="play-invite-hint">Senha certa! Seu pedido foi enviado — é só esperar alguém do servidor aprovar a sua entrada.</p>}
-                <button type="button" className="google-btn" style={{ marginTop: 10 }} disabled={joinPending} onClick={handleJoinGroup}>Entrar</button>
+                {joinPending && <p className="play-invite-hint">Pedido enviado — é só esperar alguém do servidor aprovar sua entrada.</p>}
+                <button type="button" className="google-btn" style={{ marginTop: 10 }} disabled={joinPending} onClick={handleJoinGroup}>{joinPending ? 'Pedido enviado' : 'Continuar'}</button>
                 <button type="button" className="modal-close" onClick={() => setShowJoin(false)}>fechar</button>
               </div>
             </div>
@@ -834,7 +831,7 @@ function PlayProfileCard({ profile, roles, userRoleIds, canAssign, onToggleRole,
   )
 }
 
-// Pedidos de entrada (servidor com senha): nome + email da pessoa e botao de mensagem privada (Messenger)
+// Pedidos de entrada em servidor privado: nome + email e mensagem privada (Messenger).
 function PlayJoinRequests({ groupId, me }: { groupId: string; me: Profile }) {
   type Req = { user_id: string; username: string | null; display_name: string | null; email: string | null; avatar_url: string | null }
   const [reqs, setReqs] = useState<Req[]>([])
@@ -923,11 +920,10 @@ function ServerInfoScreen({ group, members, me, canApprove, onClose, onConfigure
   )
 }
 
-function CreateGroupModal({ onClose, onCreate, error }: { onClose: () => void; onCreate: (name: string, description: string, isClosed: boolean, password: string) => void; error: string | null }) {
+function CreateGroupModal({ onClose, onCreate, error }: { onClose: () => void; onCreate: (name: string, description: string, isClosed: boolean) => void; error: string | null }) {
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [isClosed, setIsClosed] = useState(false)
-  const [password, setPassword] = useState('')
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
@@ -937,18 +933,15 @@ function CreateGroupModal({ onClose, onCreate, error }: { onClose: () => void; o
         <input placeholder="Descrição (opcional)" value={description} onChange={(e) => setDescription(e.target.value)} style={{ marginTop: 8 }} />
         <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10 }}>
           <input type="checkbox" checked={isClosed} onChange={(e) => setIsClosed(e.target.checked)} />
-          Servidor fechado (com senha)
+          Servidor privado (entrada mediante aprovação)
         </label>
-        {isClosed && (
-          <input placeholder="Senha do servidor" type="password" value={password} onChange={(e) => setPassword(e.target.value)} style={{ marginTop: 8 }} />
-        )}
         {error && <p className="auth-error">{error}</p>}
         <button
           type="button"
           className="google-btn"
           style={{ marginTop: 10 }}
-          disabled={!name.trim() || (isClosed && !password.trim())}
-          onClick={() => onCreate(name.trim(), description.trim(), isClosed, password)}
+          disabled={!name.trim()}
+          onClick={() => onCreate(name.trim(), description.trim(), isClosed)}
         >
           Criar
         </button>
@@ -2330,8 +2323,6 @@ function GroupInfoPanel({ group, myRole, members, me, can, open, onClose, onUpda
   const [uploading, setUploading] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
   const [privacySaving, setPrivacySaving] = useState(false)
-  const [closePassword, setClosePassword] = useState('')
-  const [showClosePrompt, setShowClosePrompt] = useState(false)
   const [memberSearch, setMemberSearch] = useState('')
   const [bans, setBans] = useState<{ user_id: string; profile?: Profile }[]>([])
   const [roles, setRoles] = useState<PlayRole[]>([])
@@ -2510,22 +2501,10 @@ function GroupInfoPanel({ group, myRole, members, me, can, open, onClose, onUpda
   }
 
   async function togglePrivacy(nextClosed: boolean) {
-    if (nextClosed) { setShowClosePrompt(true); return }
     setPrivacySaving(true)
-    const { error: err } = await supabase.rpc('set_play_group_privacy', { p_group_id: group.id, p_is_closed: false })
+    const { error: err } = await supabase.rpc('set_play_group_privacy', { p_group_id: group.id, p_is_closed: nextClosed, p_password: null })
     setPrivacySaving(false)
-    if (!err) onUpdate({ is_closed: false })
-  }
-
-  async function confirmClose() {
-    setPrivacySaving(true)
-    const { error: err } = await supabase.rpc('set_play_group_privacy', { p_group_id: group.id, p_is_closed: true, p_password: closePassword || null })
-    setPrivacySaving(false)
-    if (!err) {
-      onUpdate({ is_closed: true })
-      setShowClosePrompt(false)
-      setClosePassword('')
-    }
+    if (!err) onUpdate({ is_closed: nextClosed })
   }
 
   async function deleteGroup() {
@@ -2651,15 +2630,10 @@ function GroupInfoPanel({ group, myRole, members, me, can, open, onClose, onUpda
                   <IconLockOpen size={13} /> Aberto
                 </button>
                 <button type="button" className={group.is_closed ? 'active' : ''} disabled={privacySaving} onClick={() => togglePrivacy(true)}>
-                  <IconLock size={13} /> Fechado
+                  <IconLock size={13} /> Privado
                 </button>
               </div>
-              {showClosePrompt && (
-                <div className="play-invite-code-row" style={{ marginTop: 8 }}>
-                  <input type="password" placeholder="Senha (opcional)" value={closePassword} onChange={(e) => setClosePassword(e.target.value)} />
-                  <button type="button" className="google-btn" style={{ width: 'auto' }} disabled={privacySaving} onClick={confirmClose}>Confirmar</button>
-                </div>
-              )}
+              <span className="play-invite-hint">No privado, quem abrir o convite envia uma solicitação para a equipe aprovar.</span>
               </>)}
             </>
           ) : (
@@ -2674,7 +2648,7 @@ function GroupInfoPanel({ group, myRole, members, me, can, open, onClose, onUpda
             </>
           )}
           <div className="play-group-info-badge">
-            {group.is_closed ? <><IconLock size={13} /> Servidor fechado</> : <><IconLockOpen size={13} /> Servidor aberto</>}
+            {group.is_closed ? <><IconLock size={13} /> Servidor privado · entrada mediante aprovação</> : <><IconLockOpen size={13} /> Servidor aberto</>}
           </div>
 
           {isOwner && (
