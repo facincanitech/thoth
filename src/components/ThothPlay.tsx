@@ -2296,6 +2296,7 @@ function GroupInfoPanel({ group, myRole, members, me, can, channels, categories,
   const [roleEdit, setRoleEdit] = useState<{ id: string; name: string; emoji: string; permissions: string[]; hoisted: boolean } | null>(null)
   const [botCatalog, setBotCatalog] = useState<Bot[]>([])
   const [installedBotIds, setInstalledBotIds] = useState<Set<string>>(new Set())
+  const [botStoreOpen, setBotStoreOpen] = useState(false)
 
   useEffect(() => {
     setName(group.name)
@@ -2403,17 +2404,19 @@ function GroupInfoPanel({ group, myRole, members, me, can, channels, categories,
     }
   }
 
-  async function toggleBot(botId: string, installed: boolean) {
+  async function toggleBot(botId: string, installed: boolean): Promise<boolean> {
     if (installed) {
-      await supabase.from('play_group_bots').delete().eq('group_id', group.id).eq('bot_id', botId)
+      const { error } = await supabase.from('play_group_bots').delete().eq('group_id', group.id).eq('bot_id', botId)
+      if (error) { setError('Não foi possível remover o bot.'); return false }
       setInstalledBotIds((prev) => { const next = new Set(prev); next.delete(botId); return next })
     } else {
       const { error } = await supabase.from('play_group_bots').insert({ group_id: group.id, bot_id: botId, installed_by: me.id })
-      if (error) { console.error('install bot failed', error); return }
+      if (error) { setError('Não foi possível instalar o bot.'); return false }
       setInstalledBotIds((prev) => new Set(prev).add(botId))
       const bot = botCatalog.find((b) => b.id === botId)
       if (bot) await setupBotPanel(bot)
     }
+    return true
   }
 
   async function createRole() {
@@ -2866,8 +2869,10 @@ function GroupInfoPanel({ group, myRole, members, me, can, channels, categories,
 
       {tab === 'bots' && canBotsTab && (
         <div className="play-group-info-body">
-          {botCatalog.length === 0 && <p className="play-empty">nenhum bot disponível no catálogo ainda</p>}
-          {botCatalog.map((bot) => {
+          <button type="button" className="play-bot-store-button" onClick={() => setBotStoreOpen(true)}>＋ Escolher bot na Loja Thoth</button>
+          <p className="play-bot-store-caption">Bots deste servidor</p>
+          {!botCatalog.some((bot) => installedBotIds.has(bot.id)) && <p className="play-empty">Nenhum bot instalado neste servidor.</p>}
+          {botCatalog.filter((bot) => installedBotIds.has(bot.id)).map((bot) => {
             const installed = installedBotIds.has(bot.id)
             return (
               <div key={bot.id} className="play-bot-row">
@@ -2884,6 +2889,7 @@ function GroupInfoPanel({ group, myRole, members, me, can, channels, categories,
               </div>
             )
           })}
+          {botStoreOpen && <div className="store-modal-backdrop" onMouseDown={() => setBotStoreOpen(false)}><div className="store-modal" onMouseDown={(event) => event.stopPropagation()}><button className="store-modal-close" type="button" onClick={() => setBotStoreOpen(false)}>×</button><span className="store-kicker">LOJA THOTH · BOTS</span><h2>Escolher bot para {group.name}</h2><p>Adicione um bot ao servidor sem sair das configurações.</p><div className="store-targets">{botCatalog.map((bot) => <button key={bot.id} type="button" disabled={installedBotIds.has(bot.id)} onClick={async () => { if (await toggleBot(bot.id, false)) setBotStoreOpen(false) }}><b>{bot.name}</b><span>{installedBotIds.has(bot.id) ? 'Já instalado' : bot.description}</span></button>)}{botCatalog.length === 0 && <div className="store-empty">Nenhum bot disponível no catálogo.</div>}</div></div></div>}
         </div>
       )}
     </div>

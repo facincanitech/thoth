@@ -10,7 +10,6 @@ import { AvatarBox } from './AvatarBox'
 import { NotificationCenter } from './NotificationCenter'
 import { ThothStore } from './ThothStore'
 import { StatusView } from './StatusView'
-import { StyledName, NAME_FONTS, NAME_EFFECTS, PRISM_PALETTES } from './StyledName'
 import { readCache, writeCache } from '../lib/cache'
 import { APP_VERSION, APK_DOWNLOAD_URL, DESKTOP_DOWNLOAD_URL } from '../version'
 import { checkForUpdate } from '../lib/updateCheck'
@@ -60,114 +59,6 @@ export const BANNER_COLORS = [
   'linear-gradient(135deg,#0f2027,#2c5364)',
   'linear-gradient(135deg,#ff512f,#dd2476)',
 ]
-
-const SOLID_COLORS = [
-  '#5865f2', '#2f9e6e', '#9333ea', '#dc2626',
-  '#0891b2', '#78716c', '#f59e0b', '#111827',
-]
-
-function ColorField({
-  label,
-  value,
-  onPick,
-  disableGradient,
-  disableCustom,
-}: {
-  label: string
-  value: string | null | undefined
-  onPick: (v: string | null) => void
-  disableGradient?: boolean
-  disableCustom?: boolean
-}) {
-  const [open, setOpen] = useState<'gradient' | 'custom' | null>(null)
-  const ref = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    if (!open) return
-    function onOutside(e: MouseEvent | TouchEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(null)
-    }
-    document.addEventListener('mousedown', onOutside)
-    document.addEventListener('touchstart', onOutside)
-    return () => {
-      document.removeEventListener('mousedown', onOutside)
-      document.removeEventListener('touchstart', onOutside)
-    }
-  }, [open])
-
-  useEffect(() => {
-    if (disableGradient && open === 'gradient') setOpen(null)
-    if (disableCustom && open === 'custom') setOpen(null)
-  }, [disableGradient, disableCustom, open])
-
-  const isGradient = !!value && value.startsWith('linear-gradient')
-  const isCustom = !!value && value.startsWith('#')
-
-  return (
-    <div className="color-field" ref={ref}>
-      <label>{label}</label>
-      <div className="color-field-row">
-        <button
-          type="button"
-          className={`color-field-btn${isGradient ? ' active' : ''}`}
-          style={isGradient ? { backgroundImage: value } : undefined}
-          disabled={disableGradient}
-          onClick={() => setOpen((o) => (o === 'gradient' ? null : 'gradient'))}
-        >
-          Gradient
-        </button>
-        <button
-          type="button"
-          className={`color-field-btn${isCustom ? ' active' : ''}`}
-          style={isCustom ? { background: value } : undefined}
-          disabled={disableCustom}
-          onClick={() => setOpen((o) => (o === 'custom' ? null : 'custom'))}
-        >
-          Cores
-        </button>
-      </div>
-      {open === 'gradient' && (
-        <div className="color-field-popup">
-          <button
-            type="button"
-            className={`banner-color-swatch banner-color-reset${!value ? ' active' : ''}`}
-            onClick={() => { onPick(null); setOpen(null) }}
-            title="Padrão"
-          >
-            <IconMinusCircle size={14} />
-          </button>
-          {BANNER_COLORS.map((color) => (
-            <button
-              key={color}
-              type="button"
-              className={`banner-color-swatch${value === color ? ' active' : ''}`}
-              style={{ background: color }}
-              onClick={() => { onPick(color); setOpen(null) }}
-            />
-          ))}
-        </div>
-      )}
-      {open === 'custom' && (
-        <div className="color-field-popup">
-          {SOLID_COLORS.map((color) => (
-            <button
-              key={color}
-              type="button"
-              className={`banner-color-swatch${value === color ? ' active' : ''}`}
-              style={{ background: color }}
-              onClick={() => { onPick(color); setOpen(null) }}
-            />
-          ))}
-          <input
-            type="color"
-            value={isCustom ? value : '#5865f2'}
-            onChange={(e) => onPick(e.target.value)}
-          />
-        </div>
-      )}
-    </div>
-  )
-}
 
 type FilterKey = 'all' | 'favorites' | 'archived' | 'group' | 'communities'
 const DEFAULT_FILTER_ORDER: FilterKey[] = ['all', 'favorites', 'archived', 'group', 'communities']
@@ -566,6 +457,7 @@ export function ChatList({
   const [groupsQuickEntry, setGroupsQuickEntry] = useState(false)
 
   const [accountView, setAccountView] = useState<AccountView>('root')
+  const [storeBackSignal, setStoreBackSignal] = useState(0)
   const pendingAccountViewRef = useRef<AccountView | null>(null)
 
   useEffect(() => {
@@ -1576,18 +1468,6 @@ export function ChatList({
     }
   }
 
-  async function setNameStyle(field: 'name_style_font' | 'name_style_effect' | 'name_style_color', value: string | null) {
-    if (!me) return
-    try {
-      const { error: err } = await supabase.from('profiles').update({ [field]: value }).eq('id', me.id)
-      if (err) throw err
-      onProfileChange({ [field]: value })
-    } catch (err) {
-      console.error('setNameStyle failed', err)
-      setAccountError(getErrorMessage(err))
-    }
-  }
-
   async function setBannerColor(color: string) {
     if (!me) return
     setBannerSaving(true)
@@ -1730,6 +1610,7 @@ export function ChatList({
   function accountGoBack() {
     if (accountView === 'terms' || accountView === 'privacy-policy') setAccountView('privacy')
     else if (accountView === 'blocked') setAccountView('account')
+    else if (accountView === 'store' || accountView === 'library') setStoreBackSignal((value) => value + 1)
     else if (accountView === 'root') onAccountOpenChange(false)
     else setAccountView('root')
   }
@@ -2755,8 +2636,8 @@ export function ChatList({
           </div>
         )}
 
-        {accountView === 'store' && me && <ThothStore me={me} onProfileChange={onProfileChange} />}
-        {accountView === 'library' && me && <ThothStore me={me} mode="library" onProfileChange={onProfileChange} onOpenStore={() => setAccountView('store')} />}
+        {accountView === 'store' && me && <ThothStore me={me} backSignal={storeBackSignal} onExit={() => setAccountView('root')} onProfileChange={onProfileChange} />}
+        {accountView === 'library' && me && <ThothStore me={me} mode="library" backSignal={storeBackSignal} onExit={() => setAccountView('root')} onProfileChange={onProfileChange} onOpenStore={() => setAccountView('store')} />}
 
         {accountView === 'appearance' && me && (
           <div className="new-conv-form">
@@ -2829,76 +2710,6 @@ export function ChatList({
               />
             </div>
             {accountError && <span className="auth-error">{accountError}</span>}
-
-            <div className="appearance-separator" />
-
-            <label style={{ marginTop: 14 }}>Estilo do nome</label>
-
-            <div className="name-style-preview">
-              <StyledName
-                name={displayName(me)}
-                font={me.name_style_font}
-                effect={me.name_style_effect}
-                color={me.name_style_color}
-              />
-            </div>
-
-            <label style={{ marginTop: 10 }}>Fonte</label>
-            <div className="name-style-picker">
-              {NAME_FONTS.map((f) => (
-                <button
-                  key={f.id}
-                  type="button"
-                  className={`name-font-option${(me.name_style_font || 'default') === f.id ? ' active' : ''}`}
-                  style={f.id !== 'default' ? { fontFamily: f.family } : undefined}
-                  onClick={() => setNameStyle('name_style_font', f.id)}
-                >
-                  {f.label}
-                </button>
-              ))}
-            </div>
-
-            <label style={{ marginTop: 12 }}>Efeito</label>
-            <div className="name-style-picker">
-              {NAME_EFFECTS.map((e) => (
-                <button
-                  key={e.id}
-                  type="button"
-                  className={`name-effect-option${(me.name_style_effect || 'solid') === e.id ? ' active' : ''}${e.locked ? ' locked' : ''}`}
-                  disabled={e.locked}
-                  title={e.locked ? 'Em breve' : undefined}
-                  onClick={() => !e.locked && setNameStyle('name_style_effect', e.id)}
-                >
-                  {e.label} {e.locked && <IconLock size={11} />}
-                </button>
-              ))}
-            </div>
-
-            {me.name_style_effect === 'prism' ? (
-              <>
-                <label style={{ marginTop: 12 }}>Cores do prisma</label>
-                <div className="prism-palette-picker">
-                  {PRISM_PALETTES.map((pal) => (
-                    <button
-                      key={pal.id}
-                      type="button"
-                      title={pal.label}
-                      className={'prism-palette' + ((me.name_style_color || 'rainbow') === pal.id ? ' active' : '')}
-                      style={{ backgroundImage: 'linear-gradient(90deg,' + pal.colors.join(',') + ')' }}
-                      onClick={() => setNameStyle('name_style_color', pal.id === 'rainbow' ? null : pal.id)}
-                    />
-                  ))}
-                </div>
-              </>
-            ) : (
-              <ColorField
-                label="Cor"
-                value={me.name_style_color}
-                onPick={(v) => setNameStyle('name_style_color', v)}
-                disableGradient={(me.name_style_effect || 'solid') !== 'gradient'}
-                disableCustom={me.name_style_effect === 'gradient'}
-              />
-            )}
 
             <div className="appearance-separator" />
 

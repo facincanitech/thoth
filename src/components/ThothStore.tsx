@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import type { Profile } from '../types'
 import { supabase } from '../lib/supabase'
 import { getErrorMessage } from '../lib/errors'
@@ -9,6 +9,7 @@ import {
 import { builtInSounds, builtInThemes, type BuiltInTheme } from '../lib/storeDefaults'
 import { applyCommunityTheme } from '../lib/store'
 import { StoreNameStudio } from './StoreNameStudio'
+import { WINKS, playWinkEffect } from '../lib/winks'
 
 type Category = StoreKind | 'bot'
 type StoreSection = 'home' | 'themes' | 'name' | 'fun' | 'bots'
@@ -37,7 +38,7 @@ const funCategories = categories.filter((entry) => entry.id === 'wink' || entry.
 
 const kindNames: Record<StoreKind, string> = { theme: 'tema', sound: 'som', wink: 'wink', sticker: 'sticker', emoji: 'emoji' }
 
-export function ThothStore({ me, mode = 'store', onOpenStore, onProfileChange }: { me: Profile; mode?: 'store' | 'library'; onOpenStore?: () => void; onProfileChange: (patch: Partial<Profile>) => void }) {
+export function ThothStore({ me, mode = 'store', onProfileChange, backSignal, onExit }: { me: Profile; mode?: 'store' | 'library'; onOpenStore?: () => void; onProfileChange: (patch: Partial<Profile>) => void; backSignal: number; onExit: () => void }) {
   const [section, setSection] = useState<StoreSection>('home')
   const [category, setCategory] = useState<Category | null>(null)
   const [libraryOpen, setLibraryOpen] = useState(mode === 'library')
@@ -55,6 +56,8 @@ export function ThothStore({ me, mode = 'store', onOpenStore, onProfileChange }:
   const [builtInLibrary, setBuiltInLibrary] = useState<string[]>(['messenger'])
   const [activeTheme, setActiveTheme] = useState<string>('messenger')
   const [activeSounds, setActiveSounds] = useState({ message: 'message', nudge: 'nudge' })
+  const [preview, setPreview] = useState<{ kind: 'theme' | 'sound'; id: string; name: string; description: string; item?: StoreItem; soundUrl?: string; colors?: StoreManifest } | null>(null)
+  const lastBackSignal = useRef(backSignal)
   const activeCategory = libraryOpen ? libraryCategory : category
 
   const loadPreferences = useCallback(async () => {
@@ -194,34 +197,37 @@ export function ThothStore({ me, mode = 'store', onOpenStore, onProfileChange }:
   const visibleItems = libraryOpen ? items.filter((item) => installed.has(item.id)) : items
 
   function openLibrary() { setLibraryCategory(null); setLibraryOpen(true) }
-  function leaveLibrary() {
-    if (libraryCategory) { setLibraryCategory(null); return }
-    if (mode === 'library' && onOpenStore) { onOpenStore(); return }
-    setLibraryOpen(false)
-  }
   function openSection(id: StoreSection | 'mine') {
     if (id === 'mine') { openLibrary(); return }
     setSection(id)
     setCategory(id === 'bots' ? 'bot' : null)
   }
-  function goBack() {
-    if (libraryOpen) { leaveLibrary(); return }
+  useEffect(() => {
+    if (backSignal === lastBackSignal.current) return
+    lastBackSignal.current = backSignal
+    if (preview) { setPreview(null); return }
+    if (libraryOpen && libraryCategory) { setLibraryCategory(null); return }
+    if (libraryOpen) {
+      if (mode === 'library') onExit()
+      else { setLibraryOpen(false); setSection('home'); setCategory(null) }
+      return
+    }
     if (category && section !== 'bots') { setCategory(null); return }
-    setSection('home'); setCategory(null)
-  }
+    if (section !== 'home') { setSection('home'); setCategory(null); return }
+    onExit()
+  }, [backSignal, preview, libraryCategory, libraryOpen, mode, category, section, onExit])
 
   return (
     <div className="thoth-store">
       <div className="store-hero">
         <div><span className="store-kicker">{libraryOpen ? 'SUA BIBLIOTECA' : 'LOJA THOTH'}</span><h2>{title}</h2><p>{libraryOpen ? 'Seus downloads e escolhas, organizados por categoria.' : 'Feito pela comunidade. Seu acervo acompanha sua conta.'}</p></div>
         {canCreate && <button className="store-create" type="button" onClick={() => setCreatorOpen(true)}>＋ Criar</button>}
-        {(libraryOpen || section !== 'home') && <button className="store-create" type="button" onClick={goBack}>← Voltar</button>}
       </div>
       {error && <div className="store-error">{error}</div>}
       {!libraryOpen && section === 'home' ? <div className="store-category-grid">{sections.map((entry) => <button key={entry.id} className="store-category-tile" onClick={() => openSection(entry.id)}><b>{entry.glyph}</b><span>{entry.label}</span><small>{entry.description}</small></button>)}</div>
       : !libraryOpen && (section === 'themes' || section === 'fun') && !category ? <div className="store-category-grid">{(section === 'themes' ? themeCategories : funCategories).map((entry) => <button key={entry.id} className="store-category-tile" onClick={() => setCategory(entry.id)}><b>{entry.glyph}</b><span>{entry.label}</span><small>{entry.id === 'theme' ? 'Visuais do app' : entry.id === 'sound' ? 'Mensagem e chamar atenção' : 'Explore o acervo'}</small></button>)}</div>
       : !libraryOpen && section === 'name' ? <StoreNameStudio me={me} onProfileChange={onProfileChange} />
-      : libraryOpen && !libraryCategory ? <div className="store-category-grid">{categories.map((entry) => <button key={entry.id} className="store-category-tile" onClick={() => setLibraryCategory(entry.id)}><b>{entry.glyph}</b><span>{entry.label}</span><small>{entry.id === 'theme' ? `${builtInLibrary.length + items.filter((item) => item.kind === 'theme' && installed.has(item.id)).length} salvos` : entry.id === 'sound' ? `${builtInSounds.length + items.filter((item) => item.kind === 'sound' && installed.has(item.id)).length} disponíveis` : entry.id === 'bot' ? 'Ver instalados' : `${items.filter((item) => item.kind === entry.id && installed.has(item.id)).length} salvos`}</small></button>)}</div>
+      : libraryOpen && !libraryCategory ? <div className="store-category-grid">{categories.map((entry) => <button key={entry.id} className="store-category-tile" onClick={() => setLibraryCategory(entry.id)}><b>{entry.glyph}</b><span>{entry.label}</span><small>{entry.id === 'theme' ? `${builtInLibrary.length + items.filter((item) => item.kind === 'theme' && installed.has(item.id)).length} salvos` : entry.id === 'sound' ? `${builtInSounds.length + items.filter((item) => item.kind === 'sound' && installed.has(item.id)).length} disponíveis` : entry.id === 'wink' ? `${WINKS.length + items.filter((item) => item.kind === 'wink' && installed.has(item.id)).length} disponíveis` : entry.id === 'emoji' ? 'Coleção padrão + seus itens' : entry.id === 'bot' ? 'Ver instalados' : `${items.filter((item) => item.kind === entry.id && installed.has(item.id)).length} salvos`}</small></button>)}</div>
       : loading ? <div className="store-empty">Abrindo o acervo…</div> : activeCategory === 'bot' ? (
         <div className="store-grid">{bots.filter((bot) => !libraryOpen || installedBots.has(bot.id)).map((bot) => <article className="store-card bot" key={bot.id}>
           <div className="store-preview store-bot-preview"><span>⚙</span><small>{bot.command_prefix}</small></div>
@@ -232,12 +238,19 @@ export function ThothStore({ me, mode = 'store', onOpenStore, onProfileChange }:
         {activeCategory === 'theme' && builtInThemes.filter((theme) => !libraryOpen || builtInLibrary.includes(theme.id)).map((theme) => <article className="store-card" key={theme.id}>
           <div className={`store-preview builtin-theme-preview builtin-${theme.id}`}><div className="theme-mini"><i/><i/><i/></div></div>
           <div className="store-card-body"><span className="store-kind">{theme.id === 'messenger' ? 'TEMA PRINCIPAL' : 'TEMA OFICIAL'}</span><h3>{theme.name}</h3><p>{theme.description}</p><div className="store-author">por Thoth Messenger</div>
-            <div className="store-card-actions">{libraryOpen && theme.id !== 'messenger' && <button className="secondary" onClick={() => removeBuiltInTheme(theme.id)}>Remover</button>}<button disabled={busyId === theme.id || activeTheme === theme.id} onClick={() => activateBuiltInTheme(theme.id)}>{activeTheme === theme.id ? 'Em uso' : libraryOpen || builtInLibrary.includes(theme.id) ? 'Usar' : 'Salvar e usar'}</button></div></div>
+            <div className="store-card-actions">{libraryOpen && theme.id !== 'messenger' && <button className="secondary" onClick={() => removeBuiltInTheme(theme.id)}>Remover</button>}<button onClick={() => setPreview({ kind: 'theme', id: theme.id, name: theme.name, description: theme.description })}>Ver prévia</button></div></div>
         </article>)}
-        {activeCategory === 'sound' && builtInSounds.map((sound) => <article className="store-card" key={sound.id}><div className="store-preview sound"><span className="store-preview-glyph">♫</span></div><div className="store-card-body"><span className="store-kind">SOM PADRÃO · {sound.type === 'message' ? 'MENSAGEM' : 'CHAMAR ATENÇÃO'}</span><h3>{sound.name}</h3><p>{sound.description}</p><div className="store-author">por Thoth Messenger</div><div className="store-card-actions"><button className="secondary" onClick={() => new Audio(`${import.meta.env.BASE_URL}${sound.url}`).play().catch(() => {})}>Ouvir</button><button disabled={busyId === sound.id || activeSounds[sound.type] === sound.id} onClick={() => activateBuiltInSound(sound.type)}>{activeSounds[sound.type] === sound.id ? 'Em uso' : 'Usar'}</button></div></div></article>)}
-        {visibleItems.map((item) => <StoreCard key={item.id} item={item} installed={installed.has(item.id)} busy={busyId === item.id} active={activeTheme === item.id || activeSounds.message === item.id || activeSounds.nudge === item.id} onToggle={() => toggleInstall(item)} onUse={() => activateItem(item)} />)}
-        {!visibleItems.length && activeCategory !== 'theme' && activeCategory !== 'sound' && <div className="store-empty">{libraryOpen ? 'Nada salvo nesta categoria ainda. Explore a Loja Thoth.' : 'Ainda não há itens nesta categoria.'}</div>}
+        {activeCategory === 'sound' && builtInSounds.map((sound) => <article className="store-card" key={sound.id}><div className="store-preview sound"><span className="store-preview-glyph">♫</span></div><div className="store-card-body"><span className="store-kind">SOM PADRÃO · {sound.type === 'message' ? 'MENSAGEM' : 'CHAMAR ATENÇÃO'}</span><h3>{sound.name}</h3><p>{sound.description}</p><div className="store-author">por Thoth Messenger</div><div className="store-card-actions"><button onClick={() => setPreview({ kind: 'sound', id: sound.id, name: sound.name, description: sound.description, soundUrl: `${import.meta.env.BASE_URL}${sound.url}` })}>Ouvir prévia</button></div></div></article>)}
+        {activeCategory === 'wink' && WINKS.map((wink) => <article className="store-card" key={wink.id}><div className="store-preview wink"><span className="store-preview-glyph">{wink.emoji}</span></div><div className="store-card-body"><span className="store-kind">WINK PADRÃO</span><h3>{wink.label}</h3><p>Disponível para todos, sempre no seu acervo.</p><div className="store-author">por Thoth Messenger</div><div className="store-card-actions"><button onClick={() => playWinkEffect(wink.id)}>Ver prévia</button></div></div></article>)}
+        {activeCategory === 'emoji' && <article className="store-card"><div className="store-preview emoji"><span className="store-preview-glyph">😀 💙 🎉</span></div><div className="store-card-body"><span className="store-kind">EMOJIS PADRÃO</span><h3>Emojis do Messenger</h3><p>A coleção que já vem no teclado de conversa.</p><div className="store-author">por Thoth Messenger · sempre disponível</div></div></article>}
+        {visibleItems.map((item) => <StoreCard key={item.id} item={item} installed={installed.has(item.id)} busy={busyId === item.id} active={activeTheme === item.id || activeSounds.message === item.id || activeSounds.nudge === item.id} onToggle={() => toggleInstall(item)} onPreview={() => setPreview({ kind: item.kind as 'theme' | 'sound', id: item.id, name: item.name, description: item.description || '', item, colors: item.manifest, soundUrl: item.kind === 'sound' ? item.asset_url || undefined : undefined })} />)}
+        {!visibleItems.length && !['theme', 'sound', 'wink', 'emoji'].includes(activeCategory || '') && <div className="store-empty">{libraryOpen ? 'Nada salvo nesta categoria ainda. Explore a Loja Thoth.' : 'Ainda não há itens nesta categoria.'}</div>}
       </div>}
+      {preview && <div className="store-modal-backdrop" onMouseDown={() => setPreview(null)}><div className="store-modal store-use-preview" onMouseDown={(event) => event.stopPropagation()}>
+        <button className="store-modal-close" onClick={() => setPreview(null)}>×</button><span className="store-kicker">PRÉVIA · {preview.kind === 'theme' ? 'TEMA' : 'SOM'}</span><h2>{preview.name}</h2><p>{preview.description}</p>
+        {preview.kind === 'theme' ? <div className={`store-theme-demo ${preview.item ? 'community' : `builtin-${preview.id}`}`} style={preview.item ? { '--demo-bg': String(preview.colors?.background || '#08131c'), '--demo-surface': String(preview.colors?.surface || '#172936'), '--demo-accent': String(preview.colors?.accent || '#22d3ee'), '--demo-text': String(preview.colors?.text || '#fff') } as CSSProperties : undefined}><div className="store-demo-sidebar">◉<br/>▤<br/>♫</div><div className="store-demo-chat"><header>Thoth Messenger <span>● online</span></header><div className="store-demo-messages"><span>Oi! Como ficou esse tema?</span><span>Ficou com a sua cara ✨</span></div><footer>Digite sua mensagem…　➤</footer></div></div> : <button className="store-demo-play" onClick={() => { if (preview.soundUrl) new Audio(preview.soundUrl).play().catch(() => setError('Não foi possível tocar este áudio.')) }}>▶ Ouvir som</button>}
+        <div className="store-preview-actions"><button className="secondary" onClick={() => setPreview(null)}>Fechar</button><button disabled={busyId === preview.id || (preview.kind === 'theme' ? activeTheme === preview.id : activeSounds[preview.item?.manifest.soundType === 'nudge' || preview.id === 'nudge' ? 'nudge' : 'message'] === preview.id)} onClick={async () => { if (preview.item) await activateItem(preview.item); else if (preview.kind === 'theme') await activateBuiltInTheme(preview.id as BuiltInTheme); else await activateBuiltInSound(preview.id as 'message' | 'nudge'); setPreview(null) }}>{(preview.kind === 'theme' ? activeTheme === preview.id : activeSounds[preview.item?.manifest.soundType === 'nudge' || preview.id === 'nudge' ? 'nudge' : 'message'] === preview.id) ? 'Em uso' : 'Usar'}</button></div>
+      </div></div>}
       {creatorOpen && <CreatorModal me={me} initialKind={category === 'bot' || !category ? 'theme' : category} botSubmission={category === 'bot'} onClose={() => setCreatorOpen(false)} onDone={() => { setCreatorOpen(false); reload() }} />}
       {botTarget && <div className="store-modal-backdrop" onMouseDown={() => setBotTarget(null)}><div className="store-modal" onMouseDown={(event) => event.stopPropagation()}>
         <button className="store-modal-close" onClick={() => setBotTarget(null)}>×</button><span className="store-kicker">INSTALAR {botTarget.name.toUpperCase()}</span><h2>Onde ele vai morar?</h2>
@@ -249,7 +262,7 @@ export function ThothStore({ me, mode = 'store', onOpenStore, onProfileChange }:
   )
 }
 
-function StoreCard({ item, installed, busy, active, onToggle, onUse }: { item: StoreItem; installed: boolean; busy: boolean; active: boolean; onToggle: () => void; onUse: () => void }) {
+function StoreCard({ item, installed, busy, active, onToggle, onPreview }: { item: StoreItem; installed: boolean; busy: boolean; active: boolean; onToggle: () => void; onPreview: () => void }) {
   const previewStyle = item.kind === 'theme' ? {
     background: `linear-gradient(145deg, ${item.manifest.background || '#08131c'}, ${item.manifest.surface || '#172936'})`,
     color: String(item.manifest.text || '#fff'), '--card-accent': item.manifest.accent || '#22d3ee',
@@ -260,7 +273,7 @@ function StoreCard({ item, installed, busy, active, onToggle, onUse }: { item: S
     </div>
     <div className="store-card-body"><span className="store-kind">{kindNames[item.kind]}</span><h3>{item.name}</h3><p>{item.description || 'Uma criação da comunidade Thoth.'}</p>
       <div className="store-author">{item.creator?.avatar_url ? <img src={item.creator.avatar_url} alt="" /> : <i /> }<span>por {item.creator?.display_name || item.creator?.username || 'comunidade'}</span></div>
-      <div className="store-card-actions"><button className="secondary" disabled={busy || active} onClick={onToggle}>{installed ? 'Remover' : 'Baixar'}</button>{(item.kind === 'theme' || item.kind === 'sound') && <button disabled={busy || active} onClick={onUse}>{active ? 'Em uso' : 'Usar'}</button>}</div>
+      <div className="store-card-actions"><button className="secondary" disabled={busy || active} onClick={onToggle}>{installed ? 'Remover' : 'Baixar'}</button>{(item.kind === 'theme' || item.kind === 'sound') && <button onClick={onPreview}>{item.kind === 'sound' ? 'Ouvir prévia' : 'Ver prévia'}</button>}</div>
       <small>{item.installs_count} instalações · {item.likes_count} curtidas</small>
     </div></article>
 }
