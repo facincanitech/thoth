@@ -19,6 +19,7 @@ document.addEventListener('contextmenu', (e) => {
 const searchParams = isTauriDesktop ? new URLSearchParams(window.location.search) : null
 const tauriChatId = searchParams?.get('tauriChat') ?? null
 const isTauriPlay = searchParams?.get('tauriPlay') === '1'
+const tauriPlayInvite = searchParams?.get('playInvite') ?? null
 const isTauriCall = searchParams?.get('tauriCall') === '1'
 const isTauriPip = searchParams?.get('tauriPip') === '1'
 const isTauriToast = searchParams?.get('tauriToast') === '1'
@@ -38,7 +39,7 @@ async function boot() {
 
   createRoot(document.getElementById('root')!).render(
     <StrictMode>
-      {isTauriToast ? <DesktopToastWindow /> : isTauriPip ? <DesktopPipWindow /> : isTauriCall ? <DesktopCallWindow /> : isTauriPlay ? <DesktopPlayWindow /> : tauriChatId ? <DesktopChatWindow conversationId={tauriChatId} /> : <App />}
+      {isTauriToast ? <DesktopToastWindow /> : isTauriPip ? <DesktopPipWindow /> : isTauriCall ? <DesktopCallWindow /> : isTauriPlay ? <DesktopPlayWindow initialInviteCode={tauriPlayInvite} /> : tauriChatId ? <DesktopChatWindow conversationId={tauriChatId} /> : <App />}
     </StrictMode>,
   )
 }

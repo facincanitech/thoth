@@ -47,7 +47,7 @@ export async function openMainWindow() {
   await emit('tray-nav', 'home')
 }
 
-export async function openPlayWindow() {
+export async function openPlayWindow(inviteCode?: string) {
   const label = 'thoth-play'
   const existing = await WebviewWindow.getByLabel(label)
   if (existing) {
@@ -55,14 +55,21 @@ export async function openPlayWindow() {
       await existing.unminimize()
       await existing.show()
       await existing.setFocus()
+      // Janela do Play ja aberta: manda o convite por evento em vez de recriar a janela
+      // (o componente ja montado escuta 'play-invite' pra entrar no servidor).
+      if (inviteCode) {
+        const { emit } = await import('@tauri-apps/api/event')
+        await emit('play-invite', inviteCode)
+      }
       return
     } catch {
       // janela escondida ficou num estado ruim - recria do zero em vez de ficar sem abrir
       await existing.destroy().catch(() => {})
     }
   }
+  const inviteParam = inviteCode ? `&playInvite=${encodeURIComponent(inviteCode)}` : ''
   new WebviewWindow(label, {
-    url: 'index.html?tauriPlay=1',
+    url: `index.html?tauriPlay=1${inviteParam}`,
     title: 'Thoth Play',
     width: 1200,
     height: 820,

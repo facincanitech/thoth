@@ -559,13 +559,21 @@ function App() {
     })()
   }, [pendingInviteCode, session, profile?.id])
 
+  const playInviteConsumedRef = useRef(false)
   useEffect(() => {
     if (!pendingPlayInviteCode) return
     if (session === null) {
       setAuthOpen(true)
       return
     }
-    if (!profile) return
+    if (!profile || playInviteConsumedRef.current) return
+    playInviteConsumedRef.current = true
+    // No desktop o Play e uma janela separada (nunca dentro da "tela 1") - abrir o convite
+    // aqui tem que mandar pra essa janela, nao renderizar o ThothPlay dentro da janela principal.
+    if (isTauriDesktop) {
+      openPlayWindow(pendingPlayInviteCode)
+      return
+    }
     setSelected(null)
     setSelectedCommunity(null)
     setPanelOpen(false)

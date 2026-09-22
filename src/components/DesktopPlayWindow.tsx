@@ -7,9 +7,24 @@ import { currentWindow } from '../lib/desktopWindows'
 import { useHeartbeat } from '../lib/useHeartbeat'
 import type { Profile } from '../types'
 
-export function DesktopPlayWindow() {
+type Props = {
+  initialInviteCode?: string | null
+}
+
+export function DesktopPlayWindow({ initialInviteCode }: Props) {
   const [session, setSession] = useState<Session | null | undefined>(undefined)
   const [profile, setProfile] = useState<Profile | null>(null)
+  // Janela do Play ja aberta e recebe outro convite por link (openPlayWindow manda por evento
+  // em vez de recriar a janela): fica no estado, nao so na prop inicial da URL.
+  const [inviteCode, setInviteCode] = useState<string | null>(initialInviteCode ?? null)
+
+  useEffect(() => {
+    let unlisten: (() => void) | undefined
+    import('@tauri-apps/api/event').then(({ listen }) =>
+      listen<string>('play-invite', (event) => setInviteCode(event.payload)),
+    ).then((fn) => { unlisten = fn })
+    return () => unlisten?.()
+  }, [])
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session))
@@ -40,7 +55,7 @@ export function DesktopPlayWindow() {
       <DesktopTitleBar title="Thoth Play" />
       <div className="app play-desktop-app">
         {profile ? (
-          <ThothPlay me={profile} onBack={() => currentWindow().close()} />
+          <ThothPlay me={profile} onBack={() => currentWindow().close()} initialInviteCode={inviteCode} />
         ) : (
           <div style={{ padding: 24 }}>carregando...</div>
         )}
