@@ -1,6 +1,6 @@
 import { supabase } from './supabase'
-import { deleteCustomSticker, saveCustomSticker } from './stickers'
-import { deleteCustomWink, saveCustomWink } from './customWinks'
+import { deleteCustomSticker, getCustomStickers, saveCustomSticker } from './stickers'
+import { deleteCustomWink, getCustomWinks, saveCustomWink } from './customWinks'
 
 export type StoreKind = 'theme' | 'sound' | 'wink' | 'sticker' | 'emoji'
 export type StoreManifest = Record<string, string | number | boolean | null>
@@ -43,16 +43,24 @@ export async function loadInstalledIds(userId: string) {
 export async function hydrateInstalledMedia(userId: string) {
   const { data, error } = await supabase.from('store_installs')
     .select('item:store_items(*)').eq('user_id', userId)
-  if (error) return
+  if (error) throw error
+  const installedMediaIds = new Set<string>()
   for (const row of data || []) {
     const item = row.item as unknown as StoreItem | null
     if (!item?.asset_url) continue
     if (item.kind === 'wink') {
+      installedMediaIds.add(`store:${item.id}`)
       await saveCustomWink({ id: `store:${item.id}`, label: item.name, imageData: item.asset_url, soundData: String(item.manifest.soundUrl || '') || null, fromUser: null })
     } else if (item.kind === 'sticker' || item.kind === 'emoji') {
+      installedMediaIds.add(`store:${item.id}`)
       await saveCustomSticker({ id: `store:${item.id}`, label: item.name, imageData: item.asset_url })
     }
   }
+  const [localWinks, localStickers] = await Promise.all([getCustomWinks(), getCustomStickers()])
+  await Promise.all([
+    ...localWinks.filter((item) => item.id.startsWith('store:') && !installedMediaIds.has(item.id)).map((item) => deleteCustomWink(item.id)),
+    ...localStickers.filter((item) => item.id.startsWith('store:') && !installedMediaIds.has(item.id)).map((item) => deleteCustomSticker(item.id)),
+  ])
   window.dispatchEvent(new CustomEvent('thoth-store-library-changed'))
 }
 

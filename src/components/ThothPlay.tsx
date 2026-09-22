@@ -21,7 +21,8 @@ import { BANNER_COLORS } from './ChatList'
 import { fetchRandomStation, searchPublicStations, isHlsStream, type RadioStation } from '../lib/sonor'
 import { DEFAULT_PLAY_THEME, PLAY_THEMES, normalizePlayTheme, type PlayThemeId } from '../lib/playThemes'
 import { openDirectMessage } from '../lib/directMessage'
-import type { Bot, PlayBotButton, PlaySonorSession, PlayCategory, PlayChannel, PlayGroup, PlayMessage, PlayProfile, PlayRole, Profile } from '../types'
+import { ensurePlayBotPanel } from '../lib/playBotPanels'
+import type { Bot, PlaySonorSession, PlayCategory, PlayChannel, PlayGroup, PlayMessage, PlayProfile, PlayRole, Profile } from '../types'
 
 function useIsMobile() {
   const [m, setM] = useState(() => window.matchMedia('(max-width: 760px)').matches)
@@ -990,6 +991,8 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
   const [showGroupInfo, setShowGroupInfo] = useState(false)
   const [showServerInfo, setShowServerInfo] = useState(false)
   const [showGroupMenu, setShowGroupMenu] = useState(false)
+  const [leaveNotice, setLeaveNotice] = useState<string | null>(null)
+  const [leavingGroup, setLeavingGroup] = useState(false)
   const [showInvite, setShowInvite] = useState(false)
   const [sidebarWidth, setSidebarWidth] = useState<number | null>(() => {
     const saved = Number(localStorage.getItem('play-channel-sidebar-width'))
@@ -1615,9 +1618,26 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
   }
 
   async function leaveGroup() {
-    if (!confirm(`Sair de "${group.name}"?`)) return
-    await supabase.from('play_group_members').delete().eq('group_id', group.id).eq('user_id', me.id)
-    onLeftGroup()
+    if (leavingGroup) return
+    setLeavingGroup(true)
+    try {
+      const { data: membership, error: readError } = await supabase.from('play_group_members')
+        .select('role').eq('group_id', group.id).eq('user_id', me.id).maybeSingle()
+      if (readError) throw readError
+      if (!membership) { onLeftGroup(); return }
+      if (membership.role === 'owner') {
+        setLeaveNotice('Você é o dono deste servidor. Por segurança, não pode sair e deixá-lo sem dono. A transferência de posse ainda não está disponível.')
+        return
+      }
+      if (!confirm(`Sair de "${group.name}"?`)) return
+      const { data: removed, error: deleteError } = await supabase.from('play_group_members')
+        .delete().eq('group_id', group.id).eq('user_id', me.id).select('user_id')
+      if (deleteError) throw deleteError
+      if (!removed?.length) throw new Error('O servidor não confirmou sua saída. Tente novamente.')
+      onLeftGroup()
+    } catch (cause) {
+      setLeaveNotice(cause instanceof Error ? cause.message : 'Não foi possível sair do servidor. Tente novamente.')
+    } finally { setLeavingGroup(false) }
   }
 
   const typingNames = Object.entries(liveTyping)
@@ -1713,6 +1733,7 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
             </div>
           </div>
         )}
+        {leaveNotice && <div className="modal-backdrop" onClick={() => setLeaveNotice(null)}><div className="modal-card" onClick={(event) => event.stopPropagation()}><h2>Saída do servidor</h2><p>{leaveNotice}</p><button type="button" className="modal-close" onClick={() => setLeaveNotice(null)}>Entendi</button></div></div>}
 
         <div className={`play-group-body mobile-screen-${mobileScreen}`}>
           <div className="play-mobile-bar">
@@ -2254,7 +2275,7 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
   )
 }
 
-function GroupInfoPanel({ group, myRole, members, me, can, channels, categories, open, onClose, onUpdate }: {
+function GroupInfoPanel({ group, myRole, members, me, can, open, onClose, onUpdate }: {
   group: PlayGroup; myRole: string | null; members: GroupMember[]; me: Profile; can: (perm: string) => boolean; channels: PlayChannel[]; categories: PlayCategory[]
   open: boolean; onClose: () => void; onUpdate: (patch: Partial<PlayGroup>) => void
 }) {
@@ -2357,51 +2378,8 @@ function GroupInfoPanel({ group, myRole, members, me, can, channels, categories,
   }, [open, tab, canBotsTab, group.id])
 
   async function setupBotPanel(bot: Bot) {
-    const cfg = bot.slug === 'sonor'
-      ? {
-          cat: 'SONOR', ch: 'painel', title: 'Painel de Rádio',
-          desc: 'Toca rádio de verdade no servidor. Use os botões abaixo.',
-          buttons: [
-            { id: 'play', label: 'Tocar', action: 'sonor_play' },
-            { id: 'random', label: 'Aleatória', action: 'sonor_random' },
-            { id: 'stop', label: 'Parar', action: 'sonor_stop' },
-            { id: 'save', label: 'Salvar atual', action: 'sonor_save' },
-            { id: 'favs', label: 'Favoritos', action: 'sonor_favs' },
-          ] as PlayBotButton[],
-        }
-      : bot.slug === 'zelador'
-        ? {
-            cat: 'ZELADOR', ch: 'comandos', title: 'Painel do Zelador',
-            desc: 'Dados e sorteios pro servidor. Use os botões abaixo.',
-            buttons: [
-              { id: 'd6', label: 'Dado d6', action: 'zelador_d6' },
-              { id: 'd20', label: 'Dado d20', action: 'zelador_d20' },
-              { id: 'd100', label: 'Dado d100', action: 'zelador_d100' },
-              { id: 'draw', label: 'Sorteio', action: 'zelador_draw' },
-            ] as PlayBotButton[],
-          }
-        : null
-    if (!cfg) return
-    let cat = categories.find((c) => c.name.toUpperCase() === cfg.cat) || null
-    if (!cat) {
-      const { data } = await supabase.from('play_categories').insert({ group_id: group.id, name: cfg.cat, position: categories.length }).select().single()
-      cat = (data as PlayCategory) || null
-    }
-    if (!cat) return
-    let ch = channels.find((c) => c.category_id === cat!.id && c.name === cfg.ch) || null
-    let created = false
-    if (!ch) {
-      const { data } = await supabase.from('play_channels').insert({ group_id: group.id, name: cfg.ch, kind: 'text', category_id: cat.id, position: 0 }).select().single()
-      ch = (data as PlayChannel) || null
-      created = true
-    }
-    if (ch && created) {
-      const { error } = await supabase.rpc('post_play_bot_message', {
-        p_channel_id: ch.id, p_bot_slug: bot.slug, p_content: JSON.stringify({ title: cfg.title, description: cfg.desc }),
-        p_components: cfg.buttons, p_kind: 'bot_panel',
-      })
-      if (error) console.error('post bot panel failed', error)
-    }
+    try { await ensurePlayBotPanel(group.id, bot) }
+    catch (cause) { setError(`Bot instalado, mas não consegui criar o painel: ${cause instanceof Error ? cause.message : 'erro desconhecido'}`) }
   }
 
   async function toggleBot(botId: string, installed: boolean): Promise<boolean> {
@@ -2869,6 +2847,7 @@ function GroupInfoPanel({ group, myRole, members, me, can, channels, categories,
 
       {tab === 'bots' && canBotsTab && (
         <div className="play-group-info-body">
+          {error && <p className="auth-error">{error}</p>}
           <button type="button" className="play-bot-store-button" onClick={() => setBotStoreOpen(true)}>＋ Escolher bot na Loja Thoth</button>
           <p className="play-bot-store-caption">Bots deste servidor</p>
           {!botCatalog.some((bot) => installedBotIds.has(bot.id)) && <p className="play-empty">Nenhum bot instalado neste servidor.</p>}

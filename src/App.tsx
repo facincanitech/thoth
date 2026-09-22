@@ -178,7 +178,13 @@ function App() {
 
   useEffect(() => {
     if (!profile) { applyCommunityTheme(null); return }
-    hydrateInstalledMedia(profile.id).catch(() => {})
+    if (session?.user.id !== profile.id) return
+    let mediaSyncQueue = Promise.resolve()
+    const syncInstalledMedia = () => {
+      mediaSyncQueue = mediaSyncQueue.then(() => hydrateInstalledMedia(profile.id))
+        .catch((error) => console.error('Não foi possível sincronizar a biblioteca:', error))
+    }
+    syncInstalledMedia()
     let cancelled = false
     async function syncStorePreferences() {
       const { data: preferences } = await supabase.from('store_preferences').select('*').eq('user_id', profile!.id).maybeSingle()
@@ -211,8 +217,18 @@ function App() {
     const channel = supabase.channel(`store-preferences:${profile.id}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'store_preferences', filter: `user_id=eq.${profile.id}` }, syncStorePreferences)
       .subscribe()
-    return () => { cancelled = true; supabase.removeChannel(channel) }
-  }, [profile?.id])
+    const installsChannel = supabase.channel(`store-installed-media:${profile.id}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'store_installs', filter: `user_id=eq.${profile.id}` }, syncInstalledMedia)
+      .subscribe()
+    const onVisible = () => { if (!document.hidden) syncInstalledMedia() }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => {
+      cancelled = true
+      supabase.removeChannel(channel)
+      supabase.removeChannel(installsChannel)
+      document.removeEventListener('visibilitychange', onVisible)
+    }
+  }, [profile?.id, session?.user.id])
 
   useEffect(() => {
     const onStoreTheme = (event: Event) => {

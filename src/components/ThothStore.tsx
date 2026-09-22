@@ -9,6 +9,7 @@ import {
 import { builtInSounds, builtInThemes, type BuiltInTheme } from '../lib/storeDefaults'
 import { applyCommunityTheme } from '../lib/store'
 import { StoreNameStudio } from './StoreNameStudio'
+import { ensurePlayBotPanel } from '../lib/playBotPanels'
 import { WINKS, playWinkEffect } from '../lib/winks'
 
 type Category = StoreKind | 'bot'
@@ -186,8 +187,9 @@ export function ThothStore({ me, mode = 'store', onProfileChange, backSignal, on
         ? await supabase.from('group_bots').upsert({ conversation_id: target.id, bot_id: botTarget.id, installed_by: me.id, permission: 'all' })
         : await supabase.from('play_group_bots').upsert({ group_id: target.id, bot_id: botTarget.id, installed_by: me.id })
       if (result.error) throw result.error
-      setBotTarget(null)
       setInstalledBots((old) => new Set(old).add(botTarget.id))
+      if (target.type === 'play') await ensurePlayBotPanel(target.id, botTarget)
+      setBotTarget(null)
     } catch (cause) { setError(getErrorMessage(cause)) }
     finally { setBusyId(null) }
   }
@@ -254,7 +256,7 @@ export function ThothStore({ me, mode = 'store', onProfileChange, backSignal, on
       {creatorOpen && <CreatorModal me={me} initialKind={category === 'bot' || !category ? 'theme' : category} botSubmission={category === 'bot'} onClose={() => setCreatorOpen(false)} onDone={() => { setCreatorOpen(false); reload() }} />}
       {botTarget && <div className="store-modal-backdrop" onMouseDown={() => setBotTarget(null)}><div className="store-modal" onMouseDown={(event) => event.stopPropagation()}>
         <button className="store-modal-close" onClick={() => setBotTarget(null)}>×</button><span className="store-kicker">INSTALAR {botTarget.name.toUpperCase()}</span><h2>Onde ele vai morar?</h2>
-        <p>Escolha um grupo do Messenger ou servidor do Play que você administra.</p><div className="store-targets">
+        <p>Escolha um grupo do Messenger ou servidor do Play que você administra.</p>{error && <div className="store-error">{error}</div>}<div className="store-targets">
           {targets.map((target) => <button key={`${target.type}:${target.id}`} disabled={busyId === target.id} onClick={() => installBot(target)}><b>{target.name}</b><span>{target.type === 'play' ? 'Thoth Play' : 'Grupo do Messenger'}</span></button>)}
           {!targets.length && <div className="store-empty">Você precisa administrar um grupo ou servidor para instalar este bot.</div>}
         </div></div></div>}
