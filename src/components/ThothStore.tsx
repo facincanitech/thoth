@@ -11,6 +11,8 @@ import { applyCommunityTheme } from '../lib/store'
 import { StoreNameStudio } from './StoreNameStudio'
 import { ensurePlayBotPanel } from '../lib/playBotPanels'
 import { WINKS, playWinkEffect } from '../lib/winks'
+import { useDesktopLayout } from '../lib/useDesktopLayout'
+import { IconChat, IconGamepad, IconSend, IconUser } from './icons'
 
 type Category = StoreKind | 'bot'
 type StoreSection = 'home' | 'themes' | 'name' | 'fun' | 'bots'
@@ -40,6 +42,7 @@ const funCategories = categories.filter((entry) => entry.id === 'wink' || entry.
 const kindNames: Record<StoreKind, string> = { theme: 'tema', sound: 'som', wink: 'wink', sticker: 'sticker', emoji: 'emoji' }
 
 export function ThothStore({ me, mode = 'store', onProfileChange, backSignal, onExit }: { me: Profile; mode?: 'store' | 'library'; onOpenStore?: () => void; onProfileChange: (patch: Partial<Profile>) => void; backSignal: number; onExit: () => void }) {
+  const desktopLayout = useDesktopLayout()
   const [section, setSection] = useState<StoreSection>('home')
   const [category, setCategory] = useState<Category | null>(null)
   const [libraryOpen, setLibraryOpen] = useState(mode === 'library')
@@ -238,19 +241,19 @@ export function ThothStore({ me, mode = 'store', onProfileChange, backSignal, on
         </article>)}{libraryOpen && !installedBots.size && <div className="store-empty">Você ainda não instalou bots em grupos ou servidores.</div>}</div>
       ) : <div className="store-grid">
         {activeCategory === 'theme' && builtInThemes.filter((theme) => !libraryOpen || builtInLibrary.includes(theme.id)).map((theme) => <article className="store-card" key={theme.id}>
-          <div className={`store-preview builtin-theme-preview builtin-${theme.id}`}><div className="theme-mini"><i/><i/><i/></div></div>
+          <div className="store-preview theme"><ThemePreviewScene id={theme.id} desktop={desktopLayout} compact /></div>
           <div className="store-card-body"><span className="store-kind">{theme.id === 'messenger' ? 'TEMA PRINCIPAL' : 'TEMA OFICIAL'}</span><h3>{theme.name}</h3><p>{theme.description}</p><div className="store-author">por Thoth Messenger</div>
             <div className="store-card-actions">{libraryOpen && theme.id !== 'messenger' && <button className="secondary" onClick={() => removeBuiltInTheme(theme.id)}>Remover</button>}<button onClick={() => setPreview({ kind: 'theme', id: theme.id, name: theme.name, description: theme.description })}>Ver prévia</button></div></div>
         </article>)}
         {activeCategory === 'sound' && builtInSounds.map((sound) => <article className="store-card" key={sound.id}><div className="store-preview sound"><span className="store-preview-glyph">♫</span></div><div className="store-card-body"><span className="store-kind">SOM PADRÃO · {sound.type === 'message' ? 'MENSAGEM' : 'CHAMAR ATENÇÃO'}</span><h3>{sound.name}</h3><p>{sound.description}</p><div className="store-author">por Thoth Messenger</div><div className="store-card-actions"><button onClick={() => setPreview({ kind: 'sound', id: sound.id, name: sound.name, description: sound.description, soundUrl: `${import.meta.env.BASE_URL}${sound.url}` })}>Ouvir prévia</button></div></div></article>)}
         {activeCategory === 'wink' && WINKS.map((wink) => <article className="store-card" key={wink.id}><div className="store-preview wink"><span className="store-preview-glyph">{wink.emoji}</span></div><div className="store-card-body"><span className="store-kind">WINK PADRÃO</span><h3>{wink.label}</h3><p>Disponível para todos, sempre no seu acervo.</p><div className="store-author">por Thoth Messenger</div><div className="store-card-actions"><button onClick={() => playWinkEffect(wink.id)}>Ver prévia</button></div></div></article>)}
         {activeCategory === 'emoji' && <article className="store-card"><div className="store-preview emoji"><span className="store-preview-glyph">😀 💙 🎉</span></div><div className="store-card-body"><span className="store-kind">EMOJIS PADRÃO</span><h3>Emojis do Messenger</h3><p>A coleção que já vem no teclado de conversa.</p><div className="store-author">por Thoth Messenger · sempre disponível</div></div></article>}
-        {visibleItems.map((item) => <StoreCard key={item.id} item={item} installed={installed.has(item.id)} busy={busyId === item.id} active={activeTheme === item.id || activeSounds.message === item.id || activeSounds.nudge === item.id} onToggle={() => toggleInstall(item)} onPreview={() => setPreview({ kind: item.kind as 'theme' | 'sound', id: item.id, name: item.name, description: item.description || '', item, colors: item.manifest, soundUrl: item.kind === 'sound' ? item.asset_url || undefined : undefined })} />)}
+        {visibleItems.map((item) => <StoreCard key={item.id} item={item} desktop={desktopLayout} installed={installed.has(item.id)} busy={busyId === item.id} active={activeTheme === item.id || activeSounds.message === item.id || activeSounds.nudge === item.id} onToggle={() => toggleInstall(item)} onPreview={() => setPreview({ kind: item.kind as 'theme' | 'sound', id: item.id, name: item.name, description: item.description || '', item, colors: item.manifest, soundUrl: item.kind === 'sound' ? item.asset_url || undefined : undefined })} />)}
         {!visibleItems.length && !['theme', 'sound', 'wink', 'emoji'].includes(activeCategory || '') && <div className="store-empty">{libraryOpen ? 'Nada salvo nesta categoria ainda. Explore a Loja Thoth.' : 'Ainda não há itens nesta categoria.'}</div>}
       </div>}
       {preview && <div className="store-modal-backdrop" onMouseDown={() => setPreview(null)}><div className="store-modal store-use-preview" onMouseDown={(event) => event.stopPropagation()}>
         <button className="store-modal-close" onClick={() => setPreview(null)}>×</button><span className="store-kicker">PRÉVIA · {preview.kind === 'theme' ? 'TEMA' : 'SOM'}</span><h2>{preview.name}</h2><p>{preview.description}</p>
-        {preview.kind === 'theme' ? <div className={`store-theme-demo ${preview.item ? 'community' : `builtin-${preview.id}`}`} style={preview.item ? { '--demo-bg': String(preview.colors?.background || '#08131c'), '--demo-surface': String(preview.colors?.surface || '#172936'), '--demo-accent': String(preview.colors?.accent || '#22d3ee'), '--demo-text': String(preview.colors?.text || '#fff') } as CSSProperties : undefined}><div className="store-demo-sidebar">◉<br/>▤<br/>♫</div><div className="store-demo-chat"><header>Thoth Messenger <span>● online</span></header><div className="store-demo-messages"><span>Oi! Como ficou esse tema?</span><span>Ficou com a sua cara ✨</span></div><footer>Digite sua mensagem…　➤</footer></div></div> : <button className="store-demo-play" onClick={() => { if (preview.soundUrl) new Audio(preview.soundUrl).play().catch(() => setError('Não foi possível tocar este áudio.')) }}>▶ Ouvir som</button>}
+        {preview.kind === 'theme' ? <ThemePreviewScene id={preview.item ? 'community' : preview.id} manifest={preview.colors} desktop={desktopLayout} /> : <button className="store-demo-play" onClick={() => { if (preview.soundUrl) new Audio(preview.soundUrl).play().catch(() => setError('Não foi possível tocar este áudio.')) }}>▶ Ouvir som</button>}
         <div className="store-preview-actions"><button className="secondary" onClick={() => setPreview(null)}>Fechar</button><button disabled={busyId === preview.id || (preview.kind === 'theme' ? activeTheme === preview.id : activeSounds[preview.item?.manifest.soundType === 'nudge' || preview.id === 'nudge' ? 'nudge' : 'message'] === preview.id)} onClick={async () => { if (preview.item) await activateItem(preview.item); else if (preview.kind === 'theme') await activateBuiltInTheme(preview.id as BuiltInTheme); else await activateBuiltInSound(preview.id as 'message' | 'nudge'); setPreview(null) }}>{(preview.kind === 'theme' ? activeTheme === preview.id : activeSounds[preview.item?.manifest.soundType === 'nudge' || preview.id === 'nudge' ? 'nudge' : 'message'] === preview.id) ? 'Em uso' : 'Usar'}</button></div>
       </div></div>}
       {creatorOpen && <CreatorModal me={me} initialKind={category === 'bot' || !category ? 'theme' : category} botSubmission={category === 'bot'} onClose={() => setCreatorOpen(false)} onDone={() => { setCreatorOpen(false); reload() }} />}
@@ -264,14 +267,43 @@ export function ThothStore({ me, mode = 'store', onProfileChange, backSignal, on
   )
 }
 
-function StoreCard({ item, installed, busy, active, onToggle, onPreview }: { item: StoreItem; installed: boolean; busy: boolean; active: boolean; onToggle: () => void; onPreview: () => void }) {
+function ThemePreviewScene({ id, manifest, desktop, compact = false }: { id: string; manifest?: StoreManifest; desktop: boolean; compact?: boolean }) {
+  const safeColor = (key: string, fallback: string) => {
+    const value = manifest?.[key]
+    return typeof value === 'string' && /^(#[0-9a-f]{3,8}|rgba?\([\d\s,.%]+\)|hsla?\([\d\s,.%]+\))$/i.test(value) ? value : fallback
+  }
+  const artName = id === 'cyberpunk' ? 'cyberpunk-city.png' : id === 'matrix' ? 'matrix-rain.svg' : id === 'wood' ? 'walnut-grain.png' : null
+  const railImage = manifest?.railImage
+  const art = artName ? `${import.meta.env.BASE_URL}themes/${artName}` : typeof railImage === 'string' && /^https:\/\//.test(railImage) ? railImage.replace(/["\\]/g, '') : null
+  const style = {
+    ...(manifest ? {
+      '--scene-bg': safeColor('background', '#071017'),
+      '--scene-surface': safeColor('surface', '#122531'),
+      '--scene-accent': safeColor('accent', '#22d3ee'),
+      '--scene-text': safeColor('text', '#f4fbff'),
+      '--scene-in': safeColor('incoming', '#173746'),
+      '--scene-out': safeColor('outgoing', '#164e63'),
+    } : {}),
+    '--scene-art': art ? `url("${art}")` : 'none',
+  } as CSSProperties
+  return <div className={`theme-scene theme-scene-${id} ${desktop ? 'is-desktop' : 'is-mobile'}${compact ? ' is-compact' : ''}`} style={style} aria-label={`Exemplo do tema ${id}`}>
+    <div className="theme-scene-rail"><span><IconChat size={compact ? 12 : 17} /></span><span><IconGamepad size={compact ? 12 : 17} /></span><span><IconUser size={compact ? 12 : 17} /></span></div>
+    <div className="theme-scene-main">
+      <div className="theme-scene-head"><i /><div><strong>Thoth Messenger</strong><small>Contato online</small></div></div>
+      <div className="theme-scene-messages"><div className="theme-scene-in">Oi! Tudo bem?</div><div className="theme-scene-out">Tudo sim, e você?</div></div>
+      <div className="theme-scene-composer"><span>Digite sua mensagem</span><b><IconSend size={compact ? 8 : 14} /></b></div>
+    </div>
+  </div>
+}
+
+function StoreCard({ item, desktop, installed, busy, active, onToggle, onPreview }: { item: StoreItem; desktop: boolean; installed: boolean; busy: boolean; active: boolean; onToggle: () => void; onPreview: () => void }) {
   const previewStyle = item.kind === 'theme' ? {
     background: `linear-gradient(145deg, ${item.manifest.background || '#08131c'}, ${item.manifest.surface || '#172936'})`,
     color: String(item.manifest.text || '#fff'), '--card-accent': item.manifest.accent || '#22d3ee',
   } as CSSProperties : undefined
   return <article className="store-card">
     <div className={`store-preview ${item.kind}`} style={previewStyle}>
-      {item.preview_url || item.asset_url ? <img src={item.preview_url || item.asset_url || ''} alt="" /> : item.kind === 'theme' ? <div className="theme-mini"><i /><i /><i /></div> : <span className="store-preview-glyph">{item.kind === 'sound' ? '♫' : item.kind === 'wink' ? '✦' : item.kind === 'emoji' ? '☺' : '▣'}</span>}
+      {item.kind === 'theme' ? <ThemePreviewScene id="community" manifest={item.manifest} desktop={desktop} compact /> : item.preview_url || item.asset_url ? <img src={item.preview_url || item.asset_url || ''} alt="" /> : <span className="store-preview-glyph">{item.kind === 'sound' ? '♫' : item.kind === 'wink' ? '✦' : item.kind === 'emoji' ? '☺' : '▣'}</span>}
     </div>
     <div className="store-card-body"><span className="store-kind">{kindNames[item.kind]}</span><h3>{item.name}</h3><p>{item.description || 'Uma criação da comunidade Thoth.'}</p>
       <div className="store-author">{item.creator?.avatar_url ? <img src={item.creator.avatar_url} alt="" /> : <i /> }<span>por {item.creator?.display_name || item.creator?.username || 'comunidade'}</span></div>
