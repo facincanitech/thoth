@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { App as CapacitorApp } from '@capacitor/app'
+import { Capacitor } from '@capacitor/core'
 import { supabase } from './lib/supabase'
 import { Rail } from './components/Rail'
 import { ChatList } from './components/ChatList'
@@ -25,6 +26,8 @@ import { useHeartbeat } from './lib/useHeartbeat'
 import { ensureCallWindow, openChatWindow, openPlayWindow, requestCall } from './lib/desktopWindows'
 import { DesktopTitleBar } from './components/DesktopChrome'
 import { showDesktopToast } from './lib/desktopToast'
+import { InviteChooser } from './components/InviteChooser'
+import { parseInviteDeepLink } from './lib/inviteLink'
 import { applyCommunityTheme, hydrateInstalledMedia, type StoreItem } from './lib/store'
 import { isBuiltInTheme } from './lib/storeDefaults'
 import './App.css'
@@ -76,6 +79,12 @@ function App() {
 
   useEffect(() => {
     const listenerPromise = CapacitorApp.addListener('appUrlOpen', ({ url }) => {
+      const invite = parseInviteDeepLink(url)
+      if (invite) {
+        if (invite.kind === 'invite') setPendingInviteCode(invite.code)
+        else setPendingPlayInviteCode(invite.code)
+        return
+      }
       const hashIndex = url.indexOf('#')
       if (hashIndex === -1) return
       const params = new URLSearchParams(url.slice(hashIndex + 1))
@@ -93,6 +102,12 @@ function App() {
   useEffect(() => {
     if (!isTauriDesktop) return
     function handleDeepLinkUrl(url: string) {
+      const invite = parseInviteDeepLink(url)
+      if (invite) {
+        if (invite.kind === 'invite') setPendingInviteCode(invite.code)
+        else setPendingPlayInviteCode(invite.code)
+        return
+      }
       const hashIndex = url.indexOf('#')
       if (hashIndex === -1) return
       const params = new URLSearchParams(url.slice(hashIndex + 1))
@@ -248,9 +263,12 @@ function App() {
 
   const [selected, setSelected] = useState<Conversation | null>(null)
   const restoredSelectedRef = useRef(false)
-  const [pendingInviteCode] = useState(() => new URLSearchParams(window.location.search).get('invite'))
-  const [pendingPlayInviteCode] = useState(() => new URLSearchParams(window.location.search).get('play'))
+  const [pendingInviteCode, setPendingInviteCode] = useState(() => new URLSearchParams(window.location.search).get('invite'))
+  const [pendingPlayInviteCode, setPendingPlayInviteCode] = useState(() => new URLSearchParams(window.location.search).get('play'))
   const inviteConsumedRef = useRef(false)
+  // So faz sentido no navegador puro (fora do .exe/APK instalado): deixa a pessoa escolher entre
+  // abrir no app ja instalado, baixar, ou seguir direto na versao web. Ver InviteChooser.tsx.
+  const [inviteChooserDismissed, setInviteChooserDismissed] = useState(() => isTauriDesktop || Capacitor.isNativePlatform())
   const [selectedCommunity, setSelectedCommunity] = useState<Community | null>(null)
   const [communityTab, setCommunityTab] = useState<'home' | 'info' | 'members' | 'settings'>('home')
   const [authOpen, setAuthOpen] = useState(false)
@@ -801,6 +819,18 @@ function App() {
       {!isTauriDesktop && <CallOverlay ref={callOverlayRef} me={profile} />}
     </div>
   )
+
+  // Link de convite aberto direto no navegador (nao dentro do .exe/APK instalado): deixa a pessoa
+  // escolher entre abrir no app ja instalado, baixar, ou continuar na versao web.
+  if (!inviteChooserDismissed && (pendingInviteCode || pendingPlayInviteCode)) {
+    return (
+      <InviteChooser
+        kind={pendingPlayInviteCode ? 'play' : 'invite'}
+        code={(pendingPlayInviteCode || pendingInviteCode) as string}
+        onContinueInBrowser={() => setInviteChooserDismissed(true)}
+      />
+    )
+  }
 
   if (isTauriDesktop) {
     return (

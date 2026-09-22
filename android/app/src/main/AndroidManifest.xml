@@ -33,6 +33,20 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="thoth" android:host="callback" />
             </intent-filter>
+            <!-- thoth://invite/<codigo> e thoth://play/<codigo>: link de convite abrindo direto no app
+                 instalado (ver InviteChooser.tsx / src/lib/inviteLink.ts). -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="thoth" android:host="invite" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="thoth" android:host="play" />
+            </intent-filter>
         </activity>
 
         <meta-data

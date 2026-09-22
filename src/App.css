@@ -2572,3 +2572,19 @@ html .desktop-window-shell.desktop-web-shell{border:0;border-radius:0;box-shadow
     color:#183952;
   }
 }
+
+/* Tela de escolha ao abrir link de convite fora do app (InviteChooser) */
+.invite-chooser{position:fixed;inset:0;z-index:400;display:flex;align-items:center;justify-content:center;padding:20px;background:var(--bg-deep)}
+.invite-chooser-card{width:100%;max-width:380px;background:var(--bg-surface);border:1px solid var(--line);border-radius:22px;padding:28px;text-align:center;box-shadow:var(--shadow)}
+.invite-chooser-icon{width:52px;height:52px;margin:0 auto 14px;border-radius:16px;background:var(--accent-dim-bg,var(--bg-selected));color:var(--accent-text);display:grid;place-items:center}
+.invite-chooser-card h1{font-size:1.1rem;margin:0 0 4px}
+.invite-chooser-card>p{color:var(--muted);font-size:.85rem;margin:0 0 18px}
+.invite-chooser-options{display:flex;flex-direction:column;gap:10px}
+.invite-chooser-option{display:block;text-align:left;padding:12px 14px;border-radius:14px;border:1px solid var(--line-2);background:var(--bg-panel);color:var(--text);text-decoration:none;cursor:pointer;width:100%;box-sizing:border-box}
+.invite-chooser-option strong{display:block;font-size:.9rem}
+.invite-chooser-option span{display:block;font-size:.75rem;color:var(--muted);margin-top:2px}
+.invite-chooser-option:hover{border-color:var(--accent-text);background:var(--bg-selected)}
+.invite-chooser-downloads{margin-top:18px;padding-top:16px;border-top:1px solid var(--line-2);font-size:.78rem;color:var(--muted)}
+.invite-chooser-downloads div{display:flex;justify-content:center;gap:14px;margin-top:8px;flex-wrap:wrap}
+.invite-chooser-downloads a{display:inline-flex;align-items:center;gap:5px;color:var(--accent-text);text-decoration:none;font-weight:600}
+.invite-chooser-back{margin-top:14px;display:inline-flex;align-items:center;gap:5px;border:0;background:none;color:var(--muted);cursor:pointer;font-size:.78rem}

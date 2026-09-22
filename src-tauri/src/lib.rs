@@ -190,6 +190,21 @@ pub fn run() {
             }
           })
           .build(app)?;
+
+        // Inicio "a frio": app nao estava rodando e foi aberto direto por um link
+        // thoth://invite/... ou thoth://play/... (o Windows chama "app.exe <url>"). O
+        // tauri_plugin_single_instance so cobre reaproveitar uma instancia ja rodando
+        // (callback no builder acima); aqui pegamos o mesmo caso pelos argv do processo.
+        // O emit acontece com um atraso curto porque o listener em JS (App.tsx) so e
+        // registrado depois que a pagina carrega e o React monta - emitir cedo demais
+        // faz o evento se perder (eventos do Tauri nao ficam pra tras esperando listener).
+        if let Some(url) = std::env::args().skip(1).find(|a| a.starts_with("thoth://") || a.starts_with("ferus://")) {
+          let handle = app.handle().clone();
+          std::thread::spawn(move || {
+            std::thread::sleep(std::time::Duration::from_millis(1500));
+            let _ = handle.emit("deep-link", url);
+          });
+        }
       }
 
       Ok(())
