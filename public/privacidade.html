@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Política de Privacidade — ThothChat</title>
+<title>Política de Privacidade — Thoth Messenger</title>
 <style>
   body { font-family: system-ui, -apple-system, sans-serif; max-width: 720px; margin: 0 auto; padding: 32px 20px 80px; line-height: 1.6; color: #1a1a1a; background: #fff; }
   h1 { font-size: 24px; }
@@ -15,10 +15,10 @@
 </style>
 </head>
 <body>
-  <h1>Política de Privacidade — ThothChat</h1>
-  <p class="updated">Última atualização: 10 de setembro de 2026</p>
+  <h1>Política de Privacidade — Thoth Messenger</h1>
+  <p class="updated">Última atualização: 23 de setembro de 2026</p>
 
-  <p>O ThothChat é um aplicativo de mensagens em tempo real desenvolvido por Facincanitech. Esta página explica quais dados coletamos, para que usamos e como você pode excluí-los.</p>
+  <p>O Thoth Messenger é um aplicativo de mensagens em tempo real desenvolvido por Facincanitech. Esta página explica quais dados coletamos, para que usamos e como você pode excluí-los.</p>
 
   <h2>Dados que coletamos</h2>
   <ul>
@@ -26,6 +26,7 @@
     <li><strong>Perfil:</strong> status, idade, cidade, foto de capa e preferências de aparência — todos opcionais, preenchidos por você.</li>
     <li><strong>Conteúdo do app:</strong> mensagens, mídia (imagens, vídeos, áudios) enviadas em conversas, status temporários (24h), e metadados de uso (presença online/offline, confirmação de leitura).</li>
     <li><strong>Notificações push:</strong> um token de dispositivo (Firebase Cloud Messaging) para enviar notificações de novas mensagens.</li>
+    <li><strong>Contatos do celular (opcional):</strong> no Android, com sua autorização, o app lê nomes, telefones e e-mails da agenda para exibir seus contatos e encontrar pessoas que já usam o Thoth.</li>
   </ul>
 
   <h2>Como usamos os dados</h2>
@@ -34,11 +35,15 @@
   <h2>Onde os dados ficam armazenados</h2>
   <p>Os dados são armazenados em um banco de dados gerenciado pelo Supabase (infraestrutura na nuvem), protegido por regras de acesso que garantem que cada usuário só acesse dados de conversas das quais participa.</p>
 
+  <h2>Como usamos os contatos do celular</h2>
+  <p>O acesso à agenda é opcional e só é solicitado quando você abre o recurso de contatos. Os e-mails encontrados são enviados de forma temporária para comparação exata com contas cadastradas no Thoth. Não armazenamos a lista bruta da agenda, os números de telefone nem os contatos que não usam o Thoth. Guardamos apenas os identificadores dos perfis encontrados, vinculados à sua conta, para que eles também apareçam quando você usar o Web ou o desktop.</p>
+  <p>Um contato que não usa o Thoth só recebe alguma informação se você tocar em <strong>Convidar</strong>; nesse caso, o Android abre o WhatsApp ou o menu de compartilhamento para você decidir se deseja enviar o link. Você pode revogar a permissão nas configurações do Android e remover os contatos sincronizados em <strong>Perfil → Privacidade</strong>.</p>
+
   <h2>Exclusão de conta e dados</h2>
   <p>Você pode excluir sua conta a qualquer momento diretamente no app, em <strong>Conta → Excluir conta</strong>. Isso anonimiza seu perfil (nome, foto e demais dados pessoais são removidos) e desativa permanentemente o login. Mensagens que você enviou em conversas com outras pessoas continuam visíveis para os participantes dessas conversas, mas sem seu nome ou foto associados.</p>
 
   <h2>Permissões do aplicativo (Android)</h2>
-  <p>O app pode solicitar permissão de câmera e microfone (para enviar fotos, vídeos e áudios), armazenamento (para anexar arquivos) e notificações — todas usadas exclusivamente para as funcionalidades correspondentes dentro do app.</p>
+  <p>O app pode solicitar permissão de câmera e microfone (para enviar fotos, vídeos e áudios), armazenamento (para anexar arquivos), notificações e contatos (para a descoberta opcional descrita acima). Cada permissão é usada exclusivamente quando necessária para a funcionalidade correspondente.</p>
 
   <h2>Contato</h2>
   <p>Dúvidas sobre esta política ou sobre seus dados podem ser enviadas para <a href="mailto:facincanitech@gmail.com">facincanitech@gmail.com</a>.</p>

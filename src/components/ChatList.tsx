@@ -21,6 +21,16 @@ import { getPresenceColor } from '../lib/presence'
 import { playMessageSound } from '../lib/notificationSound'
 import { messagePreview, showDesktopToast } from '../lib/desktopToast'
 import {
+  deviceContactsAvailable,
+  getContactsPermission,
+  openContactsSettings,
+  readDeviceContacts,
+  requestContactsPermission,
+  shareThothInvite,
+  type ContactsPermissionState,
+  type DeviceContact,
+} from '../lib/deviceContacts'
+import {
   IconArchive,
   IconArrowLeft,
   IconBellOff,
@@ -61,6 +71,7 @@ export const BANNER_COLORS = [
 ]
 
 type FilterKey = 'all' | 'favorites' | 'archived' | 'group' | 'communities'
+type SyncedContact = Pick<Profile, 'id' | 'username' | 'display_name' | 'email' | 'avatar_url'>
 const DEFAULT_FILTER_ORDER: FilterKey[] = ['all', 'favorites', 'archived', 'group', 'communities']
 const FILTER_LABELS: Record<FilterKey, string> = {
   all: 'Todos',
@@ -455,6 +466,11 @@ export function ChatList({
   const [confirmDeleteConv, setConfirmDeleteConv] = useState<ConvWithLabel | null>(null)
   const [quickMenuOpen, setQuickMenuOpen] = useState(false)
   const [groupsQuickEntry, setGroupsQuickEntry] = useState(false)
+  const [contactsPermission, setContactsPermission] = useState<ContactsPermissionState | 'unavailable'>('unavailable')
+  const [phoneContacts, setPhoneContacts] = useState<DeviceContact[]>([])
+  const [syncedContacts, setSyncedContacts] = useState<SyncedContact[]>([])
+  const [contactsLoading, setContactsLoading] = useState(false)
+  const [contactsMessage, setContactsMessage] = useState<string | null>(null)
 
   const [accountView, setAccountView] = useState<AccountView>('root')
   const [storeBackSignal, setStoreBackSignal] = useState(0)
@@ -486,6 +502,99 @@ export function ChatList({
       setLatestVersion(info.available && info.version ? info.version : APP_VERSION)
     })
   }, [me?.id])
+
+  async function loadSyncedContacts() {
+    if (!me) return
+    const { data, error: syncError } = await supabase.rpc('list_synced_contacts')
+    if (syncError) {
+      console.error('list synced contacts failed', syncError)
+      return
+    }
+    setSyncedContacts((data || []) as SyncedContact[])
+  }
+
+  async function syncDeviceContacts() {
+    if (!me || !deviceContactsAvailable()) return
+    setContactsLoading(true)
+    setContactsMessage(null)
+    try {
+      const contacts = await readDeviceContacts()
+      setPhoneContacts(contacts)
+      const emails = [...new Set(contacts.flatMap((contact) => contact.emails).map((email) => email.trim().toLowerCase()).filter(Boolean))]
+      const { data, error: syncError } = await supabase.rpc('sync_contact_emails', { p_emails: emails })
+      if (syncError) throw syncError
+      setSyncedContacts((data || []) as SyncedContact[])
+      setContactsMessage(contacts.length ? null : 'Nenhum contato foi encontrado neste aparelho.')
+    } catch (cause) {
+      console.error('sync contacts failed', cause)
+      setContactsMessage('Não foi possível ler seus contatos. Tente novamente.')
+    } finally {
+      setContactsLoading(false)
+    }
+  }
+
+  async function refreshContactsPermission() {
+    if (!deviceContactsAvailable()) {
+      setContactsPermission('unavailable')
+      await loadSyncedContacts()
+      return
+    }
+    const state = await getContactsPermission()
+    setContactsPermission(state)
+    if (state === 'granted') await syncDeviceContacts()
+    else await loadSyncedContacts()
+  }
+
+  async function askForContacts() {
+    setContactsLoading(true)
+    setContactsMessage(null)
+    try {
+      const state = await requestContactsPermission()
+      setContactsPermission(state)
+      if (state === 'granted') await syncDeviceContacts()
+    } catch (cause) {
+      console.error('contacts permission failed', cause)
+      setContactsMessage('Não foi possível pedir a autorização de contatos.')
+    } finally {
+      setContactsLoading(false)
+    }
+  }
+
+  async function clearSyncedContacts() {
+    setContactsLoading(true)
+    setContactsMessage(null)
+    try {
+      const { error: clearError } = await supabase.rpc('clear_synced_contacts')
+      if (clearError) throw clearError
+      setSyncedContacts([])
+      setContactsMessage('Contatos sincronizados removidos da sua conta.')
+    } catch (cause) {
+      console.error('clear synced contacts failed', cause)
+      setContactsMessage('Não foi possível remover os contatos sincronizados.')
+    } finally {
+      setContactsLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    if (panelView !== 'contact' || !me) return
+    refreshContactsPermission()
+    const onFocus = () => refreshContactsPermission()
+    window.addEventListener('focus', onFocus)
+    return () => window.removeEventListener('focus', onFocus)
+  }, [panelView, me?.id])
+
+  useEffect(() => {
+    if (accountView !== 'privacy' || !me) return
+    loadSyncedContacts()
+    if (deviceContactsAvailable()) {
+      getContactsPermission().then(setContactsPermission).catch((cause) => {
+        console.error('contacts permission status failed', cause)
+      })
+    } else {
+      setContactsPermission('unavailable')
+    }
+  }, [accountView, me?.id])
 
   async function handleAppUpdateClick() {
     setAppUpdating(true)
@@ -815,13 +924,13 @@ export function ChatList({
     setInviteSent(false)
   }
 
-  async function startDm() {
+  async function startDm(emailOverride?: string) {
     if (!me) return
     setError(null)
     setBusy(true)
     setInviteSent(false)
     try {
-      const email = dmEmail.trim().toLowerCase()
+      const email = (emailOverride || dmEmail).trim().toLowerCase()
       if (!email) return
       if (email === me.email) throw new Error('Esse é você')
 
@@ -1984,6 +2093,9 @@ export function ChatList({
     )
   }
 
+  const syncedEmailSet = new Set(syncedContacts.map((contact) => contact.email.toLowerCase()))
+  const contactsToInvite = phoneContacts.filter((contact) => !contact.emails.some((email) => syncedEmailSet.has(email.toLowerCase())))
+
   return (
     <section className="chats">
       {selectedCommunity ? (
@@ -2504,22 +2616,90 @@ export function ChatList({
         )}
 
         {panelView === 'contact' && (
-          <div className="new-conv-form">
-            <label>Email da pessoa</label>
-            <input
-              type="email"
-              placeholder="email@exemplo.com"
-              value={dmEmail}
-              onChange={(e) => setDmEmail(e.target.value)}
-              autoFocus
-            />
-            <button type="button" disabled={busy} onClick={startDm}>Chamar</button>
-            {inviteSent && (
-              <span className="invite-code">
-                essa pessoa ainda não tem conta — mandamos um convite por email
-              </span>
-            )}
-            {error && <span className="auth-error">{error}</span>}
+          <div className="new-contact-screen">
+            <div className="new-conv-form contact-email-search">
+              <label>Buscar por e-mail</label>
+              <input
+                type="email"
+                placeholder="Digite o e-mail exato da pessoa"
+                value={dmEmail}
+                onChange={(e) => setDmEmail(e.target.value)}
+                autoFocus
+              />
+              <button type="button" disabled={busy || !dmEmail.trim()} onClick={() => startDm()}>Conversar</button>
+              <span className="invite-code">Use o e-mail cadastrado na conta Thoth.</span>
+              {inviteSent && <span className="invite-code">Essa pessoa ainda não tem conta — enviamos um convite por e-mail.</span>}
+              {error && <span className="auth-error">{error}</span>}
+            </div>
+
+            <div className="device-contacts-section">
+              <div className="device-contacts-heading">
+                <div>
+                  <strong>Contatos do celular</strong>
+                  <span>Veja quem já está no Thoth ou convide pelo WhatsApp.</span>
+                </div>
+                {contactsPermission === 'granted' && (
+                  <button type="button" className="contacts-refresh" disabled={contactsLoading} onClick={syncDeviceContacts}>
+                    {contactsLoading ? 'Sincronizando…' : 'Atualizar'}
+                  </button>
+                )}
+              </div>
+
+              {contactsPermission !== 'granted' && contactsPermission !== 'unavailable' && (
+                <div className="contacts-permission-card">
+                  <IconUser size={25} />
+                  <strong>Encontre quem já usa o Thoth</strong>
+                  <p>Para mostrar seus contatos, o Thoth precisa da sua autorização. A agenda não fica pública.</p>
+                  <button type="button" disabled={contactsLoading} onClick={askForContacts}>
+                    {contactsLoading ? 'Aguarde…' : contactsPermission === 'prompt' ? 'Permitir acesso aos contatos' : 'Tentar novamente'}
+                  </button>
+                  {contactsPermission !== 'prompt' && (
+                    <button type="button" className="secondary" onClick={openContactsSettings}>Abrir configurações</button>
+                  )}
+                  <small>Você também pode continuar usando a busca por e-mail.</small>
+                </div>
+              )}
+
+              {contactsPermission === 'unavailable' && syncedContacts.length === 0 && (
+                <div className="contacts-permission-card compact">
+                  <strong>Sincronize pelo celular</strong>
+                  <p>Autorize a agenda no APK uma vez. Os usuários encontrados aparecerão aqui no Web e no desktop.</p>
+                </div>
+              )}
+
+              {syncedContacts.length > 0 && (
+                <div className="device-contact-list">
+                  {syncedContacts.map((contact) => (
+                    <div key={contact.id} className="device-contact-row">
+                      <AvatarBox src={contact.avatar_url} id={contact.id} fallbackLetter={(contact.display_name || contact.username)[0]?.toUpperCase()} className="avatar-sm" />
+                      <div className="device-contact-copy">
+                        <strong>{contact.display_name || contact.username}</strong>
+                        <span>No Thoth</span>
+                      </div>
+                      <button type="button" disabled={busy} onClick={() => startDm(contact.email)}>Conversar</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {contactsPermission === 'granted' && contactsToInvite.length > 0 && (
+                <div className="device-contact-list">
+                  {contactsToInvite.map((contact) => (
+                    <div key={contact.id} className="device-contact-row">
+                      <div className="avatar-sm">{contact.name[0]?.toUpperCase() || '?'}</div>
+                      <div className="device-contact-copy">
+                        <strong>{contact.name}</strong>
+                        <span>{contact.phones[0] || contact.emails[0] || 'Contato do aparelho'}</span>
+                      </div>
+                      <button type="button" className="secondary" onClick={() => shareThothInvite(contact.name)}>Convidar</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {contactsMessage && <span className="invite-code contacts-message">{contactsMessage}</span>}
+              <span className="contacts-privacy-note">Detalhes sobre o uso da agenda ficam em Perfil → Privacidade → Política de Privacidade.</span>
+            </div>
           </div>
         )}
 
@@ -2821,6 +3001,42 @@ export function ChatList({
               <div className="option-icon"><IconUser size={20} /></div>
               <span>Contato: facincanitech@gmail.com</span>
             </div>
+            <div className="privacy-contacts-card">
+              <div className="option-icon"><IconUser size={20} /></div>
+              <div className="privacy-contacts-copy">
+                <strong>Contatos do celular</strong>
+                <span>
+                  {syncedContacts.length
+                    ? `${syncedContacts.length} ${syncedContacts.length === 1 ? 'pessoa encontrada' : 'pessoas encontradas'} no Thoth.`
+                    : 'Encontre na sua agenda quem já usa o Thoth.'}
+                </span>
+                <small>A agenda bruta não é salva. Só as contas encontradas ficam sincronizadas.</small>
+                <div className="privacy-contacts-actions">
+                  {deviceContactsAvailable() ? (
+                    contactsPermission === 'granted' ? (
+                      <button type="button" disabled={contactsLoading} onClick={syncDeviceContacts}>
+                        {contactsLoading ? 'Sincronizando…' : 'Sincronizar agora'}
+                      </button>
+                    ) : (
+                      <>
+                        <button type="button" disabled={contactsLoading} onClick={askForContacts}>Permitir acesso</button>
+                        {contactsPermission !== 'prompt' && (
+                          <button type="button" className="secondary" onClick={openContactsSettings}>Abrir configurações</button>
+                        )}
+                      </>
+                    )
+                  ) : (
+                    <span className="invite-code">A autorização da agenda é feita pelo APK.</span>
+                  )}
+                  {syncedContacts.length > 0 && (
+                    <button type="button" className="secondary" disabled={contactsLoading} onClick={clearSyncedContacts}>
+                      Remover sincronizados
+                    </button>
+                  )}
+                </div>
+                {contactsMessage && <span className="invite-code contacts-message">{contactsMessage}</span>}
+              </div>
+            </div>
           </div>
         )}
 
@@ -2839,6 +3055,13 @@ export function ChatList({
               Fotos, vídeos e áudios que você envia ficam guardados nos nossos servidores. Mídia
               marcada como "temporária" ou "visualização única" é apagada automaticamente depois
               de aberta ou após 10 minutos.
+            </p>
+            <p>
+              No APK, você pode autorizar o acesso aos contatos para descobrir quem já usa o Thoth.
+              A leitura só acontece quando você usa esse recurso. Os e-mails da agenda são comparados
+              com contas do Thoth, mas a agenda bruta não é armazenada: salvamos somente os perfis
+              encontrados para que eles também apareçam no Web e no desktop. Contatos sem conta
+              permanecem no aparelho e só recebem um convite quando você toca em “Convidar”.
             </p>
             <p>
               Não vendemos nem compartilhamos seus dados com empresas de publicidade ou terceiros.

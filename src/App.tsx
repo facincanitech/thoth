@@ -6,6 +6,7 @@ import { supabase } from './lib/supabase'
 import { Rail } from './components/Rail'
 import { ChatList } from './components/ChatList'
 import { MainPanel } from './components/MainPanel'
+import { ChatErrorBoundary } from './components/ChatErrorBoundary'
 import { CommunityView } from './components/CommunityView'
 import { ThothPlay } from './components/ThothPlay'
 import { AuthModal } from './components/AuthModal'
@@ -800,6 +801,7 @@ function App() {
           onToggleSidebar={() => setSidebarCollapsed((v) => !v)}
         />
       ) : isTauriDesktop ? null : (
+        <ChatErrorBoundary key={selected?.id || 'empty-chat'} conversationId={selected?.id || null} onBack={() => setSelected(null)}>
         <MainPanel
           me={profile}
           conversation={selected}
@@ -820,6 +822,7 @@ function App() {
           sidebarCollapsed={sidebarCollapsed}
           onToggleSidebar={() => setSidebarCollapsed((v) => !v)}
         />
+        </ChatErrorBoundary>
       )}
       </>
       )}

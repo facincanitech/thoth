@@ -150,6 +150,9 @@ export function MainPanel({ me, conversation, onBack, onConversationUpdate, bloc
   const dragStartXRef = useRef<number | null>(null)
   const dragTriggeredRef = useRef(false)
   const [liveTyping, setLiveTyping] = useState<Record<string, string>>({})
+  const typingPendingRef = useRef('')
+  const typingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const typingLastSentRef = useRef(0)
   const [showEmoji, setShowEmoji] = useState(false)
   const [showWinks, setShowWinks] = useState(false)
   const [customWinks, setCustomWinks] = useState<CustomWink[]>([])
@@ -565,11 +568,12 @@ export function MainPanel({ me, conversation, onBack, onConversationUpdate, bloc
     const channel = supabase
       .channel(`conversation:${conversation.id}`)
       .on('broadcast', { event: 'typing' }, ({ payload }) => {
-        const { userId, text } = payload as { userId: string; text: string }
+        const { userId, text } = payload as { userId?: unknown; text?: unknown }
+        if (typeof userId !== 'string' || typeof text !== 'string') return
         if (userId === me.id) return
         setLiveTyping((prev) => {
           const next = { ...prev }
-          if (text) next[userId] = text
+          if (text) next[userId] = text.slice(0, 4000)
           else delete next[userId]
           return next
         })
@@ -659,6 +663,8 @@ export function MainPanel({ me, conversation, onBack, onConversationUpdate, bloc
 
     return () => {
       cancelled = true
+      if (typingTimerRef.current) clearTimeout(typingTimerRef.current)
+      typingTimerRef.current = null
       supabase.removeChannel(channel)
     }
   }, [conversation?.id, me?.id])
@@ -841,7 +847,15 @@ export function MainPanel({ me, conversation, onBack, onConversationUpdate, bloc
 
   function broadcastTyping(text: string) {
     if (!me) return
-    channelRef.current?.send({ type: 'broadcast', event: 'typing', payload: { userId: me.id, text } })
+    typingPendingRef.current = text.slice(0, 4000)
+    const elapsed = Date.now() - typingLastSentRef.current
+    const send = () => {
+      typingTimerRef.current = null
+      typingLastSentRef.current = Date.now()
+      channelRef.current?.send({ type: 'broadcast', event: 'typing', payload: { userId: me.id, text: typingPendingRef.current } })
+    }
+    if (elapsed >= 80) send()
+    else if (!typingTimerRef.current) typingTimerRef.current = setTimeout(send, 80 - elapsed)
   }
 
   async function blockUser(userId: string) {
@@ -1865,7 +1879,11 @@ export function MainPanel({ me, conversation, onBack, onConversationUpdate, bloc
     if (!content || !conversation || !me) return
 
     const eventsToStore = [...replayBuffer.current]
-    broadcastTyping('')
+    if (typingTimerRef.current) clearTimeout(typingTimerRef.current)
+    typingTimerRef.current = null
+    typingPendingRef.current = ''
+    typingLastSentRef.current = Date.now()
+    channelRef.current?.send({ type: 'broadcast', event: 'typing', payload: { userId: me.id, text: '' } })
     setDraft('')
     setAtBottom(true)
     replayBuffer.current = []
