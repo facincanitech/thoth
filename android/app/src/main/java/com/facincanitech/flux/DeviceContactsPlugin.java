@@ -157,7 +157,9 @@ public class DeviceContactsPlugin extends Plugin {
         String phone = call.getString("phone", "").replaceAll("[^0-9]", "");
         if (!phone.isEmpty()) {
             String directText = call.getString("text", "Conheca o Thoth Messenger: https://facincanitech.github.io/thoth/");
-            Uri inviteUri = Uri.parse("https://wa.me/" + phone + "?text=" + Uri.encode(directText));
+            // O esquema nativo abre a conversa do numero. O wa.me pode ser interpretado por
+            // algumas versoes do WhatsApp como compartilhamento e cair na tela "Enviar para".
+            Uri inviteUri = Uri.parse("whatsapp://send?phone=" + phone + "&text=" + Uri.encode(directText));
             Intent direct = new Intent(Intent.ACTION_VIEW, inviteUri);
             direct.setPackage("com.whatsapp");
             try {

@@ -62,7 +62,7 @@ export async function shareThothInvite(name?: string, phone?: string) {
     return
   }
   if (directPhone) {
-    window.open(`https://wa.me/${directPhone}?text=${encodeURIComponent(text)}`, '_blank', 'noopener,noreferrer')
+    window.open(`https://api.whatsapp.com/send?phone=${directPhone}&text=${encodeURIComponent(text)}`, '_blank', 'noopener,noreferrer')
     return
   }
   if (navigator.share) await navigator.share({ title: 'Convite para o Thoth Messenger', text })
