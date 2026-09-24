@@ -656,6 +656,7 @@ body{
 .contact-onboarding-card .modal-close{margin-top:12px}
 .contact-onboarding-message{margin:14px 0 0!important}
 .contact-onboarding-input{margin:4px 0 12px}
+.contact-onboarding-warning{font-size:.74rem;color:var(--danger,#e5484d);line-height:1.4;margin:0 0 12px}
 .google-btn{
   width:100%;padding:12px;border-radius:8px;border:1px solid var(--line-2);
   background:var(--bg-panel);color:var(--text);cursor:pointer;font-size:.95rem;
@@ -2639,8 +2640,10 @@ html .desktop-window-shell.desktop-web-shell{
 .phone-discovery-toggle input{accent-color:var(--accent-text)}
 .chip-btn{align-self:flex-start;margin-top:8px!important;padding:7px 12px!important;border-radius:999px!important;border:1px dashed var(--line-2)!important;background:transparent!important;color:var(--accent-text)!important;font-weight:500!important;font-size:.74rem!important}
 .chip-btn:hover{background:var(--bg-selected)!important;border-style:solid!important}
-.privacy-contacts-manual-phone{display:flex;gap:6px;margin-top:8px}
+.privacy-contacts-manual-phone-block{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+.privacy-contacts-manual-phone{display:flex;gap:6px}
 .privacy-contacts-manual-phone input{flex:1;min-width:0}
+.privacy-contacts-warning{color:var(--danger,#e5484d);line-height:1.4}
 @media(max-width:520px){
   .device-contact-row{align-items:center}
   .device-contact-row button{padding:7px 9px;font-size:.72rem}

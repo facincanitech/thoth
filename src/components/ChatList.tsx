@@ -487,6 +487,7 @@ export function ChatList({
   const [phoneDiscoverable, setPhoneDiscoverable] = useState(true)
   const [phoneManualEntry, setPhoneManualEntry] = useState(false)
   const [phoneManualDraft, setPhoneManualDraft] = useState('')
+  const [phoneManualConfirm, setPhoneManualConfirm] = useState('')
 
   const [accountView, setAccountView] = useState<AccountView>('root')
   const [storeBackSignal, setStoreBackSignal] = useState(0)
@@ -551,6 +552,7 @@ export function ChatList({
       await loadPhoneDiscovery()
       setPhoneManualEntry(false)
       setPhoneManualDraft('')
+      setPhoneManualConfirm('')
       setContactsMessage('Número vinculado à sua conta.')
     } catch (cause) {
       console.error('link phone failed', cause)
@@ -3045,18 +3047,38 @@ export function ChatList({
                 {deviceContactsAvailable() && !phoneManualEntry && (
                   <button type="button" className="chip-btn" onClick={() => setPhoneManualEntry(true)}>ou digitar o número na mão</button>
                 )}
-                {deviceContactsAvailable() && phoneManualEntry && (
-                  <div className="privacy-contacts-manual-phone">
-                    <input
-                      type="tel"
-                      placeholder="DDD + número, ex.: 11987654321"
-                      value={phoneManualDraft}
-                      onChange={(e) => setPhoneManualDraft(e.target.value)}
-                      onKeyDown={(e) => { if (e.key === 'Enter' && phoneManualDraft.trim()) linkPhoneNumber(phoneManualDraft.trim()) }}
-                    />
-                    <button type="button" disabled={contactsLoading || !phoneManualDraft.trim()} onClick={() => linkPhoneNumber(phoneManualDraft.trim())}>Vincular</button>
-                  </div>
-                )}
+                {deviceContactsAvailable() && phoneManualEntry && (() => {
+                  const draftDigits = normalizePhoneForCompare(phoneManualDraft)
+                  const confirmDigits = normalizePhoneForCompare(phoneManualConfirm)
+                  const bothFilled = phoneManualDraft.trim() && phoneManualConfirm.trim()
+                  const matches = !!bothFilled && draftDigits === confirmDigits
+                  return (
+                    <div className="privacy-contacts-manual-phone-block">
+                      <small className="privacy-contacts-warning">
+                        Só vincule um número que seja de fato seu — vincular o número de outra pessoa quebra os Termos de Uso e pode ter sua conta banida. Digite duas vezes pra confirmar.
+                      </small>
+                      <div className="privacy-contacts-manual-phone">
+                        <input
+                          type="tel"
+                          placeholder="Seu número, ex.: 11987654321"
+                          value={phoneManualDraft}
+                          onChange={(e) => setPhoneManualDraft(e.target.value)}
+                        />
+                      </div>
+                      <div className="privacy-contacts-manual-phone">
+                        <input
+                          type="tel"
+                          placeholder="Digite de novo pra confirmar"
+                          value={phoneManualConfirm}
+                          onChange={(e) => setPhoneManualConfirm(e.target.value)}
+                          onKeyDown={(e) => { if (e.key === 'Enter' && matches) linkPhoneNumber(phoneManualDraft.trim()) }}
+                        />
+                        <button type="button" disabled={contactsLoading || !matches} onClick={() => linkPhoneNumber(phoneManualDraft.trim())}>Vincular</button>
+                      </div>
+                      {!!bothFilled && !matches && <small className="privacy-contacts-warning">Os dois números digitados são diferentes.</small>}
+                    </div>
+                  )
+                })()}
               </div>
             </div>
             <div className="privacy-contacts-card">

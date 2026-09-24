@@ -126,6 +126,7 @@ export function ContactOnboarding({ me, onOpenContacts }: Props) {
         {step === 'manual' && <>
           <h2>Qual é o seu número?</h2>
           <p>Digite com DDD, sem o +55. Ele não fica visível pra ninguém, só serve pra outras pessoas te encontrarem.</p>
+          <p className="contact-onboarding-warning">Só digite um número que seja seu de verdade — usar o número de outra pessoa quebra os Termos de Uso e pode banir sua conta.</p>
           <input
             type="tel"
             className="contact-onboarding-input"
