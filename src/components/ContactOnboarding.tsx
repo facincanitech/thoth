@@ -8,9 +8,10 @@ import {
   selectOwnPhoneNumber,
 } from '../lib/deviceContacts'
 import { IconCheck, IconUser } from './icons'
+import { whatsappVerifyAvailable, createWhatsAppVerificationCode, whatsappVerifyUrl, getWhatsAppVerificationStatus } from '../lib/whatsappVerify'
 
 type Props = { me: Profile; onOpenContacts: () => void }
-type Step = 'intro' | 'manual' | 'confirm' | 'contacts' | 'done'
+type Step = 'intro' | 'whatsapp' | 'manual' | 'confirm' | 'contacts' | 'done'
 
 function displayPhone(value: string) {
   const digits = value.replace(/\D/g, '')
@@ -27,6 +28,7 @@ export function ContactOnboarding({ me, onOpenContacts }: Props) {
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [found, setFound] = useState(0)
+  const [whatsappCode, setWhatsappCode] = useState<string | null>(null)
 
   useEffect(() => {
     if (!deviceContactsAvailable()) return
@@ -44,6 +46,37 @@ export function ContactOnboarding({ me, onOpenContacts }: Props) {
     await supabase.rpc('mark_contact_onboarding_seen')
     setOpen(false)
   }
+
+  async function startWhatsApp() {
+    setBusy(true)
+    setMessage(null)
+    try {
+      const code = await createWhatsAppVerificationCode()
+      setWhatsappCode(code)
+      setStep('whatsapp')
+    } catch (error) {
+      console.error('create whatsapp verification failed', error)
+      setMessage('Não consegui gerar o código agora.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  useEffect(() => {
+    if (step !== 'whatsapp' || !whatsappCode) return
+    const interval = setInterval(async () => {
+      try {
+        const status = await getWhatsAppVerificationStatus(whatsappCode)
+        if (status.consumed) {
+          clearInterval(interval)
+          setStep('contacts')
+        }
+      } catch (error) {
+        console.error('whatsapp verification poll failed', error)
+      }
+    }, 3000)
+    return () => clearInterval(interval)
+  }, [step, whatsappCode])
 
   async function choosePhone() {
     setBusy(true)
@@ -118,10 +151,24 @@ export function ContactOnboarding({ me, onOpenContacts }: Props) {
         <div className="contact-onboarding-icon">{step === 'done' ? <IconCheck size={30} /> : <IconUser size={30} />}</div>
         {step === 'intro' && <>
           <h2>Quer encontrar seus contatos?</h2>
-          <p>Vincule o número oferecido pelo seu aparelho e descubra quem já usa o Thoth. Seu número não ficará público.</p>
+          <p>Confirme seu número e descubra quem já usa o Thoth. Ele não fica visível pra ninguém.</p>
+          {whatsappVerifyAvailable() && (
+            <button type="button" className="google-btn whatsapp-verify-btn" disabled={busy} onClick={startWhatsApp}>
+              {busy ? 'Gerando código…' : 'Confirmar pelo WhatsApp (recomendado)'}
+            </button>
+          )}
           <button type="button" className="google-btn" disabled={busy} onClick={choosePhone}>{busy ? 'Abrindo…' : 'Selecionar meu número'}</button>
           <button type="button" className="modal-close" onClick={() => { setMessage(null); setStep('manual') }}>Digitar o número na mão</button>
           <button type="button" className="modal-close" onClick={dismiss}>Agora não</button>
+        </>}
+        {step === 'whatsapp' && whatsappCode && <>
+          <h2>Confirme pelo WhatsApp</h2>
+          <p>Mande esta mensagem pro nosso WhatsApp — é rapidinho:</p>
+          <a className="google-btn whatsapp-verify-btn" href={whatsappVerifyUrl(whatsappCode)} target="_blank" rel="noreferrer" style={{ display: 'block', textAlign: 'center', textDecoration: 'none' }}>
+            Abrir WhatsApp e enviar "{whatsappCode}"
+          </a>
+          <p style={{ marginTop: 10, fontSize: '.8rem' }}>Esperando você mandar a mensagem…</p>
+          <button type="button" className="modal-close" onClick={() => setStep('intro')}>Voltar</button>
         </>}
         {step === 'manual' && <>
           <h2>Qual é o seu número?</h2>

@@ -31,6 +31,7 @@ import {
   type ContactsPermissionState,
   type DeviceContact,
 } from '../lib/deviceContacts'
+import { whatsappVerifyAvailable, createWhatsAppVerificationCode, whatsappVerifyUrl, getWhatsAppVerificationStatus } from '../lib/whatsappVerify'
 import {
   IconArchive,
   IconArrowLeft,
@@ -488,6 +489,8 @@ export function ChatList({
   const [phoneManualEntry, setPhoneManualEntry] = useState(false)
   const [phoneManualDraft, setPhoneManualDraft] = useState('')
   const [phoneManualConfirm, setPhoneManualConfirm] = useState('')
+  const [whatsappCode, setWhatsappCode] = useState<string | null>(null)
+  const [whatsappPolling, setWhatsappPolling] = useState(false)
 
   const [accountView, setAccountView] = useState<AccountView>('root')
   const [storeBackSignal, setStoreBackSignal] = useState(0)
@@ -581,6 +584,43 @@ export function ChatList({
     }
     await linkPhoneNumber(phone)
   }
+
+  // Verificacao real (numero confirmado pelo proprio WhatsApp) - ver src/lib/whatsappVerify.ts
+  async function startWhatsAppVerification() {
+    setContactsMessage(null)
+    try {
+      const code = await createWhatsAppVerificationCode()
+      setWhatsappCode(code)
+    } catch (cause) {
+      console.error('create whatsapp verification failed', cause)
+      setContactsMessage('Não consegui gerar o código agora. Tenta de novo.')
+    }
+  }
+
+  useEffect(() => {
+    if (!whatsappCode) return
+    let cancelled = false
+    setWhatsappPolling(true)
+    const interval = setInterval(async () => {
+      try {
+        const status = await getWhatsAppVerificationStatus(whatsappCode)
+        if (cancelled) return
+        if (status.consumed) {
+          clearInterval(interval)
+          setWhatsappPolling(false)
+          setWhatsappCode(null)
+          await loadPhoneDiscovery()
+          setContactsMessage('Número verificado pelo WhatsApp! ✅')
+        }
+      } catch (cause) {
+        console.error('whatsapp verification poll failed', cause)
+      }
+    }, 3000)
+    return () => {
+      cancelled = true
+      clearInterval(interval)
+    }
+  }, [whatsappCode])
 
   async function removeLinkedPhone() {
     setContactsLoading(true)
@@ -3034,6 +3074,25 @@ export function ChatList({
                     Permitir que me encontrem pelo número
                   </label>
                 )}
+
+                {whatsappVerifyAvailable() && (
+                  <div className="whatsapp-verify-block">
+                    {!whatsappCode ? (
+                      <button type="button" className="whatsapp-verify-btn" onClick={startWhatsAppVerification}>
+                        Confirmar número pelo WhatsApp (recomendado)
+                      </button>
+                    ) : (
+                      <>
+                        <small>Mande esta mensagem pro nosso WhatsApp pra confirmar que o número é seu:</small>
+                        <a className="whatsapp-verify-btn" href={whatsappVerifyUrl(whatsappCode)} target="_blank" rel="noreferrer">
+                          Abrir WhatsApp e enviar "{whatsappCode}"
+                        </a>
+                        <small className="invite-code">{whatsappPolling ? 'Esperando você mandar a mensagem…' : ''}</small>
+                      </>
+                    )}
+                  </div>
+                )}
+
                 <div className="privacy-contacts-actions">
                   {deviceContactsAvailable() ? (
                     <button type="button" disabled={contactsLoading} onClick={changeLinkedPhone}>

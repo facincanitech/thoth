@@ -2644,6 +2644,9 @@ html .desktop-window-shell.desktop-web-shell{
 .privacy-contacts-manual-phone{display:flex;gap:6px}
 .privacy-contacts-manual-phone input{flex:1;min-width:0}
 .privacy-contacts-warning{color:var(--danger,#e5484d);line-height:1.4}
+.whatsapp-verify-block{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+.whatsapp-verify-btn{display:block;text-align:center;padding:10px;border-radius:11px;border:0;background:#25d366;color:#04220f;font-weight:700;text-decoration:none;cursor:pointer}
+.whatsapp-verify-btn:hover{filter:brightness(.96)}
 @media(max-width:520px){
   .device-contact-row{align-items:center}
   .device-contact-row button{padding:7px 9px;font-size:.72rem}
