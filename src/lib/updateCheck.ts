@@ -1,4 +1,5 @@
 import { Capacitor } from '@capacitor/core'
+import { App as CapacitorApp } from '@capacitor/app'
 import { isTauriDesktop } from './platform'
 
 export type UpdateInfo = { available: boolean; version?: string }
@@ -26,6 +27,14 @@ export function isVersionNewer(remoteVersion: string, currentVersion: string): b
 
 export async function checkForUpdate(currentVersion: string): Promise<UpdateInfo> {
   try {
+    // No Android a interface vem do site publicado e APP_VERSION representa o bundle web,
+    // nao o APK instalado. Consulte o versionName nativo para o sininho continuar detectando
+    // atualizacoes de APK mesmo quando o JavaScript remoto ja esta na versao mais recente.
+    let installedVersion = currentVersion
+    if (Capacitor.isNativePlatform()) {
+      const appInfo = await CapacitorApp.getInfo()
+      installedVersion = appInfo.version || currentVersion
+    }
     const res = await fetch(
       `https://facincanitech.github.io/thoth/version.json?t=${Date.now()}`,
       { cache: 'no-store' },
@@ -42,7 +51,7 @@ export async function checkForUpdate(currentVersion: string): Promise<UpdateInfo
     // Web e deploy do site podem estar na frente dos binarios publicados. APK
     // e desktop so olham seus campos proprios, atualizados ao publicar a release.
     const remote = String(platformVersion || '')
-    if (remote && isVersionNewer(remote, currentVersion)) {
+    if (remote && isVersionNewer(remote, installedVersion)) {
       return { available: true, version: remote }
     }
     return { available: false }
