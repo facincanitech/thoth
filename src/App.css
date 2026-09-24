@@ -2497,12 +2497,12 @@ html .desktop-window-shell:not(.desktop-chat-shell) .chats{width:auto;flex:1 1 0
 html .desktop-window-shell.desktop-web-shell .chats{width:clamp(330px,28vw,420px);flex:none;min-width:0;border-right:1px solid var(--line)}
 html .desktop-window-shell.desktop-web-shell .main{width:auto;flex:1;min-width:0}
 html .desktop-window-shell.desktop-web-shell{
-  width:113.6364vw;
-  height:113.6364dvh;
+  width:125vw;
+  height:125dvh;
   border:0;
   border-radius:0;
   box-shadow:none;
-  transform:scale(.88);
+  transform:scale(.8);
   transform-origin:top left;
 }
 
