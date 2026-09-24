@@ -32,6 +32,7 @@ import {
   type DeviceContact,
 } from '../lib/deviceContacts'
 import { whatsappVerifyAvailable, createWhatsAppVerificationCode, whatsappVerifyUrl, getWhatsAppVerificationStatus } from '../lib/whatsappVerify'
+import { PHONE_LINK_ENABLED } from '../lib/featureFlags'
 import {
   IconArchive,
   IconArrowLeft,
@@ -3062,6 +3063,7 @@ export function ChatList({
               <span>Contatos bloqueados</span>
             </div>
 
+            {PHONE_LINK_ENABLED && (
             <div className="privacy-contacts-card" style={{ margin: '14px 0 0' }}>
               <div className="option-icon"><IconUser size={20} /></div>
               <div className="privacy-contacts-copy">
@@ -3140,6 +3142,7 @@ export function ChatList({
                 })()}
               </div>
             </div>
+            )}
             <div className="privacy-contacts-card">
               <div className="option-icon"><IconUser size={20} /></div>
               <div className="privacy-contacts-copy">

@@ -9,6 +9,7 @@ import {
 } from '../lib/deviceContacts'
 import { IconCheck, IconUser } from './icons'
 import { whatsappVerifyAvailable, createWhatsAppVerificationCode, whatsappVerifyUrl, getWhatsAppVerificationStatus } from '../lib/whatsappVerify'
+import { PHONE_LINK_ENABLED } from '../lib/featureFlags'
 
 type Props = { me: Profile; onOpenContacts: () => void }
 type Step = 'intro' | 'whatsapp' | 'manual' | 'confirm' | 'contacts' | 'done'
@@ -23,7 +24,8 @@ function displayPhone(value: string) {
 
 export function ContactOnboarding({ me, onOpenContacts }: Props) {
   const [open, setOpen] = useState(false)
-  const [step, setStep] = useState<Step>('intro')
+  // Vincular número está desligado por enquanto (ver PHONE_LINK_ENABLED) - vai direto pra agenda.
+  const [step, setStep] = useState<Step>(PHONE_LINK_ENABLED ? 'intro' : 'contacts')
   const [phone, setPhone] = useState('')
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
@@ -193,10 +195,10 @@ export function ContactOnboarding({ me, onOpenContacts }: Props) {
           <button type="button" className="modal-close" onClick={() => setStep('intro')}>Escolher outro</button>
         </>}
         {step === 'contacts' && <>
-          <h2>Agora permita sua agenda</h2>
-          <p>O Thoth compara telefones e e-mails e salva somente os perfis encontrados. A agenda bruta permanece no aparelho.</p>
+          <h2>Quer encontrar seus contatos?</h2>
+          <p>O Thoth compara telefones e e-mails da sua agenda com quem já usa o app e salva somente os perfis encontrados. A agenda bruta permanece no aparelho.</p>
           <button type="button" className="google-btn" disabled={busy} onClick={allowContacts}>{busy ? 'Procurando…' : 'Permitir agenda'}</button>
-          <button type="button" className="modal-close" onClick={dismiss}>Fazer depois</button>
+          <button type="button" className="modal-close" onClick={dismiss}>Agora não</button>
         </>}
         {step === 'done' && <>
           <h2>Contatos encontrados</h2>
