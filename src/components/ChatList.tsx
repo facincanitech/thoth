@@ -12,7 +12,7 @@ import { ThothStore } from './ThothStore'
 import { StatusView } from './StatusView'
 import { readCache, writeCache } from '../lib/cache'
 import { APP_VERSION, APK_DOWNLOAD_URL, DESKTOP_DOWNLOAD_URL } from '../version'
-import { checkForUpdate } from '../lib/updateCheck'
+import { checkForUpdate, getInstalledVersion, isVersionNewer } from '../lib/updateCheck'
 import { downloadAndInstallUpdate } from '../lib/appUpdate'
 import { downloadAndInstallDesktopUpdate } from '../lib/desktopUpdate'
 import { isTauriDesktop } from '../lib/platform'
@@ -508,10 +508,14 @@ export function ChatList({
     }
   }, [accountView])
   const [latestVersion, setLatestVersion] = useState<string>(APP_VERSION)
+  const [installedVersion, setInstalledVersion] = useState<string>(APP_VERSION)
   const [appUpdating, setAppUpdating] = useState(false)
 
   useEffect(() => {
-    if (accountView !== 'account') return
+    // A tela "Sobre" (Baixar o app / notas da versão) é quem mostra isso - "account" aqui virou
+    // Configurações e não usa mais esse estado (ver reorganização 24/09 no CLAUDE.md).
+    if (accountView !== 'about') return
+    getInstalledVersion(APP_VERSION).then(setInstalledVersion)
     checkForUpdate(APP_VERSION).then((info) => {
       setLatestVersion(info.available && info.version ? info.version : APP_VERSION)
     })
@@ -521,6 +525,7 @@ export function ChatList({
     // No desktop checa direto ao logar (sem precisar abrir a tela de conta),
     // pra dar pra mostrar um aviso no sininho da notificacao.
     if (!isTauriDesktop || !me) return
+    getInstalledVersion(APP_VERSION).then(setInstalledVersion)
     checkForUpdate(APP_VERSION).then((info) => {
       setLatestVersion(info.available && info.version ? info.version : APP_VERSION)
     })
@@ -3244,7 +3249,7 @@ export function ChatList({
               {appUpdating ? 'Baixando...' : `Baixar o app (${isTauriDesktop ? 'Windows' : 'Android'}) — v${latestVersion}`}
             </button>
             <span className="invite-code">
-              {latestVersion !== APP_VERSION ? `sua versão instalada: v${APP_VERSION}` : 'você já está na versão mais nova'}
+              {isVersionNewer(latestVersion, installedVersion) ? `sua versão instalada: v${installedVersion}` : 'você já está na versão mais nova'}
             </span>
 
             <label style={{ marginTop: 14 }}>Notas da versão</label>

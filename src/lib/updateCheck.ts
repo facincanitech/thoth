@@ -25,16 +25,23 @@ export function isVersionNewer(remoteVersion: string, currentVersion: string): b
   return false
 }
 
+// No Android a interface vem do site publicado, entao APP_VERSION (a const do bundle JS) e' sempre
+// a versao mais recente do SITE, nao do APK instalado - as duas podem divergir a qualquer momento
+// (ex.: alguem so deu `npm run deploy` sem gerar APK novo). Consulta o versionName nativo de verdade
+// via @capacitor/app pra qualquer lugar que precise saber "qual versao esta instalada de fato".
+export async function getInstalledVersion(currentVersion: string): Promise<string> {
+  if (!Capacitor.isNativePlatform()) return currentVersion
+  try {
+    const appInfo = await CapacitorApp.getInfo()
+    return appInfo.version || currentVersion
+  } catch {
+    return currentVersion
+  }
+}
+
 export async function checkForUpdate(currentVersion: string): Promise<UpdateInfo> {
   try {
-    // No Android a interface vem do site publicado e APP_VERSION representa o bundle web,
-    // nao o APK instalado. Consulte o versionName nativo para o sininho continuar detectando
-    // atualizacoes de APK mesmo quando o JavaScript remoto ja esta na versao mais recente.
-    let installedVersion = currentVersion
-    if (Capacitor.isNativePlatform()) {
-      const appInfo = await CapacitorApp.getInfo()
-      installedVersion = appInfo.version || currentVersion
-    }
+    const installedVersion = await getInstalledVersion(currentVersion)
     const res = await fetch(
       `https://facincanitech.github.io/thoth/version.json?t=${Date.now()}`,
       { cache: 'no-store' },
