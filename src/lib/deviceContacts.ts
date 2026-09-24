@@ -54,7 +54,7 @@ function whatsappPhone(phone?: string) {
 
 export async function shareThothInvite(name?: string, phone?: string) {
   const greeting = name ? `Oi, ${name}!` : 'Oi!'
-  const url = 'https://facincanitech.github.io/thoth/'
+  const url = 'https://facincanitech.github.io/thoth/site'
   const text = `${greeting} Vem conversar comigo no Thoth Messenger! Você pode usar pelo navegador ou baixar o app aqui:\n\n${url}`
   const directPhone = whatsappPhone(phone)
   if (deviceContactsAvailable()) {
