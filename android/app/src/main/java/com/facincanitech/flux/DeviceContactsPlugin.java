@@ -3,6 +3,7 @@ package com.facincanitech.flux;
 import android.Manifest;
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
+import android.app.Activity;
 import android.net.Uri;
 import android.provider.ContactsContract;
 import android.provider.Settings;
@@ -16,6 +17,8 @@ import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
 import com.getcapacitor.annotation.Permission;
 import com.getcapacitor.annotation.PermissionCallback;
+import com.getcapacitor.annotation.ActivityCallback;
+import androidx.activity.result.ActivityResult;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -25,6 +28,27 @@ import java.util.Map;
     permissions = @Permission(alias = "contacts", strings = { Manifest.permission.READ_CONTACTS })
 )
 public class DeviceContactsPlugin extends Plugin {
+    @PluginMethod
+    public void selectOwnPhoneNumber(PluginCall call) {
+        Intent intent = new Intent(getContext(), PhoneHintActivity.class);
+        startActivityForResult(call, intent, "phoneHintResult");
+    }
+
+    @ActivityCallback
+    private void phoneHintResult(PluginCall call, ActivityResult result) {
+        if (call == null) return;
+        Intent data = result.getData();
+        if (result.getResultCode() != Activity.RESULT_OK || data == null) {
+            JSObject response = new JSObject();
+            response.put("phone", "");
+            call.resolve(response);
+            return;
+        }
+        JSObject response = new JSObject();
+        response.put("phone", data.getStringExtra("phone"));
+        call.resolve(response);
+    }
+
     private static class ContactRow {
         final String id;
         String name;

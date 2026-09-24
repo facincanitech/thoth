@@ -28,6 +28,7 @@ import { ensureCallWindow, openChatWindow, openPlayWindow, requestCall } from '.
 import { DesktopTitleBar } from './components/DesktopChrome'
 import { showDesktopToast } from './lib/desktopToast'
 import { InviteChooser } from './components/InviteChooser'
+import { ContactOnboarding } from './components/ContactOnboarding'
 import { parseInviteDeepLink } from './lib/inviteLink'
 import { applyCommunityTheme, hydrateInstalledMedia, type StoreItem } from './lib/store'
 import { isBuiltInTheme } from './lib/storeDefaults'
@@ -613,7 +614,7 @@ function App() {
       setAccountOpen(false)
       setGroupsOpen(false)
       setPlayOpen(false)
-      setPanelView('root')
+      setPanelView('contact')
       setPanelOpen(true)
     })
   }
@@ -827,6 +828,7 @@ function App() {
       </>
       )}
       {authOpen && <AuthModal onClose={() => setAuthOpen(false)} />}
+      {profile && <ContactOnboarding me={profile} onOpenContacts={() => { setPanelView('contact'); setPanelOpen(true) }} />}
       {!isTauriDesktop && <CallOverlay ref={callOverlayRef} me={profile} />}
     </div>
   )

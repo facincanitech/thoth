@@ -26,6 +26,7 @@ import {
   openContactsSettings,
   readDeviceContacts,
   requestContactsPermission,
+  selectOwnPhoneNumber,
   shareThothInvite,
   type ContactsPermissionState,
   type DeviceContact,
@@ -71,7 +72,17 @@ export const BANNER_COLORS = [
 ]
 
 type FilterKey = 'all' | 'favorites' | 'archived' | 'group' | 'communities'
-type SyncedContact = Pick<Profile, 'id' | 'username' | 'display_name' | 'email' | 'avatar_url'>
+type SyncedContact = Pick<Profile, 'id' | 'username' | 'display_name' | 'email' | 'avatar_url'> & {
+  matched_emails?: string[]
+  matched_phones?: string[]
+}
+
+function normalizePhoneForCompare(value: string) {
+  let digits = value.replace(/\D/g, '')
+  if (digits.startsWith('00')) digits = digits.slice(2)
+  if (digits.length === 10 || digits.length === 11) digits = `55${digits}`
+  return digits
+}
 const DEFAULT_FILTER_ORDER: FilterKey[] = ['all', 'favorites', 'archived', 'group', 'communities']
 const FILTER_LABELS: Record<FilterKey, string> = {
   all: 'Todos',
@@ -471,6 +482,9 @@ export function ChatList({
   const [syncedContacts, setSyncedContacts] = useState<SyncedContact[]>([])
   const [contactsLoading, setContactsLoading] = useState(false)
   const [contactsMessage, setContactsMessage] = useState<string | null>(null)
+  const [phoneLinked, setPhoneLinked] = useState(false)
+  const [phoneLast4, setPhoneLast4] = useState<string | null>(null)
+  const [phoneDiscoverable, setPhoneDiscoverable] = useState(true)
 
   const [accountView, setAccountView] = useState<AccountView>('root')
   const [storeBackSignal, setStoreBackSignal] = useState(0)
@@ -513,6 +527,60 @@ export function ChatList({
     setSyncedContacts((data || []) as SyncedContact[])
   }
 
+  async function loadPhoneDiscovery() {
+    if (!me) return
+    const { data, error: phoneError } = await supabase.rpc('get_my_contact_discovery')
+    if (phoneError) {
+      console.error('phone discovery status failed', phoneError)
+      return
+    }
+    const status = data?.[0]
+    setPhoneLinked(!!status?.phone_linked)
+    setPhoneLast4(status?.phone_last4 || null)
+    setPhoneDiscoverable(status?.discoverable_by_phone !== false)
+  }
+
+  async function changeLinkedPhone() {
+    setContactsLoading(true)
+    setContactsMessage(null)
+    try {
+      const phone = await selectOwnPhoneNumber()
+      if (!phone) {
+        setContactsMessage('O Android não encontrou um número disponível neste aparelho.')
+        return
+      }
+      const { error: phoneError } = await supabase.rpc('link_device_phone', { p_phone: phone })
+      if (phoneError) throw phoneError
+      await loadPhoneDiscovery()
+      setContactsMessage('Número vinculado à sua conta.')
+    } catch (cause) {
+      console.error('link phone failed', cause)
+      setContactsMessage(getErrorMessage(cause).includes('already linked') ? 'Este número já está vinculado a outra conta.' : 'Não foi possível vincular o número.')
+    } finally {
+      setContactsLoading(false)
+    }
+  }
+
+  async function removeLinkedPhone() {
+    setContactsLoading(true)
+    const { error: phoneError } = await supabase.rpc('unlink_my_device_phone')
+    if (phoneError) setContactsMessage('Não foi possível remover o número.')
+    else {
+      setPhoneLinked(false)
+      setPhoneLast4(null)
+      setPhoneDiscoverable(false)
+      setContactsMessage('Número removido da sua conta.')
+    }
+    setContactsLoading(false)
+  }
+
+  async function togglePhoneDiscovery() {
+    const next = !phoneDiscoverable
+    const { error: phoneError } = await supabase.rpc('set_phone_discovery_enabled', { p_enabled: next })
+    if (phoneError) setContactsMessage('Não foi possível alterar essa opção.')
+    else setPhoneDiscoverable(next)
+  }
+
   async function syncDeviceContacts() {
     if (!me || !deviceContactsAvailable()) return
     setContactsLoading(true)
@@ -521,7 +589,8 @@ export function ChatList({
       const contacts = await readDeviceContacts()
       setPhoneContacts(contacts)
       const emails = [...new Set(contacts.flatMap((contact) => contact.emails).map((email) => email.trim().toLowerCase()).filter(Boolean))]
-      const { data, error: syncError } = await supabase.rpc('sync_contact_emails', { p_emails: emails })
+      const phones = [...new Set(contacts.flatMap((contact) => contact.phones).map((phone) => phone.trim()).filter(Boolean))]
+      const { data, error: syncError } = await supabase.rpc('sync_contact_identifiers', { p_emails: emails, p_phones: phones })
       if (syncError) throw syncError
       setSyncedContacts((data || []) as SyncedContact[])
       setContactsMessage(contacts.length ? null : 'Nenhum contato foi encontrado neste aparelho.')
@@ -587,6 +656,7 @@ export function ChatList({
   useEffect(() => {
     if (accountView !== 'privacy' || !me) return
     loadSyncedContacts()
+    loadPhoneDiscovery()
     if (deviceContactsAvailable()) {
       getContactsPermission().then(setContactsPermission).catch((cause) => {
         console.error('contacts permission status failed', cause)
@@ -924,17 +994,18 @@ export function ChatList({
     setInviteSent(false)
   }
 
-  async function startDm(emailOverride?: string) {
+  async function startDm(contactOverride?: string) {
     if (!me) return
     setError(null)
     setBusy(true)
     setInviteSent(false)
     try {
-      const email = (emailOverride || dmEmail).trim().toLowerCase()
-      if (!email) return
-      if (email === me.email) throw new Error('Esse é você')
+      const contactQuery = (contactOverride || dmEmail).trim()
+      const isEmail = contactQuery.includes('@')
+      if (!contactQuery) return
+      if (isEmail && contactQuery.toLowerCase() === me.email) throw new Error('Esse é você')
 
-      const { data: found, error: findErr } = await supabase.rpc('find_profile_by_email', { p_email: email })
+      const { data: found, error: findErr } = await supabase.rpc('find_profile_by_contact', { p_query: contactQuery })
       if (findErr) throw findErr
       const target = found?.[0]
 
@@ -997,6 +1068,7 @@ export function ChatList({
             .insert({ conversation_id: conv.id, user_id: target.id })
           if (memberErr) throw memberErr
         } else {
+          if (!isEmail) throw new Error('Não encontramos esse número no Thoth. Confira o DDD ou convide pela agenda.')
           await supabase.auth.refreshSession()
           const { data: sessionData } = await supabase.auth.getSession()
           const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/invite-by-email`, {
@@ -1006,7 +1078,7 @@ export function ChatList({
               Authorization: `Bearer ${sessionData.session?.access_token}`,
               apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
             },
-            body: JSON.stringify({ email, conversationId: conv.id }),
+            body: JSON.stringify({ email: contactQuery.toLowerCase(), conversationId: conv.id }),
           })
           const body = await res.json()
           if (!res.ok) throw new Error(body.error || 'Falha ao convidar')
@@ -1787,7 +1859,7 @@ export function ChatList({
     panelView === 'root'
       ? 'Nova conversa'
       : panelView === 'contact'
-        ? 'Novo contato'
+        ? 'Adicionar contato'
         : panelView === 'group'
           ? 'Novo grupo'
           : (friendsView === 'add' ? 'Adicionar amigo' : 'Amigos')
@@ -2093,8 +2165,12 @@ export function ChatList({
     )
   }
 
-  const syncedEmailSet = new Set(syncedContacts.map((contact) => contact.email.toLowerCase()))
-  const contactsToInvite = phoneContacts.filter((contact) => !contact.emails.some((email) => syncedEmailSet.has(email.toLowerCase())))
+  const matchedEmailSet = new Set(syncedContacts.flatMap((contact) => contact.matched_emails || [contact.email]).map((email) => email.toLowerCase()))
+  const matchedPhoneSet = new Set(syncedContacts.flatMap((contact) => contact.matched_phones || []).map(normalizePhoneForCompare))
+  const contactsToInvite = phoneContacts.filter((contact) =>
+    !contact.emails.some((email) => matchedEmailSet.has(email.toLowerCase()))
+    && !contact.phones.some((phone) => matchedPhoneSet.has(normalizePhoneForCompare(phone))),
+  )
 
   return (
     <section className="chats">
@@ -2163,7 +2239,7 @@ export function ChatList({
                       onClick={() => { setQuickMenuOpen(false); onPanelOpenChange(true); onPanelViewChange('contact') }}
                     >
                       <IconUser size={17} />
-                      <span>Novo contato</span>
+                      <span>Adicionar contato</span>
                     </button>
                     <button
                       type="button"
@@ -2497,7 +2573,7 @@ export function ChatList({
           <div className="new-conv-list">
             <div className="new-conv-option" onClick={() => onPanelViewChange('contact')}>
               <div className="option-icon"><IconUser size={20} /></div>
-              <span>Novo contato</span>
+              <span>Adicionar contato</span>
             </div>
             <div className="new-conv-option" onClick={() => { setFriendsView('list'); onPanelViewChange('friends') }}>
               <div className="option-icon"><IconHeart size={20} /></div>
@@ -2618,16 +2694,16 @@ export function ChatList({
         {panelView === 'contact' && (
           <div className="new-contact-screen">
             <div className="new-conv-form contact-email-search">
-              <label>Buscar por e-mail</label>
+              <label>Buscar contato</label>
               <input
-                type="email"
-                placeholder="Digite o e-mail exato da pessoa"
+                type="text"
+                placeholder="E-mail ou telefone com DDD"
                 value={dmEmail}
                 onChange={(e) => setDmEmail(e.target.value)}
                 autoFocus
               />
               <button type="button" disabled={busy || !dmEmail.trim()} onClick={() => startDm()}>Conversar</button>
-              <span className="invite-code">Use o e-mail cadastrado na conta Thoth.</span>
+              <span className="invite-code">Use o e-mail da conta ou o telefone completo com DDD.</span>
               {inviteSent && <span className="invite-code">Essa pessoa ainda não tem conta — enviamos um convite por e-mail.</span>}
               {error && <span className="auth-error">{error}</span>}
             </div>
@@ -3004,6 +3080,30 @@ export function ChatList({
             <div className="privacy-contacts-card">
               <div className="option-icon"><IconUser size={20} /></div>
               <div className="privacy-contacts-copy">
+                <strong>Meu número</strong>
+                <span>{phoneLinked && phoneLast4 ? `Número vinculado •••• ${phoneLast4}` : 'Nenhum número vinculado.'}</span>
+                <small>Usado somente para que seus contatos encontrem você. O número completo não aparece no perfil.</small>
+                {phoneLinked && (
+                  <label className="phone-discovery-toggle">
+                    <input type="checkbox" checked={phoneDiscoverable} onChange={togglePhoneDiscovery} />
+                    Permitir que me encontrem pelo número
+                  </label>
+                )}
+                <div className="privacy-contacts-actions">
+                  {deviceContactsAvailable() ? (
+                    <button type="button" disabled={contactsLoading} onClick={changeLinkedPhone}>
+                      {phoneLinked ? 'Trocar número' : 'Vincular número'}
+                    </button>
+                  ) : (
+                    <span className="invite-code">O número é vinculado pelo APK.</span>
+                  )}
+                  {phoneLinked && <button type="button" className="secondary" disabled={contactsLoading} onClick={removeLinkedPhone}>Remover</button>}
+                </div>
+              </div>
+            </div>
+            <div className="privacy-contacts-card">
+              <div className="option-icon"><IconUser size={20} /></div>
+              <div className="privacy-contacts-copy">
                 <strong>Contatos do celular</strong>
                 <span>
                   {syncedContacts.length
@@ -3057,8 +3157,8 @@ export function ChatList({
               de aberta ou após 10 minutos.
             </p>
             <p>
-              No APK, você pode autorizar o acesso aos contatos para descobrir quem já usa o Thoth.
-              A leitura só acontece quando você usa esse recurso. Os e-mails da agenda são comparados
+              No APK, você pode vincular o número oferecido pelo aparelho e autorizar o acesso aos contatos para descobrir quem já usa o Thoth.
+              A leitura só acontece quando você usa esse recurso. Telefones e e-mails da agenda são comparados
               com contas do Thoth, mas a agenda bruta não é armazenada: salvamos somente os perfis
               encontrados para que eles também apareçam no Web e no desktop. Contatos sem conta
               permanecem no aparelho e só recebem um convite quando você toca em “Convidar”.

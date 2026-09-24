@@ -114,10 +114,10 @@ export function Rail({ me, onRequireAuth, onNewConversation, onOpenAccount, onOp
         )}
       </div>
       <div className="rail-item">
-        <button type="button" className="rail-link" title="Nova conversa" onClick={onNewConversation}
+        <button type="button" className="rail-link" title="Adicionar contato" onClick={onNewConversation}
           aria-current={activeSection === 'new' ? 'page' : undefined}>
           <span className="rail-symbol"><IconPlus /></span>
-          <span className="rail-label">Novo</span>
+          <span className="rail-label">Contato</span>
         </button>
         {pendingCount > 0 && (
           <span className="rail-badge" title={`${pendingCount} solicitação(ões) de amizade`}>

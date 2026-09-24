@@ -26,7 +26,7 @@
     <li><strong>Perfil:</strong> status, idade, cidade, foto de capa e preferências de aparência — todos opcionais, preenchidos por você.</li>
     <li><strong>Conteúdo do app:</strong> mensagens, mídia (imagens, vídeos, áudios) enviadas em conversas, status temporários (24h), e metadados de uso (presença online/offline, confirmação de leitura).</li>
     <li><strong>Notificações push:</strong> um token de dispositivo (Firebase Cloud Messaging) para enviar notificações de novas mensagens.</li>
-    <li><strong>Contatos do celular (opcional):</strong> no Android, com sua autorização, o app lê nomes, telefones e e-mails da agenda para exibir seus contatos e encontrar pessoas que já usam o Thoth.</li>
+    <li><strong>Número e contatos do celular (opcionais):</strong> no Android, você pode vincular à conta um número oferecido pelo próprio aparelho. Com sua autorização, o app também lê nomes, telefones e e-mails da agenda para encontrar pessoas que já usam o Thoth.</li>
   </ul>
 
   <h2>Como usamos os dados</h2>
@@ -36,7 +36,7 @@
   <p>Os dados são armazenados em um banco de dados gerenciado pelo Supabase (infraestrutura na nuvem), protegido por regras de acesso que garantem que cada usuário só acesse dados de conversas das quais participa.</p>
 
   <h2>Como usamos os contatos do celular</h2>
-  <p>O acesso à agenda é opcional e só é solicitado quando você abre o recurso de contatos. Os e-mails encontrados são enviados de forma temporária para comparação exata com contas cadastradas no Thoth. Não armazenamos a lista bruta da agenda, os números de telefone nem os contatos que não usam o Thoth. Guardamos apenas os identificadores dos perfis encontrados, vinculados à sua conta, para que eles também apareçam quando você usar o Web ou o desktop.</p>
+  <p>O acesso à agenda é opcional. Telefones e e-mails encontrados são enviados de forma temporária para comparação exata com contas cadastradas no Thoth. O número vinculado à sua conta é normalizado e armazenado somente como hash não reversível, além dos quatro últimos dígitos para identificação no perfil. Ele não é exibido publicamente nem usado para login. Não armazenamos a lista bruta da agenda nem os contatos que não usam o Thoth. Guardamos apenas os identificadores dos perfis encontrados, vinculados à sua conta, para que eles também apareçam quando você usar o Web ou o desktop.</p>
   <p>Um contato que não usa o Thoth só recebe alguma informação se você tocar em <strong>Convidar</strong>; nesse caso, o Android abre o WhatsApp ou o menu de compartilhamento para você decidir se deseja enviar o link. Você pode revogar a permissão nas configurações do Android e remover os contatos sincronizados em <strong>Perfil → Privacidade</strong>.</p>
 
   <h2>Exclusão de conta e dados</h2>

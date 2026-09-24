@@ -10,6 +10,7 @@ export type DeviceContact = {
 export type ContactsPermissionState = 'granted' | 'denied' | 'prompt' | 'prompt-with-rationale'
 
 type DeviceContactsPlugin = {
+  selectOwnPhoneNumber(): Promise<{ phone: string }>
   permissionStatus(): Promise<{ state: ContactsPermissionState }>
   requestAccess(): Promise<{ state: ContactsPermissionState }>
   openSettings(): Promise<void>
@@ -20,6 +21,11 @@ type DeviceContactsPlugin = {
 const NativeContacts = registerPlugin<DeviceContactsPlugin>('DeviceContacts')
 
 export const deviceContactsAvailable = () => Capacitor.isNativePlatform()
+
+export async function selectOwnPhoneNumber() {
+  if (!deviceContactsAvailable()) return ''
+  return (await NativeContacts.selectOwnPhoneNumber()).phone || ''
+}
 
 export async function getContactsPermission() {
   if (!deviceContactsAvailable()) return 'denied' as const
