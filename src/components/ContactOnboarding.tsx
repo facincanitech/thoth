@@ -10,7 +10,7 @@ import {
 import { IconCheck, IconUser } from './icons'
 
 type Props = { me: Profile; onOpenContacts: () => void }
-type Step = 'intro' | 'confirm' | 'contacts' | 'done'
+type Step = 'intro' | 'manual' | 'confirm' | 'contacts' | 'done'
 
 function displayPhone(value: string) {
   const digits = value.replace(/\D/g, '')
@@ -51,14 +51,18 @@ export function ContactOnboarding({ me, onOpenContacts }: Props) {
     try {
       const selected = await selectOwnPhoneNumber()
       if (!selected) {
-        setMessage('O Android não encontrou um número neste aparelho. Você ainda pode encontrar pessoas pelo e-mail.')
+        // Frequente em SIM brasileiro: a operadora não guarda o próprio número no chip, então o
+        // Android não tem de onde sugerir - deixa a pessoa digitar em vez de travar aqui.
+        setMessage('O Android não encontrou automaticamente. Digite seu número.')
+        setStep('manual')
         return
       }
       setPhone(selected)
       setStep('confirm')
     } catch (error) {
       console.error('phone hint failed', error)
-      setMessage('Não foi possível obter o número deste aparelho.')
+      setMessage('Não foi possível abrir a seleção de número. Digite abaixo.')
+      setStep('manual')
     } finally {
       setBusy(false)
     }
@@ -116,7 +120,22 @@ export function ContactOnboarding({ me, onOpenContacts }: Props) {
           <h2>Quer encontrar seus contatos?</h2>
           <p>Vincule o número oferecido pelo seu aparelho e descubra quem já usa o Thoth. Seu número não ficará público.</p>
           <button type="button" className="google-btn" disabled={busy} onClick={choosePhone}>{busy ? 'Abrindo…' : 'Selecionar meu número'}</button>
+          <button type="button" className="modal-close" onClick={() => { setMessage(null); setStep('manual') }}>Digitar o número na mão</button>
           <button type="button" className="modal-close" onClick={dismiss}>Agora não</button>
+        </>}
+        {step === 'manual' && <>
+          <h2>Qual é o seu número?</h2>
+          <p>Digite com DDD, sem o +55. Ele não fica visível pra ninguém, só serve pra outras pessoas te encontrarem.</p>
+          <input
+            type="tel"
+            className="contact-onboarding-input"
+            placeholder="ex.: 11987654321"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            autoFocus
+          />
+          <button type="button" className="google-btn" disabled={busy || !phone.trim()} onClick={() => setStep('confirm')}>Continuar</button>
+          <button type="button" className="modal-close" onClick={() => setStep('intro')}>Voltar</button>
         </>}
         {step === 'confirm' && <>
           <h2>Este é seu número?</h2>

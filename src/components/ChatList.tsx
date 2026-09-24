@@ -54,7 +54,7 @@ import {
 } from './icons'
 import type { Community, ContactCategory, Conversation, PanelView, Profile } from '../types'
 
-type AccountView = 'root' | 'profile' | 'appearance' | 'library' | 'store' | 'account' | 'privacy' | 'blocked' | 'terms' | 'privacy-policy'
+type AccountView = 'root' | 'profile' | 'appearance' | 'library' | 'store' | 'account' | 'about' | 'privacy' | 'blocked' | 'terms' | 'privacy-policy'
 
 export type GroupsView =
   | 'group-root' | 'group-create' | 'group-search' | 'group-trending' | 'group-mine'
@@ -485,6 +485,8 @@ export function ChatList({
   const [phoneLinked, setPhoneLinked] = useState(false)
   const [phoneLast4, setPhoneLast4] = useState<string | null>(null)
   const [phoneDiscoverable, setPhoneDiscoverable] = useState(true)
+  const [phoneManualEntry, setPhoneManualEntry] = useState(false)
+  const [phoneManualDraft, setPhoneManualDraft] = useState('')
 
   const [accountView, setAccountView] = useState<AccountView>('root')
   const [storeBackSignal, setStoreBackSignal] = useState(0)
@@ -540,18 +542,15 @@ export function ChatList({
     setPhoneDiscoverable(status?.discoverable_by_phone !== false)
   }
 
-  async function changeLinkedPhone() {
+  async function linkPhoneNumber(phone: string) {
     setContactsLoading(true)
     setContactsMessage(null)
     try {
-      const phone = await selectOwnPhoneNumber()
-      if (!phone) {
-        setContactsMessage('O Android não encontrou um número disponível neste aparelho.')
-        return
-      }
       const { error: phoneError } = await supabase.rpc('link_device_phone', { p_phone: phone })
       if (phoneError) throw phoneError
       await loadPhoneDiscovery()
+      setPhoneManualEntry(false)
+      setPhoneManualDraft('')
       setContactsMessage('Número vinculado à sua conta.')
     } catch (cause) {
       console.error('link phone failed', cause)
@@ -559,6 +558,26 @@ export function ChatList({
     } finally {
       setContactsLoading(false)
     }
+  }
+
+  async function changeLinkedPhone() {
+    setContactsLoading(true)
+    setContactsMessage(null)
+    let phone = ''
+    try {
+      phone = await selectOwnPhoneNumber()
+    } catch (cause) {
+      console.error('phone hint failed', cause)
+    }
+    if (!phone) {
+      // Comum em SIM brasileiro: a operadora não guarda o próprio número no chip, e o Android
+      // não tem de onde puxar a sugestão - nesse caso deixa digitar na mão em vez de travar aqui.
+      setContactsMessage('O Android não encontrou automaticamente. Digite seu número abaixo.')
+      setPhoneManualEntry(true)
+      setContactsLoading(false)
+      return
+    }
+    await linkPhoneNumber(phone)
   }
 
   async function removeLinkedPhone() {
@@ -1809,6 +1828,8 @@ export function ChatList({
           ? 'Minha coleção'
         : accountView === 'account'
           ? 'Configurações'
+        : accountView === 'about'
+          ? 'Sobre'
           : accountView === 'privacy'
             ? 'Privacidade'
             : accountView === 'terms'
@@ -2822,6 +2843,13 @@ export function ChatList({
                   <div className="option-subtitle">Tema, dados da conta, sair</div>
                 </div>
               </div>
+              <div className="new-conv-option" onClick={() => setAccountView('about')}>
+                <div className="option-icon"><IconDownload size={20} /></div>
+                <div>
+                  <div>Sobre</div>
+                  <div className="option-subtitle">Versão do app, baixar atualização</div>
+                </div>
+              </div>
               <div className="new-conv-option" onClick={() => setAccountView('privacy')}>
                 <div className="option-icon"><IconLock size={20} /></div>
                 <div>
@@ -2992,30 +3020,81 @@ export function ChatList({
               <span>Contatos bloqueados</span>
             </div>
 
-            <label style={{ marginTop: 10 }}>App</label>
-            <button
-              type="button"
-              className="google-btn"
-              disabled={appUpdating}
-              style={{ display: 'block', width: '100%', textAlign: 'center' }}
-              onClick={handleAppUpdateClick}
-            >
-              {appUpdating ? 'Baixando...' : `Baixar o app (${isTauriDesktop ? 'Windows' : 'Android'}) — v${latestVersion}`}
-            </button>
-            <span className="invite-code">
-              {latestVersion !== APP_VERSION ? `sua versão instalada: v${APP_VERSION}` : 'você já está na versão mais nova'}
-            </span>
-
-            <label style={{ marginTop: 10 }}>Sobre o app</label>
-            <a
-              href="https://github.com/facincanitech/thoth/releases/latest"
-              target="_blank"
-              rel="noreferrer"
-              className="google-btn"
-              style={{ display: 'block', width: '100%', textAlign: 'center', textDecoration: 'none' }}
-            >
-              Ver notas da versão (release)
-            </a>
+            <div className="privacy-contacts-card" style={{ margin: '14px 0 0' }}>
+              <div className="option-icon"><IconUser size={20} /></div>
+              <div className="privacy-contacts-copy">
+                <strong>Meu número</strong>
+                <span>{phoneLinked && phoneLast4 ? `Número vinculado •••• ${phoneLast4}` : 'Nenhum número vinculado.'}</span>
+                <small>Usado somente para que seus contatos encontrem você. O número completo não aparece no perfil.</small>
+                {phoneLinked && (
+                  <label className="phone-discovery-toggle">
+                    <input type="checkbox" checked={phoneDiscoverable} onChange={togglePhoneDiscovery} />
+                    Permitir que me encontrem pelo número
+                  </label>
+                )}
+                <div className="privacy-contacts-actions">
+                  {deviceContactsAvailable() ? (
+                    <button type="button" disabled={contactsLoading} onClick={changeLinkedPhone}>
+                      {phoneLinked ? 'Trocar número' : 'Vincular número'}
+                    </button>
+                  ) : (
+                    <span className="invite-code">O número é vinculado pelo APK.</span>
+                  )}
+                  {phoneLinked && <button type="button" className="secondary" disabled={contactsLoading} onClick={removeLinkedPhone}>Remover</button>}
+                </div>
+                {deviceContactsAvailable() && !phoneManualEntry && (
+                  <button type="button" className="chip-btn" onClick={() => setPhoneManualEntry(true)}>ou digitar o número na mão</button>
+                )}
+                {deviceContactsAvailable() && phoneManualEntry && (
+                  <div className="privacy-contacts-manual-phone">
+                    <input
+                      type="tel"
+                      placeholder="DDD + número, ex.: 11987654321"
+                      value={phoneManualDraft}
+                      onChange={(e) => setPhoneManualDraft(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter' && phoneManualDraft.trim()) linkPhoneNumber(phoneManualDraft.trim()) }}
+                    />
+                    <button type="button" disabled={contactsLoading || !phoneManualDraft.trim()} onClick={() => linkPhoneNumber(phoneManualDraft.trim())}>Vincular</button>
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="privacy-contacts-card">
+              <div className="option-icon"><IconUser size={20} /></div>
+              <div className="privacy-contacts-copy">
+                <strong>Contatos do celular</strong>
+                <span>
+                  {syncedContacts.length
+                    ? `${syncedContacts.length} ${syncedContacts.length === 1 ? 'pessoa encontrada' : 'pessoas encontradas'} no Thoth.`
+                    : 'Encontre na sua agenda quem já usa o Thoth.'}
+                </span>
+                <small>A agenda bruta não é salva. Só as contas encontradas ficam sincronizadas.</small>
+                <div className="privacy-contacts-actions">
+                  {deviceContactsAvailable() ? (
+                    contactsPermission === 'granted' ? (
+                      <button type="button" disabled={contactsLoading} onClick={syncDeviceContacts}>
+                        {contactsLoading ? 'Sincronizando…' : 'Sincronizar agora'}
+                      </button>
+                    ) : (
+                      <>
+                        <button type="button" disabled={contactsLoading} onClick={askForContacts}>Permitir acesso</button>
+                        {contactsPermission !== 'prompt' && (
+                          <button type="button" className="secondary" onClick={openContactsSettings}>Abrir configurações</button>
+                        )}
+                      </>
+                    )
+                  ) : (
+                    <span className="invite-code">A autorização da agenda é feita pelo APK.</span>
+                  )}
+                  {syncedContacts.length > 0 && (
+                    <button type="button" className="secondary" disabled={contactsLoading} onClick={clearSyncedContacts}>
+                      Remover sincronizados
+                    </button>
+                  )}
+                </div>
+                {contactsMessage && <span className="invite-code contacts-message">{contactsMessage}</span>}
+              </div>
+            </div>
 
             <div style={{ marginTop: 24, borderTop: '1px solid var(--line-2)', paddingTop: 16 }}>
               {confirmSignOut ? (
@@ -3063,6 +3142,35 @@ export function ChatList({
           </div>
         )}
 
+        {accountView === 'about' && (
+          <div className="new-conv-form">
+            <label>App</label>
+            <button
+              type="button"
+              className="google-btn"
+              disabled={appUpdating}
+              style={{ display: 'block', width: '100%', textAlign: 'center' }}
+              onClick={handleAppUpdateClick}
+            >
+              {appUpdating ? 'Baixando...' : `Baixar o app (${isTauriDesktop ? 'Windows' : 'Android'}) — v${latestVersion}`}
+            </button>
+            <span className="invite-code">
+              {latestVersion !== APP_VERSION ? `sua versão instalada: v${APP_VERSION}` : 'você já está na versão mais nova'}
+            </span>
+
+            <label style={{ marginTop: 14 }}>Notas da versão</label>
+            <a
+              href="https://github.com/facincanitech/thoth/releases/latest"
+              target="_blank"
+              rel="noreferrer"
+              className="google-btn"
+              style={{ display: 'block', width: '100%', textAlign: 'center', textDecoration: 'none' }}
+            >
+              Ver notas da versão (release)
+            </a>
+          </div>
+        )}
+
         {accountView === 'privacy' && (
           <div className="new-conv-list">
             <div className="new-conv-option" onClick={() => setAccountView('terms')}>
@@ -3076,66 +3184,6 @@ export function ChatList({
             <div className="new-conv-option">
               <div className="option-icon"><IconUser size={20} /></div>
               <span>Contato: facincanitech@gmail.com</span>
-            </div>
-            <div className="privacy-contacts-card">
-              <div className="option-icon"><IconUser size={20} /></div>
-              <div className="privacy-contacts-copy">
-                <strong>Meu número</strong>
-                <span>{phoneLinked && phoneLast4 ? `Número vinculado •••• ${phoneLast4}` : 'Nenhum número vinculado.'}</span>
-                <small>Usado somente para que seus contatos encontrem você. O número completo não aparece no perfil.</small>
-                {phoneLinked && (
-                  <label className="phone-discovery-toggle">
-                    <input type="checkbox" checked={phoneDiscoverable} onChange={togglePhoneDiscovery} />
-                    Permitir que me encontrem pelo número
-                  </label>
-                )}
-                <div className="privacy-contacts-actions">
-                  {deviceContactsAvailable() ? (
-                    <button type="button" disabled={contactsLoading} onClick={changeLinkedPhone}>
-                      {phoneLinked ? 'Trocar número' : 'Vincular número'}
-                    </button>
-                  ) : (
-                    <span className="invite-code">O número é vinculado pelo APK.</span>
-                  )}
-                  {phoneLinked && <button type="button" className="secondary" disabled={contactsLoading} onClick={removeLinkedPhone}>Remover</button>}
-                </div>
-              </div>
-            </div>
-            <div className="privacy-contacts-card">
-              <div className="option-icon"><IconUser size={20} /></div>
-              <div className="privacy-contacts-copy">
-                <strong>Contatos do celular</strong>
-                <span>
-                  {syncedContacts.length
-                    ? `${syncedContacts.length} ${syncedContacts.length === 1 ? 'pessoa encontrada' : 'pessoas encontradas'} no Thoth.`
-                    : 'Encontre na sua agenda quem já usa o Thoth.'}
-                </span>
-                <small>A agenda bruta não é salva. Só as contas encontradas ficam sincronizadas.</small>
-                <div className="privacy-contacts-actions">
-                  {deviceContactsAvailable() ? (
-                    contactsPermission === 'granted' ? (
-                      <button type="button" disabled={contactsLoading} onClick={syncDeviceContacts}>
-                        {contactsLoading ? 'Sincronizando…' : 'Sincronizar agora'}
-                      </button>
-                    ) : (
-                      <>
-                        <button type="button" disabled={contactsLoading} onClick={askForContacts}>Permitir acesso</button>
-                        {contactsPermission !== 'prompt' && (
-                          <button type="button" className="secondary" onClick={openContactsSettings}>Abrir configurações</button>
-                        )}
-                      </>
-                    )
-                  ) : (
-                    <span className="invite-code">A autorização da agenda é feita pelo APK.</span>
-                  )}
-                  {syncedContacts.length > 0 && (
-                    <button type="button" className="secondary" disabled={contactsLoading} onClick={clearSyncedContacts}>
-                      Remover sincronizados
-                    </button>
-                  )}
-                </div>
-                {contactsMessage && <span className="invite-code contacts-message">{contactsMessage}</span>}
-              </div>
             </div>
           </div>
         )}
