@@ -728,7 +728,6 @@ function App() {
         onNewConversation={openNewConversation}
         onOpenAccount={openAccount}
         onOpenGroups={openGroups}
-        onOpenCommunities={openCommunities}
         onOpenStatus={openStatus}
         onOpenPlay={openPlay}
         onGoHome={openNudger}

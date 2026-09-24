@@ -3240,10 +3240,19 @@ export function ChatList({
           >
             <IconArrowLeft size={20} />
           </button>
-          <div className="brand" style={{ fontSize: 18 }}>
-            {groupsView.startsWith('community-') ? 'Thoth Messenger - Comunidades' : 'Thoth Messenger - Grupos'}
-          </div>
+          <div className="brand" style={{ fontSize: 18 }}>Thoth Messenger - Espaços</div>
         </div>
+
+        {(groupsView === 'group-root' || groupsView === 'community-root') && (
+          <div className="play-group-privacy-toggle groups-section-toggle">
+            <button type="button" className={groupsView === 'group-root' ? 'active' : ''} onClick={() => setGroupsView('group-root')}>
+              <IconGroup size={15} /> Grupos
+            </button>
+            <button type="button" className={groupsView === 'community-root' ? 'active' : ''} onClick={() => setGroupsView('community-root')}>
+              <IconHeart size={15} /> Comunidades
+            </button>
+          </div>
+        )}
 
         {groupsView === 'group-root' && (
           <>

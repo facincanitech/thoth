@@ -2640,3 +2640,7 @@ html .desktop-window-shell.desktop-web-shell{
   .device-contact-row{align-items:center}
   .device-contact-row button{padding:7px 9px;font-size:.72rem}
 }
+
+/* Toggle Grupos/Comunidades dentro do painel unificado "Espacos" (reaproveita o visual do
+   toggle Aberto/Fechado do Play, .play-group-privacy-toggle) */
+.groups-section-toggle{margin:14px 16px 4px}
