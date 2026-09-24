@@ -50,7 +50,9 @@ import {
   IconMinusCircle,
   IconMore,
   IconPlus,
+  IconRefresh,
   IconSearch,
+  IconSend,
   IconTrash,
   IconUser,
 } from './icons'
@@ -2779,7 +2781,8 @@ export function ChatList({
                   <span>Veja quem já está no Thoth ou convide pelo WhatsApp.</span>
                 </div>
                 {contactsPermission === 'granted' && (
-                  <button type="button" className="contacts-refresh" disabled={contactsLoading} onClick={syncDeviceContacts}>
+                  <button type="button" className="contacts-refresh contact-action-button" disabled={contactsLoading} onClick={syncDeviceContacts}>
+                    <IconRefresh size={15} />
                     {contactsLoading ? 'Sincronizando…' : 'Atualizar'}
                   </button>
                 )}
@@ -2831,7 +2834,9 @@ export function ChatList({
                         <strong>{contact.name}</strong>
                         <span>{contact.phones[0] || contact.emails[0] || 'Contato do aparelho'}</span>
                       </div>
-                      <button type="button" className="secondary" onClick={() => shareThothInvite(contact.name)}>Convidar</button>
+                      <button type="button" className="contact-action-button" onClick={() => shareThothInvite(contact.name, contact.phones[0])}>
+                        <IconSend size={14} /> Convidar
+                      </button>
                     </div>
                   ))}
                 </div>

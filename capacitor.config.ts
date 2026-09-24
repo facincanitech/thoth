@@ -14,6 +14,10 @@ const config: CapacitorConfig = {
     url: 'https://facincanitech.github.io/thoth/',
     cleartext: false,
     errorPath: 'offline.html',
+    // localhost e' onde o Android serve o offline.html (arquivo local, ver server.errorPath) - sem
+    // isso, navegar nele (mesmo so recarregando) conta como sair da origem configurada em server.url
+    // e o Android jogava pro navegador do sistema em vez de ficar dentro do app.
+    allowNavigation: ['localhost'],
   },
 };
 

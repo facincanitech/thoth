@@ -98,6 +98,17 @@ export function IconSend({ size = 20 }: IconProps) {
   )
 }
 
+export function IconRefresh({ size = 20 }: IconProps) {
+  return (
+    <svg {...base} width={size} height={size}>
+      <path d="M20 6v5h-5" />
+      <path d="M4 18v-5h5" />
+      <path d="M6.1 9a7 7 0 0 1 11.5-2.6L20 9" />
+      <path d="M17.9 15a7 7 0 0 1-11.5 2.6L4 15" />
+    </svg>
+  )
+}
+
 export function IconAttach({ size = 20 }: IconProps) {
   return (
     <svg {...base} width={size} height={size}>

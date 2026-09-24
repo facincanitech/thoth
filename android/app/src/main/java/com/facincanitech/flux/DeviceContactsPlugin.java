@@ -154,6 +154,35 @@ public class DeviceContactsPlugin extends Plugin {
 
     @PluginMethod
     public void shareInvite(PluginCall call) {
+        String phone = call.getString("phone", "").replaceAll("[^0-9]", "");
+        if (!phone.isEmpty()) {
+            String directText = call.getString("text", "Conheca o Thoth Messenger: https://facincanitech.github.io/thoth/");
+            Uri inviteUri = Uri.parse("https://wa.me/" + phone + "?text=" + Uri.encode(directText));
+            Intent direct = new Intent(Intent.ACTION_VIEW, inviteUri);
+            direct.setPackage("com.whatsapp");
+            try {
+                getActivity().startActivity(direct);
+                call.resolve();
+                return;
+            } catch (ActivityNotFoundException missingWhatsApp) {
+                direct.setPackage("com.whatsapp.w4b");
+                try {
+                    getActivity().startActivity(direct);
+                    call.resolve();
+                    return;
+                } catch (ActivityNotFoundException missingWhatsAppBusiness) {
+                    direct.setPackage(null);
+                    try {
+                        getActivity().startActivity(direct);
+                        call.resolve();
+                        return;
+                    } catch (ActivityNotFoundException ignored) {
+                        // Sem WhatsApp ou navegador compativel: usa o compartilhamento abaixo.
+                    }
+                }
+            }
+        }
+
         String text = call.getString("text", "Conheça o Thoth Messenger: https://facincanitech.github.io/thoth/");
         Intent send = new Intent(Intent.ACTION_SEND);
         send.setType("text/plain");

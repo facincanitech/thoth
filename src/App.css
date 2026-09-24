@@ -2620,6 +2620,18 @@ html .desktop-window-shell.desktop-web-shell{
 .device-contacts-heading strong{font-size:.92rem}
 .device-contacts-heading span,.device-contact-copy span{font-size:.74rem;color:var(--muted)}
 .contacts-refresh{flex:none}
+.contact-action-button{
+  display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:34px;padding:8px 12px;
+  border:1px solid color-mix(in srgb,var(--green) 72%,var(--line-2));border-radius:10px;
+  background:linear-gradient(180deg,color-mix(in srgb,var(--green) 88%,white),var(--green));
+  color:var(--on-button,#fff);font-weight:700;cursor:pointer;
+  box-shadow:0 4px 12px color-mix(in srgb,var(--green) 24%,transparent);
+  transition:filter .16s ease,transform .16s ease,box-shadow .16s ease;
+}
+.contact-action-button:hover{filter:brightness(1.08);box-shadow:0 6px 16px color-mix(in srgb,var(--green) 32%,transparent)}
+.contact-action-button:active{transform:translateY(1px)}
+.contact-action-button:disabled{opacity:.58;cursor:default;transform:none;box-shadow:none}
+.contact-action-button svg{flex:none}
 .contacts-permission-card{display:flex;flex-direction:column;align-items:flex-start;gap:8px;padding:14px;border:1px solid var(--line-2);border-radius:14px;background:var(--bg-panel)}
 .contacts-permission-card.compact{gap:4px}
 .contacts-permission-card p{margin:0;color:var(--muted);font-size:.8rem;line-height:1.45}

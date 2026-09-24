@@ -15,7 +15,7 @@ type DeviceContactsPlugin = {
   requestAccess(): Promise<{ state: ContactsPermissionState }>
   openSettings(): Promise<void>
   getContacts(): Promise<{ contacts: DeviceContact[] }>
-  shareInvite(options: { text: string }): Promise<void>
+  shareInvite(options: { text: string; phone?: string }): Promise<void>
 }
 
 const NativeContacts = registerPlugin<DeviceContactsPlugin>('DeviceContacts')
@@ -45,13 +45,26 @@ export async function readDeviceContacts() {
   return result.contacts || []
 }
 
-export async function shareThothInvite(name?: string) {
+function whatsappPhone(phone?: string) {
+  const digits = (phone || '').replace(/\D/g, '').replace(/^00/, '')
+  if (!digits) return ''
+  // A agenda brasileira normalmente salva apenas DDD + numero. O wa.me exige DDI.
+  return digits.length === 10 || digits.length === 11 ? `55${digits}` : digits
+}
+
+export async function shareThothInvite(name?: string, phone?: string) {
   const greeting = name ? `Oi, ${name}!` : 'Oi!'
-  const text = `${greeting} Estou usando o Thoth Messenger. Entra por aqui: https://facincanitech.github.io/thoth/`
+  const url = 'https://facincanitech.github.io/thoth/'
+  const text = `${greeting} Quero te convidar para conversar comigo no Thoth Messenger. Baixe o app ou entre pelo navegador: ${url}`
+  const directPhone = whatsappPhone(phone)
   if (deviceContactsAvailable()) {
-    await NativeContacts.shareInvite({ text })
+    await NativeContacts.shareInvite({ text, phone: directPhone || undefined })
     return
   }
-  if (navigator.share) await navigator.share({ title: 'Thoth Messenger', text, url: 'https://facincanitech.github.io/thoth/' })
+  if (directPhone) {
+    window.open(`https://wa.me/${directPhone}?text=${encodeURIComponent(text)}`, '_blank', 'noopener,noreferrer')
+    return
+  }
+  if (navigator.share) await navigator.share({ title: 'Convite para o Thoth Messenger', text })
   else await navigator.clipboard.writeText(text)
 }
