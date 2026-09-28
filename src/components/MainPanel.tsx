@@ -2632,7 +2632,7 @@ export function MainPanel({ me, conversation, onBack, onConversationUpdate, bloc
                 onPointerCancel={() => handleMessagePointerUp(m)}
                 style={dragMsgId === m.id ? { transform: `translateX(${dragX}px)` } : undefined}
               >
-                <div className="bubble">
+                <div className="bubble message-text-bubble">
                   {m.author_id !== me.id && (conversation.type === 'group' || botsById[m.author_id]) && (
                     <span
                       className="author-label"
@@ -2679,7 +2679,7 @@ export function MainPanel({ me, conversation, onBack, onConversationUpdate, bloc
 
         {Object.entries(liveTyping).filter(([userId]) => !blockedIds.has(userId)).map(([userId, text]) => (
           <div key={userId} className="message in live">
-            <div className="bubble">
+            <div className="bubble message-text-bubble">
               <span className="author-label">{members[userId] ? displayName(members[userId]) : '...'}</span>
               <span className="live-typing-label">digitando...</span>
               {text}
