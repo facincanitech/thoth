@@ -200,7 +200,7 @@ const desktopFoundation = `
 .desktop-chat-shell .chat-header{min-height:108px!important;padding:15px 20px!important}
 .desktop-chat-shell .messages{padding:22px 24px!important}
 .desktop-chat-shell .bubble{max-width:min(620px,82%)!important;padding:10px 13px 8px!important;border:1px solid var(--line-2)!important;border-radius:10px!important;box-shadow:0 2px 8px #00000016!important}
-.desktop-chat-shell .message-text-bubble{max-width:min(32ch,78%)!important}
+.desktop-chat-shell .message-text-bubble{max-width:min(28ch,74%)!important}
 .desktop-chat-shell .in .bubble{background:var(--bg-surface)!important;color:var(--text-base)!important}
 .desktop-chat-shell .out .bubble{background:var(--bg-selected)!important;color:var(--text-base)!important}
 .desktop-chat-shell .composer{min-height:142px!important;background:var(--bg-panel)!important;border-top:1px solid var(--line)!important}
