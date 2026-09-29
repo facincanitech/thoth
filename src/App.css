@@ -2590,9 +2590,15 @@ html .desktop-window-shell.desktop-web-shell{
   .messages > .message.in > .sticker-message{margin-right:auto;margin-left:0}
   .messages > .message.out > .bubble,
   .messages > .message.out > .sticker-message{margin-left:auto;margin-right:0}
-  html[data-theme="messenger"]:not([data-store-theme]) .messages > .message .bubble{
-    padding:0;border:0;border-radius:0;background:transparent;box-shadow:none;
+  html[data-theme="messenger"]:not([data-store-theme]) .messages > .message.in > .bubble{
+    padding:11px 13px 8px;border:1px solid #a9cddd;border-radius:14px 14px 14px 5px;
+    background:linear-gradient(180deg,#fff,#eaf7fc);box-shadow:0 1px 3px rgb(24 57 82 / 12%);
     color:#183952;
+  }
+  html[data-theme="messenger"]:not([data-store-theme]) .messages > .message.out > .bubble{
+    padding:11px 13px 8px;border:1px solid #9ac56d;border-radius:14px 14px 5px;
+    background:linear-gradient(180deg,#eafbd8,#d2efad);box-shadow:0 1px 3px rgb(53 91 27 / 14%);
+    color:#29451d;
   }
 }
 
