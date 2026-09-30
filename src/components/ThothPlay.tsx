@@ -175,10 +175,15 @@ type PlayVoiceSettings = {
 }
 
 const PLAY_VOICE_SETTINGS_KEY = 'thoth-play-voice-settings-v1'
-const DEFAULT_VOICE_SETTINGS: PlayVoiceSettings = { inputDeviceId: '', outputDeviceId: '', inputVolume: 1, outputVolume: 1, inputProfile: 'isolation', voiceActivation: true }
+const DEFAULT_VOICE_SETTINGS: PlayVoiceSettings = { inputDeviceId: '', outputDeviceId: '', inputVolume: 1, outputVolume: 1, inputProfile: 'studio', voiceActivation: true }
 
 function readPlayVoiceSettings(): PlayVoiceSettings {
-  try { return { ...DEFAULT_VOICE_SETTINGS, ...JSON.parse(localStorage.getItem(PLAY_VOICE_SETTINGS_KEY) || '{}') } }
+  try {
+    const settings = { ...DEFAULT_VOICE_SETTINGS, ...JSON.parse(localStorage.getItem(PLAY_VOICE_SETTINGS_KEY) || '{}') }
+    // No WebView2, qualquer processamento de captura pode recolocar toda a sessao na
+    // categoria de comunicacao. Desktop fica sempre cru; isolamento continua no APK/web.
+    return isTauriDesktop ? { ...settings, inputProfile: 'studio' } : settings
+  }
   catch { return DEFAULT_VOICE_SETTINGS }
 }
 
@@ -3090,9 +3095,9 @@ function PlayVoiceSettingsPanel({ open, onClose }: { open: boolean; onClose: () 
     try {
       const audio: MediaTrackConstraints = {
         ...(settings.inputDeviceId ? { deviceId: { exact: settings.inputDeviceId } } : {}),
-        echoCancellation: settings.inputProfile === 'isolation',
-        noiseSuppression: settings.inputProfile === 'isolation',
-        autoGainControl: settings.inputProfile === 'isolation',
+        echoCancellation: !isTauriDesktop && settings.inputProfile === 'isolation',
+        noiseSuppression: !isTauriDesktop && settings.inputProfile === 'isolation',
+        autoGainControl: !isTauriDesktop && settings.inputProfile === 'isolation',
       }
       const stream = await navigator.mediaDevices.getUserMedia({ audio })
       testStreamRef.current = stream
@@ -3132,7 +3137,7 @@ function PlayVoiceSettingsPanel({ open, onClose }: { open: boolean; onClose: () 
           <button type="button" className="play-device-refresh" onClick={() => loadDevices(true)}>Atualizar dispositivos de áudio</button>
           <div className="appearance-separator" />
           <h3>Perfil de entrada</h3>
-          <label className="play-voice-radio"><input type="radio" checked={settings.inputProfile === 'isolation'} onChange={() => update('inputProfile', 'isolation')} /><span><strong>Isolamento de voz</strong><small>Reduz eco e ruído ao redor.</small></span></label>
+          <label className={`play-voice-radio${isTauriDesktop ? ' disabled' : ''}`}><input type="radio" disabled={isTauriDesktop} checked={settings.inputProfile === 'isolation'} onChange={() => update('inputProfile', 'isolation')} /><span><strong>Isolamento de voz</strong><small>{isTauriDesktop ? 'Desativado no EXE para não abafar o áudio do computador.' : 'Reduz eco e ruído ao redor.'}</small></span></label>
           <label className="play-voice-radio"><input type="radio" checked={settings.inputProfile === 'studio'} onChange={() => update('inputProfile', 'studio')} /><span><strong>Estúdio</strong><small>Áudio puro, sem processamento.</small></span></label>
           <label className="play-voice-toggle"><span><strong>Detecção de voz</strong><small>Transmite sua voz automaticamente, sem apertar para falar.</small></span><input type="checkbox" checked={settings.voiceActivation} onChange={(event) => update('voiceActivation', event.target.checked)} /></label>
           <p className="play-voice-help">Para manter música e jogos em estéreo com fone Bluetooth, escolha outro microfone como entrada. A detecção de voz precisa manter o microfone selecionado disponível.</p>
@@ -3634,9 +3639,9 @@ function VoiceChannel({ allow, me, membersById, channel, onParticipantsChange, o
   const voiceSettings = readPlayVoiceSettings()
   const playMicOptions: AudioCaptureOptions = {
     ...(voiceSettings.inputDeviceId ? { deviceId: voiceSettings.inputDeviceId } : {}),
-    echoCancellation: voiceSettings.inputProfile === 'isolation',
-    noiseSuppression: voiceSettings.inputProfile === 'isolation',
-    autoGainControl: voiceSettings.inputProfile === 'isolation',
+    echoCancellation: !isTauriDesktop && voiceSettings.inputProfile === 'isolation',
+    noiseSuppression: !isTauriDesktop && voiceSettings.inputProfile === 'isolation',
+    autoGainControl: !isTauriDesktop && voiceSettings.inputProfile === 'isolation',
   }
   const roomRef = useRef<Room | null>(null)
   const [connected, setConnected] = useState(false)
@@ -3728,6 +3733,8 @@ function VoiceChannel({ allow, me, membersById, channel, onParticipantsChange, o
         // perfil escolhidos nas configuracoes de voz.
         if (allow.speak && voiceSettings.voiceActivation) {
           await room.localParticipant.setMicrophoneEnabled(true, playMicOptions)
+          const micTrack = room.localParticipant.getTrackPublication(Track.Source.Microphone)?.track?.mediaStreamTrack
+          if (micTrack) micTrack.contentHint = 'music'
           setMicEnabled(true)
         } else {
           setMicEnabled(false)
@@ -3767,6 +3774,10 @@ function VoiceChannel({ allow, me, membersById, channel, onParticipantsChange, o
     // ligar o microfone estando ensurdecido tambem volta a ouvir (como no Discord)
     if (next && deafenedRef.current) applyDeafen(false)
     await room.localParticipant.setMicrophoneEnabled(next, next ? playMicOptions : undefined)
+    if (next) {
+      const micTrack = room.localParticipant.getTrackPublication(Track.Source.Microphone)?.track?.mediaStreamTrack
+      if (micTrack) micTrack.contentHint = 'music'
+    }
     await setMediaAudioMode()
     setMicEnabled(next)
     syncParticipants(room)
