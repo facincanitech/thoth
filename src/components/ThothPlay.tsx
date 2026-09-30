@@ -2247,7 +2247,7 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
 
           {joinedVoiceChannel && (
             <div className="play-voice-holder" style={{ display: selectedChannel?.id === joinedVoiceChannel.id ? 'flex' : 'none', flex: 1, minWidth: 0, flexDirection: 'column', overflow: 'hidden' }}>
-              <VoiceChannel key={joinedVoiceChannel.id} allow={{ speak: can('voice_speak'), camera: can('voice_camera'), screen: can('voice_screen') }} me={myPlayProfile} membersById={membersById} channel={joinedVoiceChannel} onParticipantsChange={setVoiceParticipants} onLeave={leaveVoice} pipIds={pipIds} maximizedId={maximizedId} onFullscreen={setFullscreenId} onTogglePip={togglePip} onToggleMaximize={(id) => setMaximizedId((cur) => (cur === id ? null : id))} onMediaMenu={(id, x, y) => setMediaMenu({ id, x, y, fromGrid: true })} />
+              <VoiceChannel key={joinedVoiceChannel.id} allow={{ speak: can('voice_speak'), camera: can('voice_camera'), screen: can('voice_screen') }} me={myPlayProfile} membersById={membersById} channel={joinedVoiceChannel} onParticipantsChange={setVoiceParticipants} onLeave={leaveVoice} pipIds={pipIds} maximizedId={maximizedId} onFullscreen={setFullscreenId} onTogglePip={togglePip} onToggleMaximize={(id) => setMaximizedId((cur) => (cur === id ? null : id))} />
             </div>
           )}
 
@@ -3238,11 +3238,12 @@ function VoiceSettingsFields() {
       <div className="appearance-separator" />
       <h3>Redução de ruído</h3>
       <span className="play-share-menu-hint" style={{ display: 'block', marginBottom: 6 }}>
-        {isTauriDesktop ? 'Desativado no EXE para não abafar o áudio do computador.' : 'Atenua chiado/ruído de fundo no microfone, independente do perfil de entrada. Quanto mais alto o nível, mais agressivo o corte.'}
+        Atenua chiado/ruído de fundo no microfone, independente do perfil de entrada. Quanto mais alto o nível, mais agressivo o corte.
+        {isTauriDesktop && ' Pode abafar um pouco o som externo captado pelo microfone (ex.: alto-falante da sala) em níveis mais altos.'}
       </span>
       {(['off', 'low', 'medium', 'high'] as const).map((level) => (
-        <label key={level} className={`play-voice-radio${isTauriDesktop && level !== 'off' ? ' disabled' : ''}`}>
-          <input type="radio" disabled={isTauriDesktop && level !== 'off'} checked={settings.noiseReduction === level} onChange={() => update('noiseReduction', level)} />
+        <label key={level} className="play-voice-radio">
+          <input type="radio" checked={settings.noiseReduction === level} onChange={() => update('noiseReduction', level)} />
           <span><strong>{level === 'off' ? 'Desligado' : level === 'low' ? 'Baixo' : level === 'medium' ? 'Médio' : 'Alto'}</strong></span>
         </label>
       ))}
@@ -3679,11 +3680,11 @@ function FullscreenOverlay({ name, track, onClose }: { name: string; track: Trac
   )
 }
 
-function VoiceTile({ p, avatarUrl, bannerColor, bannerImageUrl, startedAt, maximized, inPip, screenAudio, onFullscreen, onToggleMaximize, onMediaMenu, onVolumeMenu }: {
+function VoiceTile({ p, avatarUrl, bannerColor, bannerImageUrl, startedAt, maximized, inPip, screenAudio, onFullscreen, onToggleMaximize, onVolumeMenu }: {
   p: ParticipantTile; avatarUrl: string | null; bannerColor?: string | null; bannerImageUrl?: string | null
   startedAt?: number; maximized: boolean; inPip: boolean; screenAudio?: HTMLMediaElement
   onFullscreen: (id: string) => void; onTogglePip: (id: string) => void; onToggleMaximize: (id: string) => void
-  onMediaMenu: (id: string, x: number, y: number) => void; onVolumeMenu: (id: string, x: number, y: number) => void
+  onVolumeMenu: (id: string, x: number, y: number) => void
 }) {
   const videoElRef = useRef<HTMLVideoElement | null>(null)
   const [paused, setPaused] = useState(false)
@@ -3715,7 +3716,7 @@ function VoiceTile({ p, avatarUrl, bannerColor, bannerImageUrl, startedAt, maxim
     <div className={'play-voice-tile' + (maximized ? ' maximized' : '') + (p.isSpeaking && p.micOn ? ' speaking' : '')}>
       <div
         className="play-voice-tile-head"
-        onContextMenu={(e) => { if (p.isLocal) return; e.preventDefault(); onVolumeMenu(p.id, e.clientX, e.clientY) }}
+        onContextMenu={(e) => { e.preventDefault(); onVolumeMenu(p.id, e.clientX, e.clientY) }}
       >
         {p.micOn ? <IconMic size={13} /> : <IconMicOff size={13} />}
         <span>{p.name}{p.isLocal ? ' (você)' : ''}</span>
@@ -3726,7 +3727,7 @@ function VoiceTile({ p, avatarUrl, bannerColor, bannerImageUrl, startedAt, maxim
         className="play-voice-tile-stage"
         style={!showVideo ? (bannerImageUrl ? { backgroundImage: 'url(' + bannerImageUrl + ')', backgroundSize: 'cover', backgroundPosition: '50% 50%' } : { background: bannerColor || 'var(--bg-panel)' }) : undefined}
         onClick={() => { if (showVideo && !ownScreen) onToggleMaximize(p.id) }}
-        onContextMenu={(e) => { e.preventDefault(); if (showVideo && !ownScreen) onMediaMenu(p.id, e.clientX, e.clientY) }}
+        onContextMenu={(e) => { e.preventDefault(); onVolumeMenu(p.id, e.clientX, e.clientY) }}
       >
         {showVideo ? (
           <StreamView track={p.videoTrack!} muted={p.isLocal} videoRef={videoElRef} streamId={p.id} />
@@ -3754,7 +3755,7 @@ function VoiceTile({ p, avatarUrl, bannerColor, bannerImageUrl, startedAt, maxim
               </>
             )}
             <button type="button" onClick={() => onFullscreen(p.id)} title="Tela cheia"><IconFullscreen size={16} /></button>
-            <button type="button" onClick={(e) => { const r = e.currentTarget.getBoundingClientRect(); onMediaMenu(p.id, r.left, r.top - 130) }} title="Mais opções"><IconMore size={16} /></button>
+            <button type="button" onClick={(e) => { const r = e.currentTarget.getBoundingClientRect(); onVolumeMenu(p.id, r.left, r.top - 130) }} title="Mais opções"><IconMore size={16} /></button>
           </div>
         )}
       </div>
@@ -3762,11 +3763,10 @@ function VoiceTile({ p, avatarUrl, bannerColor, bannerImageUrl, startedAt, maxim
   )
 }
 
-function VoiceChannel({ allow, me, membersById, channel, onParticipantsChange, onLeave, pipIds, maximizedId, onFullscreen, onTogglePip, onToggleMaximize, onMediaMenu }: {
+function VoiceChannel({ allow, me, membersById, channel, onParticipantsChange, onLeave, pipIds, maximizedId, onFullscreen, onTogglePip, onToggleMaximize }: {
   allow: { speak: boolean; camera: boolean; screen: boolean }
   me: Profile; membersById: Record<string, Profile>; channel: PlayChannel; onParticipantsChange: (p: VoiceParticipantInfo[]) => void; onLeave: () => void
   pipIds: string[]; maximizedId: string | null; onFullscreen: (id: string) => void; onTogglePip: (id: string) => void; onToggleMaximize: (id: string) => void
-  onMediaMenu: (id: string, x: number, y: number) => void
 }) {
   const voiceSettings = readPlayVoiceSettings()
   // Mantido atualizado ao vivo (evento VOICE_SETTINGS_CHANGED_EVENT) pra volume/dispositivo de
@@ -4078,24 +4078,26 @@ function VoiceChannel({ allow, me, membersById, channel, onParticipantsChange, o
   }
 
   // Apertar-pra-falar: so ativo quando "Deteccao de voz" esta desligada nas configuracoes.
-  // Segura a tecla escolhida (padrao Espaco) pra transmitir, solta pra voltar a mutar.
+  // No desktop segura a tecla escolhida (padrao Espaco); no celular/APK nao tem teclado fisico
+  // pra segurar, entao aparece um botao de "segurar pra falar" nos controles da chamada que
+  // chama a mesma funcao (ver botao mais abaixo, so quando !voiceActivation).
   const pttHeldRef = useRef(false)
+  async function setMicHeld(next: boolean) {
+    const room = roomRef.current
+    if (!room) return
+    if (next && deafenedRef.current) applyDeafen(false)
+    await room.localParticipant.setMicrophoneEnabled(next, next ? await resolvePlayMicOptions() : undefined)
+    if (next) {
+      await applyMicGainProcessing()
+      const micTrack = room.localParticipant.getTrackPublication(Track.Source.Microphone)?.track?.mediaStreamTrack
+      if (micTrack) micTrack.contentHint = 'music'
+    }
+    await setMediaAudioMode()
+    setMicEnabled(next)
+    syncParticipants(room)
+  }
   useEffect(() => {
     if (voiceSettings.voiceActivation || !allow.speak) return
-    async function setMicHeld(next: boolean) {
-      const room = roomRef.current
-      if (!room) return
-      if (next && deafenedRef.current) applyDeafen(false)
-      await room.localParticipant.setMicrophoneEnabled(next, next ? await resolvePlayMicOptions() : undefined)
-      if (next) {
-        await applyMicGainProcessing()
-        const micTrack = room.localParticipant.getTrackPublication(Track.Source.Microphone)?.track?.mediaStreamTrack
-        if (micTrack) micTrack.contentHint = 'music'
-      }
-      await setMediaAudioMode()
-      setMicEnabled(next)
-      syncParticipants(room)
-    }
     function isTypingTarget(target: EventTarget | null) {
       const el = target as HTMLElement | null
       return !!el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable)
@@ -4222,33 +4224,72 @@ function VoiceChannel({ allow, me, membersById, channel, onParticipantsChange, o
                 onFullscreen={onFullscreen}
                 onTogglePip={onTogglePip}
                 onToggleMaximize={onToggleMaximize}
-                onMediaMenu={onMediaMenu}
                 onVolumeMenu={(id, x, y) => setVolumeMenu({ id, x, y })}
               />
             ))}
           </div>
-          {volumeMenu && (
-            <>
-              <div className="play-group-menu-backdrop" onClick={() => setVolumeMenu(null)} onContextMenu={(e) => { e.preventDefault(); setVolumeMenu(null) }} />
-              <div
-                className="play-group-menu play-volume-menu"
-                style={{ position: 'fixed', top: Math.max(8, Math.min(volumeMenu.y, window.innerHeight - 90)), left: Math.max(8, Math.min(volumeMenu.x, window.innerWidth - 220)), minWidth: 200 }}
-              >
-                <span className="play-volume-menu-label">
-                  Volume de {participants.find((p) => p.id === volumeMenu.id)?.name || ''}: {Math.round((participantVolumes[volumeMenu.id] ?? 1) * 100)}%
-                </span>
-                <input
-                  type="range" min="0" max="2" step="0.05"
-                  value={participantVolumes[volumeMenu.id] ?? 1}
-                  onChange={(e) => setParticipantVolume(volumeMenu.id, Number(e.target.value))}
-                />
-              </div>
-            </>
-          )}
+          {volumeMenu && (() => {
+            const target = participants.find((p) => p.id === volumeMenu.id)
+            const hasMedia = !!target && !!target.videoTrack && !(target.isLocal && target.isScreen)
+            return (
+              <>
+                <div className="play-group-menu-backdrop" onClick={() => setVolumeMenu(null)} onContextMenu={(e) => { e.preventDefault(); setVolumeMenu(null) }} />
+                <div
+                  className="play-group-menu play-volume-menu"
+                  style={{ position: 'fixed', top: Math.max(8, Math.min(volumeMenu.y, window.innerHeight - 220)), left: Math.max(8, Math.min(volumeMenu.x, window.innerWidth - 220)), minWidth: 200 }}
+                >
+                  {!target?.isLocal && (
+                    <>
+                      <span className="play-volume-menu-label">
+                        Volume de {target?.name || ''}: {Math.round((participantVolumes[volumeMenu.id] ?? 1) * 100)}%
+                      </span>
+                      <input
+                        type="range" min="0" max="2" step="0.05"
+                        value={participantVolumes[volumeMenu.id] ?? 1}
+                        onChange={(e) => setParticipantVolume(volumeMenu.id, Number(e.target.value))}
+                      />
+                    </>
+                  )}
+                  {hasMedia && (
+                    <>
+                      {!target?.isLocal && <div className="play-group-menu-sep" />}
+                      <button type="button" onClick={() => { const id = volumeMenu.id; setVolumeMenu(null); onTogglePip(id) }}>
+                        <IconMonitorShare size={15} /> {pipIds.includes(volumeMenu.id) ? 'Sair do picture in picture' : 'Picture in picture'}
+                      </button>
+                      <button type="button" onClick={() => { const id = volumeMenu.id; setVolumeMenu(null); onFullscreen(id) }}>
+                        <IconFullscreen size={15} /> Tela cheia
+                      </button>
+                      <button type="button" onClick={() => { const id = volumeMenu.id; setVolumeMenu(null); onToggleMaximize(id) }}>
+                        {maximizedId === volumeMenu.id ? <IconShrink size={15} /> : <IconFullscreen size={15} />} {maximizedId === volumeMenu.id ? 'Restaurar' : 'Maximizar'}
+                      </button>
+                    </>
+                  )}
+                </div>
+              </>
+            )
+          })()}
           <div className="play-voice-controls">
-            <button type="button" className={'icon-btn' + (micEnabled ? '' : ' off')} onClick={toggleMic} disabled={!allow.speak} title={!allow.speak ? 'Seu cargo não pode falar na chamada' : micEnabled ? 'Mutar microfone' : 'Ativar microfone'}>
-              {micEnabled ? <IconMic size={20} /> : <IconMicOff size={20} />}
-            </button>
+            {voiceSettings.voiceActivation ? (
+              <button type="button" className={'icon-btn' + (micEnabled ? '' : ' off')} onClick={toggleMic} disabled={!allow.speak} title={!allow.speak ? 'Seu cargo não pode falar na chamada' : micEnabled ? 'Mutar microfone' : 'Ativar microfone'}>
+                {micEnabled ? <IconMic size={20} /> : <IconMicOff size={20} />}
+              </button>
+            ) : (
+              // Apertar-pra-falar sem teclado (celular/toque): segura o botao em vez de uma tecla.
+              // pointerdown/up cobre mouse e toque nos dois; cancel/leave evita ficar preso ligado
+              // se o dedo sair do botao sem soltar (arrastar pra fora, notificacao cobrindo etc.).
+              <button
+                type="button"
+                className={'icon-btn' + (micEnabled ? ' active' : '')}
+                disabled={!allow.speak}
+                title={!allow.speak ? 'Seu cargo não pode falar na chamada' : 'Segure pra falar'}
+                onPointerDown={(e) => { e.preventDefault(); if (allow.speak) setMicHeld(true) }}
+                onPointerUp={() => setMicHeld(false)}
+                onPointerLeave={() => { if (micEnabled) setMicHeld(false) }}
+                onPointerCancel={() => setMicHeld(false)}
+              >
+                {micEnabled ? <IconMic size={20} /> : <IconMicOff size={20} />}
+              </button>
+            )}
             <button type="button" className={'icon-btn' + (deafened ? ' off' : '')} onClick={toggleDeafen} title={deafened ? 'Voltar a ouvir a chamada' : 'Parar de ouvir a chamada (fone)'}>
               {deafened ? <IconHeadphonesOff size={20} /> : <IconHeadphones size={20} />}
             </button>

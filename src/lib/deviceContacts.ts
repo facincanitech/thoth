@@ -85,7 +85,8 @@ export async function getSimOptions(): Promise<SimOption[]> {
   try {
     const result = await NativeContacts.getSimOptions()
     return result.sims || []
-  } catch {
+  } catch (err) {
+    console.error('getSimOptions failed', err)
     return []
   }
 }

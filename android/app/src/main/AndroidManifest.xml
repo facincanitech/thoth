@@ -51,6 +51,15 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="thoth" android:host="play" />
             </intent-filter>
+            <!-- thoth://admin/smsgateway: revela a tela interna do celular-gateway de SMS
+                 (Configuracoes -> Privacidade), escondida da navegacao normal do app. So
+                 acionavel via adb/link direto, nunca por um botao visivel. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="thoth" android:host="admin" />
+            </intent-filter>
         </activity>
 
         <meta-data
