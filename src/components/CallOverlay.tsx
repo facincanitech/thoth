@@ -22,10 +22,12 @@ import {
 } from './icons'
 import type { Profile } from '../types'
 
-// No Windows (.exe), o WebView2 abre o microfone no dispositivo de "comunicacoes" quando o
-// cancelamento de eco esta ligado, e o Windows abaixa o audio de todo o resto do PC (Sonor,
-// YouTube etc) enquanto a chamada estiver ativa. Desligar isso so no desktop evita a "ducking".
-const micAudioConstraints: boolean | MediaTrackConstraints = isTauriDesktop ? { echoCancellation: false } : true
+// No Windows (.exe), o processamento de voz do WebView2 pode tratar toda a sessao como
+// "comunicacoes". Alem do ducking, noise suppression e auto gain deixam os outros audios
+// estreitos/telefonados. No desktop mantemos o microfone cru, como ja fazemos no Thoth Play.
+const micAudioConstraints: boolean | MediaTrackConstraints = isTauriDesktop
+  ? { echoCancellation: false, noiseSuppression: false, autoGainControl: false }
+  : true
 
 type Direction = 'incoming' | 'outgoing'
 type Status = 'ringing' | 'connecting' | 'connected'

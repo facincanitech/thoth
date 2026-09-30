@@ -766,6 +766,8 @@ body{
   width:44px;height:44px;border-radius:14px;background:var(--btn-custom,var(--accent-dim-bg));color:var(--on-button,var(--accent-text));
   display:grid;place-items:center;font-size:20px;font-weight:700;flex-shrink:0;
 }
+.account-field-hint{display:block;margin:4px 0 2px;color:var(--muted);font-size:11px;line-height:1.35}
+.account-field-hint.available{color:#31c76a}.account-field-hint.unavailable{color:var(--danger)}
 [data-theme="dark"] .option-icon{
   background:linear-gradient(145deg,#17212e,#1c2938);border:1px solid #2d3b4e;color:#65bdec;
 }

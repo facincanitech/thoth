@@ -753,8 +753,9 @@ export function ChatList({
       setAppUpdating(false)
     }
   }
-  const [usernameDraft, setUsernameDraft] = useState('')
   const [displayNameDraft, setDisplayNameDraft] = useState('')
+  const [usernameDraft, setUsernameDraft] = useState('')
+  const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null)
   const [statusDraft, setStatusDraft] = useState('')
   const [ageDraft, setAgeDraft] = useState('')
   const [cityDraft, setCityDraft] = useState('')
@@ -1074,9 +1075,11 @@ export function ChatList({
     setInviteSent(false)
     try {
       const contactQuery = (contactOverride || dmEmail).trim()
-      const isEmail = contactQuery.includes('@')
+      const isHandle = contactQuery.startsWith('@')
+      const isEmail = !isHandle && contactQuery.includes('@')
       if (!contactQuery) return
       if (isEmail && contactQuery.toLowerCase() === me.email) throw new Error('Esse é você')
+      if (isHandle && contactQuery.slice(1).toLowerCase() === me.username.toLowerCase()) throw new Error('Esse é você')
 
       const { data: found, error: findErr } = await supabase.rpc('find_profile_by_contact', { p_query: contactQuery })
       if (findErr) throw findErr
@@ -1141,6 +1144,7 @@ export function ChatList({
             .insert({ conversation_id: conv.id, user_id: target.id })
           if (memberErr) throw memberErr
         } else {
+          if (isHandle) throw new Error(`Não encontramos ${contactQuery} no Thoth.`)
           if (!isEmail) throw new Error('Não encontramos esse número no Thoth. Confira o DDD ou convide pela agenda.')
           await supabase.auth.refreshSession()
           const { data: sessionData } = await supabase.auth.getSession()
@@ -1396,7 +1400,8 @@ export function ChatList({
 
   useEffect(() => {
     if (accountOpen && me) {
-      setUsernameDraft(me.username)
+      setUsernameDraft(`@${me.username}`)
+      setUsernameAvailable(null)
       setDisplayNameDraft(me.display_name || '')
       setStatusDraft(me.status || '')
       setAgeDraft(me.age != null ? String(me.age) : '')
@@ -1411,6 +1416,20 @@ export function ChatList({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [accountOpen, me?.id, accountResetKey])
+
+  useEffect(() => {
+    if (!accountOpen || !me) return
+    const normalized = usernameDraft.trim().replace(/^@+/, '').toLowerCase()
+    if (!normalized || normalized === me.username.toLowerCase()) {
+      setUsernameAvailable(null)
+      return
+    }
+    const timer = window.setTimeout(async () => {
+      const { data, error: availabilityError } = await supabase.rpc('is_username_available', { p_username: normalized })
+      setUsernameAvailable(availabilityError ? null : Boolean(data))
+    }, 350)
+    return () => window.clearTimeout(timer)
+  }, [accountOpen, me?.id, me?.username, usernameDraft])
 
   async function loadMyGroups() {
     if (!me) return
@@ -1666,7 +1685,7 @@ export function ChatList({
     setAccountSaving(true)
     setAccountError(null)
     const display_name = displayNameDraft.trim()
-    const username = usernameDraft.trim()
+    const username = usernameDraft.trim().replace(/^@+/, '').toLowerCase()
     const status = statusDraft.trim()
     const trimmedAge = ageDraft.trim()
     const age = trimmedAge ? parseInt(trimmedAge, 10) : null
@@ -1676,9 +1695,17 @@ export function ChatList({
       .update({ display_name, username, status, age, city })
       .eq('id', me.id)
     if (err) {
-      setAccountError(err.message.includes('duplicate') ? 'Esse nome de usuário já está em uso' : getErrorMessage(err))
+      const message = getErrorMessage(err)
+      setAccountError(
+        message.includes('USERNAME_TAKEN') || message.includes('duplicate') ? 'Esse @ já está em uso.'
+          : message.includes('USERNAME_COOLDOWN') ? 'Você só pode alterar o @ uma vez a cada 30 dias.'
+            : message.includes('USERNAME_INVALID') ? 'Use de 3 a 30 caracteres: letras, números, ponto ou _.'
+              : message,
+      )
     } else {
       onProfileChange({ display_name, username, status, age, city })
+      setUsernameDraft(`@${username}`)
+      setUsernameAvailable(null)
     }
     setAccountSaving(false)
   }
@@ -2772,13 +2799,13 @@ export function ChatList({
               <label>Buscar contato</label>
               <input
                 type="text"
-                placeholder="E-mail ou telefone com DDD"
+                placeholder="@usuário, e-mail ou telefone com DDD"
                 value={dmEmail}
                 onChange={(e) => setDmEmail(e.target.value)}
                 autoFocus
               />
               <button type="button" disabled={busy || !dmEmail.trim()} onClick={() => startDm()}>Conversar</button>
-              <span className="invite-code">Use o e-mail da conta ou o telefone completo com DDD.</span>
+              <span className="invite-code">Use o @ da pessoa, o e-mail da conta ou o telefone completo com DDD.</span>
               {inviteSent && <span className="invite-code">Essa pessoa ainda não tem conta — enviamos um convite por e-mail.</span>}
               {error && <span className="auth-error">{error}</span>}
             </div>
@@ -2965,10 +2992,16 @@ export function ChatList({
             <label style={{ marginTop: 10 }}>Nome de usuário</label>
             <input
               value={usernameDraft}
-              onChange={(e) => setUsernameDraft(e.target.value)}
+              onChange={(e) => setUsernameDraft(e.target.value.startsWith('@') ? e.target.value : `@${e.target.value}`)}
               onBlur={saveProfile}
               onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
             />
+            <span className={`account-field-hint${usernameAvailable === false ? ' unavailable' : usernameAvailable === true ? ' available' : ''}`}>
+              {usernameAvailable === false ? 'Esse @ já está em uso.' : usernameAvailable === true ? 'Esse @ está disponível.' : 'Pode ser alterado uma vez a cada 30 dias.'}
+            </span>
 
             <label style={{ marginTop: 10 }}>Status</label>
             <input
