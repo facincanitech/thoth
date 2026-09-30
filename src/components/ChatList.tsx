@@ -503,6 +503,9 @@ export function ChatList({
   const [smsSending, setSmsSending] = useState(false)
   const [simOptions, setSimOptions] = useState<SimOption[]>([])
   const [smsSimPickerOpen, setSmsSimPickerOpen] = useState(false)
+  const [rememberedSim, setRememberedSim] = useState<number | null>(() => {
+    try { const v = localStorage.getItem('thoth-sms-sim-choice'); return v ? Number(v) : null } catch { return null }
+  })
   const [gatewayEnabled, setGatewayEnabled] = useState(false)
   const [gatewayToken, setGatewayToken] = useState('')
   const [gatewayWebhookUrl, setGatewayWebhookUrl] = useState('https://eeyypnkbiejvficybhxu.supabase.co/functions/v1/sms-webhook')
@@ -666,9 +669,13 @@ export function ChatList({
     setContactsMessage(null)
     setSmsSending(true)
     setSmsSimPickerOpen(false)
+    if (subscriptionId != null) {
+      setRememberedSim(subscriptionId)
+      try { localStorage.setItem('thoth-sms-sim-choice', String(subscriptionId)) } catch { /* ignore */ }
+    }
     try {
       const code = await createSmsVerificationCode()
-      await sendSmsVerification(code, subscriptionId)
+      await sendSmsVerification(code, subscriptionId ?? rememberedSim ?? undefined)
       setSmsCode(code)
     } catch (cause) {
       console.error('sms verification failed', cause)
@@ -676,6 +683,40 @@ export function ChatList({
     } finally {
       setSmsSending(false)
     }
+  }
+
+  // Depois de escolher um chip uma vez, lembra pra sempre (localStorage) e para de perguntar de
+  // novo - so mostra um aviso de qual chip vai usar, com opcao de trocar se precisar.
+  function renderSmsVerifyButton() {
+    if (smsCode) return <small className="invite-code">{smsPolling ? 'SMS enviado, esperando confirmação…' : ''}</small>
+    const remembered = simOptions.length > 1 ? simOptions.find((s) => s.subscriptionId === rememberedSim) : null
+    if (simOptions.length > 1 && smsSimPickerOpen) {
+      return (
+        <div className="sms-sim-picker">
+          <small className="invite-code">Qual número é o seu?</small>
+          {simOptions.map((sim) => (
+            <button key={sim.subscriptionId} type="button" className="whatsapp-verify-btn" disabled={smsSending} onClick={() => startSmsVerification(sim.subscriptionId)}>
+              {sim.label}
+            </button>
+          ))}
+        </div>
+      )
+    }
+    return (
+      <>
+        {remembered && (
+          <small className="invite-code">
+            Vai confirmar usando {remembered.label}. <button type="button" className="chip-btn" style={{ padding: '2px 8px' }} onClick={() => setSmsSimPickerOpen(true)}>trocar chip</button>
+          </small>
+        )}
+        <button
+          type="button" className="whatsapp-verify-btn" disabled={smsSending}
+          onClick={() => (simOptions.length > 1 && !remembered) ? setSmsSimPickerOpen(true) : startSmsVerification(remembered?.subscriptionId)}
+        >
+          {smsSending ? 'Mandando SMS…' : 'Confirmar número por SMS'}
+        </button>
+      </>
+    )
   }
 
   // Celular com 2 chips: o Android nao sabe sozinho por qual numero a pessoa quer confirmar, tem
@@ -2951,24 +2992,7 @@ export function ChatList({
                   )}
                   {smsVerifyAvailable() && !whatsappCode && (
                     <div className="whatsapp-verify-block">
-                      {!smsCode ? (
-                        simOptions.length > 1 && smsSimPickerOpen ? (
-                          <div className="sms-sim-picker">
-                            <small className="invite-code">Qual número é o seu?</small>
-                            {simOptions.map((sim) => (
-                              <button key={sim.subscriptionId} type="button" className="whatsapp-verify-btn" disabled={smsSending} onClick={() => startSmsVerification(sim.subscriptionId)}>
-                                {sim.label}
-                              </button>
-                            ))}
-                          </div>
-                        ) : (
-                          <button type="button" className="whatsapp-verify-btn" disabled={smsSending} onClick={() => simOptions.length > 1 ? setSmsSimPickerOpen(true) : startSmsVerification()}>
-                            {smsSending ? 'Mandando SMS…' : 'Confirmar número por SMS'}
-                          </button>
-                        )
-                      ) : (
-                        <small className="invite-code">{smsPolling ? 'SMS enviado, esperando confirmação…' : ''}</small>
-                      )}
+                      {renderSmsVerifyButton()}
                     </div>
                   )}
 
@@ -3371,24 +3395,7 @@ export function ChatList({
                 )}
                 {smsVerifyAvailable() && !whatsappCode && (
                   <div className="whatsapp-verify-block">
-                    {!smsCode ? (
-                      simOptions.length > 1 && smsSimPickerOpen ? (
-                        <div className="sms-sim-picker">
-                          <small className="invite-code">Qual número é o seu?</small>
-                          {simOptions.map((sim) => (
-                            <button key={sim.subscriptionId} type="button" className="whatsapp-verify-btn" disabled={smsSending} onClick={() => startSmsVerification(sim.subscriptionId)}>
-                              {sim.label}
-                            </button>
-                          ))}
-                        </div>
-                      ) : (
-                        <button type="button" className="whatsapp-verify-btn" disabled={smsSending} onClick={() => simOptions.length > 1 ? setSmsSimPickerOpen(true) : startSmsVerification()}>
-                          {smsSending ? 'Mandando SMS…' : 'Confirmar número por SMS'}
-                        </button>
-                      )
-                    ) : (
-                      <small className="invite-code">{smsPolling ? 'SMS enviado, esperando confirmação…' : ''}</small>
-                    )}
+                    {renderSmsVerifyButton()}
                   </div>
                 )}
 
