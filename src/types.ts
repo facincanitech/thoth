@@ -69,6 +69,7 @@ export type ContactCategory = {
 export type PlayGroup = {
   id: string
   name: string
+  emoji: string | null
   description: string | null
   image_url: string | null
   banner_color: string | null
@@ -106,6 +107,7 @@ export type PlayCategory = {
   id: string
   group_id: string
   name: string
+  emoji: string | null
   position: number
   created_at: string
 }
@@ -115,6 +117,7 @@ export type PlayChannel = {
   group_id: string
   category_id: string | null
   name: string
+  emoji: string | null
   kind: 'text' | 'voice'
   position: number
   created_at: string

@@ -1,6 +1,7 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
+import { isTauriDesktop } from '../lib/platform'
 import { displayName } from '../lib/displayName'
 import { triggerNudgeShake } from '../lib/nudge'
 import { sendPush } from '../lib/pushSend'
@@ -20,6 +21,11 @@ import {
   IconVolumeOff,
 } from './icons'
 import type { Profile } from '../types'
+
+// No Windows (.exe), o WebView2 abre o microfone no dispositivo de "comunicacoes" quando o
+// cancelamento de eco esta ligado, e o Windows abaixa o audio de todo o resto do PC (Sonor,
+// YouTube etc) enquanto a chamada estiver ativa. Desligar isso so no desktop evita a "ducking".
+const micAudioConstraints: boolean | MediaTrackConstraints = isTauriDesktop ? { echoCancellation: false } : true
 
 type Direction = 'incoming' | 'outgoing'
 type Status = 'ringing' | 'connecting' | 'connected'
@@ -241,7 +247,7 @@ export const CallOverlay = forwardRef<CallOverlayHandle, Props>(function CallOve
 
     let stream: MediaStream
     try {
-      stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: req.kind === 'video' })
+      stream = await navigator.mediaDevices.getUserMedia({ audio: micAudioConstraints, video: req.kind === 'video' })
     } catch (err) {
       console.error('getUserMedia failed', err)
       const reason = err instanceof Error ? `${err.name}: ${err.message}` : String(err)
@@ -312,7 +318,7 @@ export const CallOverlay = forwardRef<CallOverlayHandle, Props>(function CallOve
 
     let stream: MediaStream
     try {
-      stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: s.kind === 'video' })
+      stream = await navigator.mediaDevices.getUserMedia({ audio: micAudioConstraints, video: s.kind === 'video' })
     } catch (err) {
       console.error('getUserMedia failed', err)
       const reason = err instanceof Error ? `${err.name}: ${err.message}` : String(err)

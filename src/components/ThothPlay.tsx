@@ -901,7 +901,7 @@ function ServerInfoScreen({ group, members, me, canApprove, onClose, onConfigure
       <div className="modal-card play-server-info" onClick={(e) => e.stopPropagation()}>
         <div className="play-server-info-banner" style={group.banner_image_url ? { backgroundImage: 'url(' + group.banner_image_url + ')', backgroundSize: 'cover', backgroundPosition: '50% 50%' } : { background: group.banner_color || 'var(--green)' }} />
         <AvatarBox src={group.image_url} id={group.id} fallbackLetter={group.name[0]?.toUpperCase()} className="play-group-avatar play-server-info-avatar" />
-        <h2>{group.name}</h2>
+        <h2>{group.emoji ? group.emoji + ' ' : ''}{group.name}</h2>
         {group.description && <p className="play-server-info-desc">{group.description}</p>}
         {members && (
           <div className="play-server-info-counts"><span>{online} online</span><span>{members.length} {members.length === 1 ? 'membro' : 'membros'}</span></div>
@@ -1035,9 +1035,10 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
     const t = setInterval(() => setNowTick(Date.now()), 5000)
     return () => clearInterval(t)
   }, [])
-  const [renameChannelDraft, setRenameChannelDraft] = useState<{ id: string; name: string } | null>(null)
+  const [renameChannelDraft, setRenameChannelDraft] = useState<{ id: string; name: string; emoji: string } | null>(null)
   const [renameCategoryId, setRenameCategoryId] = useState<string | null>(null)
   const [renameCategoryDraft, setRenameCategoryDraft] = useState('')
+  const [renameCategoryEmoji, setRenameCategoryEmoji] = useState('')
   const [dragChannelId, setDragChannelId] = useState<string | null>(null)
   const [dragCategoryId, setDragCategoryId] = useState<string | null>(null)
   const [collapsedCats, setCollapsedCats] = useState<Set<string>>(() => {
@@ -1066,6 +1067,51 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
   useEffect(() => {
     setVoiceParticipants([])
   }, [joinedVoiceChannel?.id])
+
+  // Presenca de canal de voz que nao depende de estar conectado no LiveKit - sem isso so
+  // quem esta na chamada via o Room sabe quem mais esta la. channel_id -> lista de user_id.
+  const [voicePresence, setVoicePresence] = useState<Record<string, string[]>>({})
+  const [expandedVoiceIds, setExpandedVoiceIds] = useState<Set<string>>(new Set())
+  const voiceChannelIds = channels.filter((c) => c.kind === 'voice').map((c) => c.id)
+  const voiceChannelIdsKey = voiceChannelIds.join(',')
+
+  useEffect(() => {
+    if (!voiceChannelIds.length) { setVoicePresence({}); return }
+    let cancelled = false
+    async function loadPresence() {
+      const { data } = await supabase.from('play_voice_presence').select('channel_id, user_id').in('channel_id', voiceChannelIds)
+      if (cancelled) return
+      const grouped: Record<string, string[]> = {}
+      for (const row of data || []) {
+        grouped[row.channel_id] = grouped[row.channel_id] || []
+        grouped[row.channel_id].push(row.user_id)
+      }
+      setVoicePresence(grouped)
+    }
+    loadPresence()
+    const sub = supabase
+      .channel(`play-voice-presence:${voiceChannelIdsKey}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'play_voice_presence' }, () => loadPresence())
+      .subscribe()
+    return () => { cancelled = true; supabase.removeChannel(sub) }
+  }, [voiceChannelIdsKey])
+
+  useEffect(() => {
+    if (!joinedVoiceChannel) return
+    supabase.from('play_voice_presence').upsert({ channel_id: joinedVoiceChannel.id, user_id: me.id }).then()
+    return () => {
+      supabase.from('play_voice_presence').delete().eq('channel_id', joinedVoiceChannel.id).eq('user_id', me.id).then()
+    }
+  }, [joinedVoiceChannel?.id, me.id])
+
+  function toggleVoicePreview(key: string) {
+    setExpandedVoiceIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
+      return next
+    })
+  }
 
   useEffect(() => {
     // O indicador de compartilhamento de tela do WebView2 mostra o titulo do
@@ -1119,7 +1165,27 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
   const memberOnline = (m: GroupMember) => m.profile.id === me.id || getPresenceColor(m.profile.last_seen_at, m.profile.is_idle) !== 'offline'
   const onlineMembers = members.filter(memberOnline)
   const offlineMembers = members.filter((m) => !memberOnline(m))
-  const inVoiceIds = new Set(voiceParticipants.map((p) => p.id))
+  const inVoiceIds = new Set([...voiceParticipants.map((p) => p.id), ...Object.values(voicePresence).flat()])
+
+  type ChannelVoiceEntry = { id: string; name: string; avatar_url: string | null; videoTrack?: Track; cameraTrack?: Track; isScreen?: boolean; micOn?: boolean }
+  function channelVoiceList(channelId: string): ChannelVoiceEntry[] {
+    if (joinedVoiceChannel?.id === channelId) {
+      return voiceParticipants.map((p) => ({
+        id: p.id,
+        name: p.name,
+        avatar_url: (p.id === me.id ? myPlayProfile.avatar_url : membersById[p.id]?.avatar_url) || null,
+        videoTrack: p.videoTrack,
+        cameraTrack: p.cameraTrack,
+        isScreen: p.isScreen,
+        micOn: p.micOn,
+      }))
+    }
+    return (voicePresence[channelId] || []).map((userId) => ({
+      id: userId,
+      name: userId === me.id ? (myPlayProfile.display_name || myPlayProfile.username) : (membersById[userId]?.display_name || membersById[userId]?.username || '...'),
+      avatar_url: (userId === me.id ? myPlayProfile.avatar_url : membersById[userId]?.avatar_url) || null,
+    }))
+  }
   // Cargos com "mostrar separado": quem tem mais de um cai no de cima (ordem = prioridade)
   const hoistedRoles = groupRoles.filter((r) => r.hoisted).sort((a, b) => a.position - b.position)
   const isOnline = memberOnline
@@ -1219,7 +1285,7 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
 
   async function renameCategory() {
     if (!renameCategoryId || !renameCategoryDraft.trim()) return
-    await supabase.from('play_categories').update({ name: renameCategoryDraft.trim() }).eq('id', renameCategoryId)
+    await supabase.from('play_categories').update({ name: renameCategoryDraft.trim(), emoji: renameCategoryEmoji || null }).eq('id', renameCategoryId)
     setRenameCategoryId(null)
     onCategoriesChange()
   }
@@ -1248,7 +1314,7 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
 
   async function renameChannelSave() {
     if (!renameChannelDraft || !renameChannelDraft.name.trim()) return
-    await supabase.from('play_channels').update({ name: renameChannelDraft.name.trim() }).eq('id', renameChannelDraft.id)
+    await supabase.from('play_channels').update({ name: renameChannelDraft.name.trim(), emoji: renameChannelDraft.emoji || null }).eq('id', renameChannelDraft.id)
     setRenameChannelDraft(null)
     onChannelsChange()
   }
@@ -1703,7 +1769,7 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
           <div className="play-group-topbar-copy">
             <div className="play-group-topbar-title">
               <button type="button" className="play-group-topbar-name-btn" onClick={() => setShowServerInfo(true)} title="Sobre o servidor">
-                <strong>{group.name}</strong>
+                <strong>{group.emoji ? group.emoji + ' ' : ''}{group.name}</strong>
               </button>
               <div className="play-group-menu-wrap">
                 <button type="button" className="play-group-menu-trigger" onClick={() => setShowGroupMenu((v) => !v)} title="Menu do servidor">
@@ -1791,7 +1857,7 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
                     >
                       <IconChevronDown size={13} />
                     </button>
-                    <span className="play-category-name" onClick={() => toggleCategoryCollapsed(cat.id)}>{cat.name}</span>
+                    <span className="play-category-name" onClick={() => toggleCategoryCollapsed(cat.id)}>{cat.emoji ? cat.emoji + ' ' : ''}{cat.name}</span>
                     {canManage && (
                       <button type="button" onClick={() => openNewChannelModal(cat.id)} title="Criar canal"><IconPlus size={14} /></button>
                     )}
@@ -1811,12 +1877,12 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
                       >
                         <button type="button" className={`play-channel-item${selectedChannel?.id === c.id ? ' active' : ''}`} onClick={() => handleSelectChannel(c)}>
                           {canManage && <span className="play-channel-grip"><IconGrip size={11} /></span>}
-                          {c.kind === 'text' ? <IconHash size={15} /> : <IconVideo size={15} />} {c.name}
+                          {c.kind === 'text' ? <IconHash size={15} /> : <IconVideo size={15} />} {c.emoji ? c.emoji + ' ' : ''}{c.name}
                         </button>
-                        {c.kind === 'voice' && joinedVoiceChannel?.id === c.id && voiceParticipants.map((p) => (
+                        {c.kind === 'voice' && channelVoiceList(c.id).map((p) => (
                           <div key={p.id} className="play-channel-voice-member">
                             <AvatarBox
-                              src={p.id === me.id ? myPlayProfile.avatar_url : membersById[p.id]?.avatar_url || null}
+                              src={p.avatar_url}
                               id={p.id}
                               fallbackLetter={p.name[0]?.toUpperCase()}
                               className="avatar-sm"
@@ -1848,12 +1914,12 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
                       >
                         <button type="button" className={`play-channel-item${selectedChannel?.id === c.id ? ' active' : ''}`} onClick={() => handleSelectChannel(c)}>
                           {canManage && <span className="play-channel-grip"><IconGrip size={11} /></span>}
-                          {c.kind === 'text' ? <IconHash size={15} /> : <IconVideo size={15} />} {c.name}
+                          {c.kind === 'text' ? <IconHash size={15} /> : <IconVideo size={15} />} {c.emoji ? c.emoji + ' ' : ''}{c.name}
                         </button>
-                        {c.kind === 'voice' && joinedVoiceChannel?.id === c.id && voiceParticipants.map((p) => (
+                        {c.kind === 'voice' && channelVoiceList(c.id).map((p) => (
                           <div key={p.id} className="play-channel-voice-member">
                             <AvatarBox
-                              src={p.id === me.id ? myPlayProfile.avatar_url : membersById[p.id]?.avatar_url || null}
+                              src={p.avatar_url}
                               id={p.id}
                               fallbackLetter={p.name[0]?.toUpperCase()}
                               className="avatar-sm"
@@ -1871,7 +1937,7 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
                 <>
                   <div className="play-group-menu-backdrop" onClick={() => setChanMenu(null)} onContextMenu={(e) => { e.preventDefault(); setChanMenu(null) }} />
                   <div className="play-group-menu" style={{ position: 'fixed', top: chanMenu.y, left: chanMenu.x }}>
-                    <button type="button" onClick={() => { const ch = channels.find((c) => c.id === chanMenu.channelId); setChanMenu(null); if (ch) setRenameChannelDraft({ id: ch.id, name: ch.name }) }}>
+                    <button type="button" onClick={() => { const ch = channels.find((c) => c.id === chanMenu.channelId); setChanMenu(null); if (ch) setRenameChannelDraft({ id: ch.id, name: ch.name, emoji: ch.emoji || '' }) }}>
                       <IconEdit size={14} /> Renomear canal
                     </button>
                     {can('manage_roles') && (
@@ -1902,6 +1968,7 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
                         const cat = categories.find((c) => c.id === catMenu.categoryId)
                         setRenameCategoryId(catMenu.categoryId)
                         setRenameCategoryDraft(cat?.name || '')
+                        setRenameCategoryEmoji(cat?.emoji || '')
                         setCatMenu(null)
                       }}
                     >
@@ -1939,8 +2006,8 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
           {selectedChannel?.kind === 'text' && (
             <div className="play-text-channel">
               <header className="play-text-channel-header">
-                <div><IconHash size={17} /> <strong>{selectedChannel.name}</strong></div>
-                <span>Conversa geral do {group.name}</span>
+                <div><IconHash size={17} /> <strong>{selectedChannel.emoji ? selectedChannel.emoji + ' ' : ''}{selectedChannel.name}</strong></div>
+                <span>Conversa geral do {group.emoji ? group.emoji + ' ' : ''}{group.name}</span>
               </header>
               <div className="play-messages">
                 {messages.length === 0 && <p className="play-empty">nenhuma mensagem ainda</p>}
@@ -2064,24 +2131,52 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
               </>
             ) : (
               <>
-                {voiceParticipants.length === 0 && <p className="play-empty">ninguém na voz agora</p>}
-                {voiceParticipants.map((p) => (
-                  <div key={p.id} className="play-member-row">
-                    <AvatarBox src={p.id === me.id ? myPlayProfile.avatar_url : membersById[p.id]?.avatar_url || null} id={p.id} fallbackLetter={p.name[0]?.toUpperCase()} className="avatar-sm" />
-                    <span
-                      className="play-name-clickable"
-                      onContextMenu={(e) => { e.preventDefault(); openRoleQuickMenu(p.id, p.name, e.clientX, e.clientY) }}
-                      onClick={() => setProfileCardId(p.id)}
-                    >
-                      {p.name}
-                    </span>
-                    <IconHeadphones size={14} />
-                    {p.videoTrack && !(p.id === me.id && p.isScreen) && (
-                      <div className="play-mini-stream">
-                        <StreamView track={p.videoTrack} muted className="play-mini-stream-video" />
-                        <button type="button" className="play-mini-stream-menu" title="Opções" onClick={(e) => { const r = e.currentTarget.getBoundingClientRect(); setMediaMenu({ id: p.id, x: Math.max(8, Math.min(r.left, window.innerWidth - 220)), y: Math.max(8, Math.min(r.bottom + 4, window.innerHeight - 140)), fromGrid: false }) }}><IconMore size={16} /></button>
-                      </div>
-                    )}
+                {channels.filter((c) => c.kind === 'voice').map((c) => ({ channel: c, list: channelVoiceList(c.id) })).filter((g) => g.list.length > 0).length === 0 && (
+                  <p className="play-empty">ninguém na voz agora</p>
+                )}
+                {channels.filter((c) => c.kind === 'voice').map((c) => ({ channel: c, list: channelVoiceList(c.id) })).filter((g) => g.list.length > 0).map((g) => (
+                  <div key={g.channel.id}>
+                    <div className="play-member-group-title">{g.channel.name.toUpperCase()} — {g.list.length}</div>
+                    {g.list.map((p) => {
+                      const key = `${g.channel.id}:${p.id}`
+                      const expanded = expandedVoiceIds.has(key)
+                      const hasPreview = !!(p.videoTrack || p.cameraTrack)
+                      return (
+                        <div key={key} className="play-member-row">
+                          <AvatarBox src={p.avatar_url} id={p.id} fallbackLetter={p.name[0]?.toUpperCase()} className="avatar-sm" />
+                          <span
+                            className="play-name-clickable"
+                            onContextMenu={(e) => { e.preventDefault(); openRoleQuickMenu(p.id, p.name, e.clientX, e.clientY) }}
+                            onClick={() => setProfileCardId(p.id)}
+                          >
+                            {p.name}
+                          </span>
+                          <IconHeadphones size={14} />
+                          {hasPreview && (
+                            <button
+                              type="button"
+                              className="play-voice-preview-toggle"
+                              title={expanded ? 'Esconder prévia' : 'Mostrar prévia'}
+                              onClick={() => toggleVoicePreview(key)}
+                              style={{ transform: expanded ? 'rotate(180deg)' : undefined }}
+                            >
+                              <IconChevronDown size={14} />
+                            </button>
+                          )}
+                          {expanded && p.videoTrack && !(p.id === me.id && p.isScreen) && (
+                            <div className="play-mini-stream">
+                              <StreamView track={p.videoTrack} muted className="play-mini-stream-video" />
+                              <button type="button" className="play-mini-stream-menu" title="Opções" onClick={(e) => { const r = e.currentTarget.getBoundingClientRect(); setMediaMenu({ id: p.id, x: Math.max(8, Math.min(r.left, window.innerWidth - 220)), y: Math.max(8, Math.min(r.bottom + 4, window.innerHeight - 140)), fromGrid: false }) }}><IconMore size={16} /></button>
+                            </div>
+                          )}
+                          {expanded && p.cameraTrack && (
+                            <div className="play-mini-stream">
+                              <StreamView track={p.cameraTrack} muted className="play-mini-stream-video" />
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
                   </div>
                 ))}
               </>
@@ -2259,6 +2354,13 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
           <div className="modal-card" onClick={(e) => e.stopPropagation()}>
             <h2>Renomear canal</h2>
             <input autoFocus placeholder="Nome do canal" value={renameChannelDraft.name} onChange={(e) => setRenameChannelDraft({ ...renameChannelDraft, name: e.target.value })} onKeyDown={(e) => { if (e.key === 'Enter') renameChannelSave() }} />
+            <label className="play-channel-modal-label" style={{ marginTop: 10 }}>Ícone (opcional)</label>
+            <div className="play-role-emoji-row">
+              <button type="button" className={renameChannelDraft.emoji === '' ? 'active' : ''} onClick={() => setRenameChannelDraft({ ...renameChannelDraft, emoji: '' })}>sem</button>
+              {ROLE_EMOJIS.map((em) => (
+                <button key={em} type="button" className={renameChannelDraft.emoji === em ? 'active' : ''} onClick={() => setRenameChannelDraft({ ...renameChannelDraft, emoji: em })}>{em}</button>
+              ))}
+            </div>
             <button type="button" className="google-btn" style={{ marginTop: 10 }} onClick={renameChannelSave}>Salvar</button>
             <button type="button" className="modal-close" onClick={() => setRenameChannelDraft(null)}>cancelar</button>
           </div>
@@ -2285,6 +2387,13 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
             <h2>Renomear categoria</h2>
             <label className="play-channel-modal-label">Nome da categoria</label>
             <input autoFocus placeholder="Nome da categoria" value={renameCategoryDraft} onChange={(e) => setRenameCategoryDraft(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') renameCategory() }} />
+            <label className="play-channel-modal-label" style={{ marginTop: 10 }}>Ícone (opcional)</label>
+            <div className="play-role-emoji-row">
+              <button type="button" className={renameCategoryEmoji === '' ? 'active' : ''} onClick={() => setRenameCategoryEmoji('')}>sem</button>
+              {ROLE_EMOJIS.map((em) => (
+                <button key={em} type="button" className={renameCategoryEmoji === em ? 'active' : ''} onClick={() => setRenameCategoryEmoji(em)}>{em}</button>
+              ))}
+            </div>
             <div className="play-channel-modal-actions">
               <button type="button" className="modal-close" onClick={() => setRenameCategoryId(null)}>Cancelar</button>
               <button type="button" className="google-btn" style={{ width: 'auto' }} onClick={renameCategory}>Salvar</button>
@@ -2565,6 +2674,13 @@ function GroupInfoPanel({ group, myRole, members, me, can, open, onClose, onUpda
               {canGeral && (<>
               <label>Nome</label>
               <input value={name} onChange={(e) => setName(e.target.value)} onBlur={() => { if (name.trim() && name.trim() !== group.name) saveGroup({ name: name.trim() }); else setName(group.name) }} onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()} />
+              <label style={{ marginTop: 10 }}>Ícone (opcional)</label>
+              <div className="play-role-emoji-row">
+                <button type="button" className={!group.emoji ? 'active' : ''} onClick={() => saveGroup({ emoji: null })}>sem</button>
+                {ROLE_EMOJIS.map((em) => (
+                  <button key={em} type="button" className={group.emoji === em ? 'active' : ''} onClick={() => saveGroup({ emoji: em })}>{em}</button>
+                ))}
+              </div>
               <label style={{ marginTop: 10 }}>Descrição</label>
               <input value={description} onChange={(e) => setDescription(e.target.value)} onBlur={() => { const d = description.trim() || null; if (d !== (group.description || null)) saveGroup({ description: d }) }} onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()} placeholder="Sem descrição" />
               <label style={{ marginTop: 10 }}>Características (até 4)</label>
@@ -3382,7 +3498,7 @@ function VoiceChannel({ allow, me, membersById, channel, onParticipantsChange, o
   const micBeforeDeafen = useRef(true)
   const [shareMenuOpen, setShareMenuOpen] = useState(false)
   const [shareQuality, setShareQuality] = useState<'480' | '720'>('720')
-  const [shareLimit, setShareLimit] = useState<10 | 20 | 30 | 60>(30)
+  const shareLimit = 60
   const [shareNotice, setShareNotice] = useState<string | null>(null)
   const attachedAudio = useRef<HTMLMediaElement[]>([])
 
@@ -3447,7 +3563,11 @@ function VoiceChannel({ allow, me, membersById, channel, onParticipantsChange, o
         const { token, url } = await fetchLiveKitToken(channel.id)
         if (cancelled) return
         await room.connect(url, token)
-        if (allow.speak) await room.localParticipant.setMicrophoneEnabled(true)
+        // No Windows (.exe), o WebView2 pede o dispositivo de "comunicacoes" quando o
+        // cancelamento de eco esta ligado, e o Windows abaixa o audio de todo o resto do PC
+        // (Sonor, YouTube, etc) - desligar aqui evita isso. Ja testamos sem cancelamento de
+        // eco antes (registro do "Modo fone") e nao percebemos diferenca perceptivel na chamada.
+        if (allow.speak) await room.localParticipant.setMicrophoneEnabled(true, isTauriDesktop ? { echoCancellation: false } : undefined)
         else setMicEnabled(false)
         if (cancelled) { room.disconnect(); return }
         setConnected(true)
@@ -3481,7 +3601,7 @@ function VoiceChannel({ allow, me, membersById, channel, onParticipantsChange, o
     const next = !micEnabled
     // ligar o microfone estando ensurdecido tambem volta a ouvir (como no Discord)
     if (next && deafenedRef.current) applyDeafen(false)
-    await room.localParticipant.setMicrophoneEnabled(next)
+    await room.localParticipant.setMicrophoneEnabled(next, next && isTauriDesktop ? { echoCancellation: false } : undefined)
     setMicEnabled(next)
     syncParticipants(room)
   }
@@ -3499,7 +3619,7 @@ function VoiceChannel({ allow, me, membersById, channel, onParticipantsChange, o
     } else {
       applyDeafen(false)
       if (micBeforeDeafen.current && allow.speak) {
-        await room.localParticipant.setMicrophoneEnabled(true)
+        await room.localParticipant.setMicrophoneEnabled(true, isTauriDesktop ? { echoCancellation: false } : undefined)
         setMicEnabled(true)
       }
     }
@@ -3565,14 +3685,14 @@ function VoiceChannel({ allow, me, membersById, channel, onParticipantsChange, o
 
   return (
     <div className="play-voice-channel">
-      <header className="play-text-channel-header"><IconVideo size={17} /> {channel.name}</header>
+      <header className="play-text-channel-header"><IconVideo size={17} /> {channel.emoji ? channel.emoji + ' ' : ''}{channel.name}</header>
       {shareNotice && <div className="play-share-notice">{shareNotice}</div>}
       {connecting && <p className="play-empty">conectando...</p>}
       {error && <p className="play-empty error">{error}</p>}
       {connected && (
         <>
           <div className={'play-voice-grid' + (maximizedId ? ' has-max' : '')}>
-            {participants.flatMap((p0) => (p0.cameraTrack ? [p0, { ...p0, id: p0.id + ':cam', isScreen: false, videoTrack: p0.cameraTrack, cameraTrack: undefined }] : [p0])).map((p) => (
+            {participants.map((p) => (
               <VoiceTile
                 key={p.id}
                 p={p}
@@ -3607,12 +3727,6 @@ function VoiceChannel({ allow, me, membersById, channel, onParticipantsChange, o
                   <div className="play-group-menu-backdrop" onClick={() => setShareMenuOpen(false)} />
                   <div className="play-share-menu">
                     <strong>{screenEnabled ? 'Compartilhando sua tela' : 'Compartilhar tela'}</strong>
-                    <span className="play-share-menu-label">Duração máxima</span>
-                    <div className="play-share-quality">
-                      {([10, 20, 30, 60] as const).map((m) => (
-                        <button key={m} type="button" className={shareLimit === m ? 'active' : ''} onClick={() => setShareLimit(m)}>{m} min</button>
-                      ))}
-                    </div>
                     <span className="play-share-menu-label">Qualidade</span>
                     <div className="play-share-quality">
                       <button type="button" className={shareQuality === '480' ? 'active' : ''} onClick={() => setShareQuality('480')}>480p</button>
