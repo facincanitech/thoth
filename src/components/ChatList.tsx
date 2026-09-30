@@ -619,6 +619,9 @@ export function ChatList({
           setWhatsappCode(null)
           await loadPhoneDiscovery()
           setContactsMessage('Número verificado pelo WhatsApp! ✅')
+          // ja puxa a agenda na hora - sem isso o usuario precisaria sair da tela de
+          // + Contato e voltar pra ver os contatos que passaram a bater pelo numero
+          if (contactsPermission === 'granted') await syncDeviceContacts()
         }
       } catch (cause) {
         console.error('whatsapp verification poll failed', cause)
@@ -2778,6 +2781,31 @@ export function ChatList({
               {inviteSent && <span className="invite-code">Essa pessoa ainda não tem conta — enviamos um convite por e-mail.</span>}
               {error && <span className="auth-error">{error}</span>}
             </div>
+
+            {PHONE_LINK_ENABLED && !phoneLinked && whatsappVerifyAvailable() && (
+              <div className="privacy-contacts-card" style={{ margin: '0 0 14px' }}>
+                <div className="option-icon"><IconUser size={20} /></div>
+                <div className="privacy-contacts-copy">
+                  <strong>Facilite ser encontrado</strong>
+                  <span>Confirme seu número pra seus contatos te acharem mais rápido.</span>
+                  <div className="whatsapp-verify-block">
+                    {!whatsappCode ? (
+                      <button type="button" className="whatsapp-verify-btn" onClick={startWhatsAppVerification}>
+                        Configurar número pelo WhatsApp
+                      </button>
+                    ) : (
+                      <>
+                        <small>Mande esta mensagem pro nosso WhatsApp pra confirmar que o número é seu:</small>
+                        <a className="whatsapp-verify-btn" href={whatsappVerifyUrl(whatsappCode)} target="_blank" rel="noreferrer">
+                          Abrir WhatsApp e enviar "{whatsappCode}"
+                        </a>
+                        <small className="invite-code">{whatsappPolling ? 'Esperando você mandar a mensagem…' : ''}</small>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
 
             <div className="device-contacts-section">
               <div className="device-contacts-heading">

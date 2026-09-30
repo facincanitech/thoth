@@ -414,6 +414,12 @@
 /* Play desktop: moldura das fotos nas listas de gerenciar (membros/banidos/cargos) menor */
 .play-window-shell .play-manage-member-row .avatar-sm,.play-window-shell .play-role-check-row .avatar-sm{width:30px!important;height:30px!important;padding:1px!important;border:2px solid #ffffff!important;border-radius:6px!important}
 
+/* Chat Frutiger Aero desktop: mensagens precisam manter bolhas visiveis como os demais temas. */
+.desktop-chat-shell .bubble{max-width:min(620px,82%)!important;padding:10px 13px 8px!important;border:1px solid #ffffff!important;border-radius:10px!important;box-shadow:0 2px 8px #00000016!important}
+.desktop-chat-shell .message-text-bubble{max-width:min(28ch,74%)!important}
+.desktop-chat-shell .in .bubble{background:linear-gradient(180deg,#ffffff,#ffffff)!important;color:#000000!important}
+.desktop-chat-shell .out .bubble{background:linear-gradient(180deg,#ffffff,#ffffff)!important;border-color:#ff0000!important;color:#000000!important}
+
 .desktop-window-shell .msn-identity-card{min-height:118px!important;padding:16px 18px!important}
 .desktop-window-shell .msn-identity-copy strong{color:var(--text)!important;font-size:18px!important}
 .desktop-window-shell .msn-presence{color:var(--text-secondary)!important;line-height:1.45!important}
