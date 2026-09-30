@@ -3,7 +3,7 @@ import { openPip, closePip, updatePipTrack } from '../lib/pipBridge'
 import { openMainWindow } from '../lib/desktopWindows'
 import { isTauriDesktop } from '../lib/platform'
 import { useEffect, useMemo, useRef, useState, type ChangeEvent, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent } from 'react'
-import { Room, RoomEvent, Track, createLocalScreenTracks, type RemoteParticipant, type LocalParticipant, type TrackPublication } from 'livekit-client'
+import { Room, RoomEvent, Track, createLocalScreenTracks, type AudioCaptureOptions, type RemoteParticipant, type LocalParticipant, type TrackPublication } from 'livekit-client'
 import { supabase } from '../lib/supabase'
 import { fetchLiveKitToken } from '../lib/livekit'
 import { setMediaAudioMode } from '../lib/audioRoute'
@@ -165,10 +165,33 @@ type Props = {
 
 type ChannelMessage = PlayMessage & { author?: Profile }
 
+type PlayVoiceSettings = {
+  inputDeviceId: string
+  outputDeviceId: string
+  inputVolume: number
+  outputVolume: number
+  inputProfile: 'isolation' | 'studio'
+  voiceActivation: boolean
+}
+
+const PLAY_VOICE_SETTINGS_KEY = 'thoth-play-voice-settings-v1'
+const DEFAULT_VOICE_SETTINGS: PlayVoiceSettings = { inputDeviceId: '', outputDeviceId: '', inputVolume: 1, outputVolume: 1, inputProfile: 'isolation', voiceActivation: true }
+
+function readPlayVoiceSettings(): PlayVoiceSettings {
+  try { return { ...DEFAULT_VOICE_SETTINGS, ...JSON.parse(localStorage.getItem(PLAY_VOICE_SETTINGS_KEY) || '{}') } }
+  catch { return DEFAULT_VOICE_SETTINGS }
+}
+
+function writePlayVoiceSettings(settings: PlayVoiceSettings) {
+  try { localStorage.setItem(PLAY_VOICE_SETTINGS_KEY, JSON.stringify(settings)) } catch { /* ignore */ }
+}
+
 export function ThothPlay({ me, onBack, initialInviteCode }: Props) {
   const [myPlayProfile, setMyPlayProfile] = useState<Profile>(me)
   const [playTheme, setPlayTheme] = useState<PlayThemeId>(DEFAULT_PLAY_THEME)
   const [showProfile, setShowProfile] = useState(false)
+  const [showAccountMenu, setShowAccountMenu] = useState(false)
+  const [showVoiceSettings, setShowVoiceSettings] = useState(false)
   const [myGroups, setMyGroups] = useState<PlayGroup[]>([])
   const [browseGroups, setBrowseGroups] = useState<PlayGroup[]>([])
   const [loading, setLoading] = useState(true)
@@ -491,7 +514,7 @@ export function ThothPlay({ me, onBack, initialInviteCode }: Props) {
         onExit={onBack}
         me={me}
         myPlayProfile={myPlayProfile}
-        onOpenProfile={() => setShowProfile(true)}
+        onOpenProfile={() => setShowAccountMenu(true)}
       />
 
       {selectedGroup ? (
@@ -578,6 +601,19 @@ export function ThothPlay({ me, onBack, initialInviteCode }: Props) {
       )}
 
       <ProfilePanel me={me} open={showProfile} onClose={() => setShowProfile(false)} onSaved={loadMyPlayProfile} />
+      {showAccountMenu && (
+        <div className="modal-backdrop play-account-menu-backdrop" onClick={() => setShowAccountMenu(false)}>
+          <div className="modal-card play-account-menu" onClick={(event) => event.stopPropagation()}>
+            <h2>Minha conta no Play</h2>
+            <span className="play-account-menu-category">Configurações</span>
+            <button type="button" onClick={() => { setShowAccountMenu(false); setShowVoiceSettings(true) }}><IconSettingsGear size={18} /><span><strong>Voz</strong><small>Microfone, alto-falante e detecção de voz</small></span><IconChevronDown size={16} /></button>
+            <span className="play-account-menu-category">Perfil</span>
+            <button type="button" onClick={() => { setShowAccountMenu(false); setShowProfile(true) }}><IconUser size={18} /><span><strong>Editar perfil</strong><small>Foto, nome, status, aparência e tema</small></span><IconChevronDown size={16} /></button>
+            <button type="button" className="modal-close" onClick={() => setShowAccountMenu(false)}>fechar</button>
+          </div>
+        </div>
+      )}
+      <PlayVoiceSettingsPanel open={showVoiceSettings} onClose={() => setShowVoiceSettings(false)} />
     </div>
   )
 }
@@ -3004,6 +3040,108 @@ function GroupInfoPanel({ group, myRole, members, me, can, open, onClose, onUpda
   )
 }
 
+function PlayVoiceSettingsPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const [settings, setSettings] = useState<PlayVoiceSettings>(readPlayVoiceSettings)
+  const [inputs, setInputs] = useState<MediaDeviceInfo[]>([])
+  const [outputs, setOutputs] = useState<MediaDeviceInfo[]>([])
+  const [testing, setTesting] = useState(false)
+  const [level, setLevel] = useState(0)
+  const testStreamRef = useRef<MediaStream | null>(null)
+  const testFrameRef = useRef<number | null>(null)
+
+  async function loadDevices(requestPermission = false) {
+    let probe: MediaStream | null = null
+    try {
+      if (requestPermission) probe = await navigator.mediaDevices.getUserMedia({ audio: true })
+      const devices = await navigator.mediaDevices.enumerateDevices()
+      setInputs(devices.filter((device) => device.kind === 'audioinput'))
+      setOutputs(devices.filter((device) => device.kind === 'audiooutput'))
+    } catch { /* permissao pode ser concedida somente ao iniciar o teste/canal */ }
+    finally { probe?.getTracks().forEach((track) => track.stop()) }
+  }
+
+  useEffect(() => {
+    if (!open) return
+    setSettings(readPlayVoiceSettings())
+    loadDevices(false)
+    return stopTest
+  }, [open])
+
+  function update<K extends keyof PlayVoiceSettings>(key: K, value: PlayVoiceSettings[K]) {
+    setSettings((current) => {
+      const next = { ...current, [key]: value }
+      writePlayVoiceSettings(next)
+      return next
+    })
+  }
+
+  function stopTest() {
+    testStreamRef.current?.getTracks().forEach((track) => track.stop())
+    testStreamRef.current = null
+    if (testFrameRef.current != null) cancelAnimationFrame(testFrameRef.current)
+    testFrameRef.current = null
+    setTesting(false)
+    setLevel(0)
+    void setMediaAudioMode()
+  }
+
+  async function toggleTest() {
+    if (testing) { stopTest(); return }
+    try {
+      const audio: MediaTrackConstraints = {
+        ...(settings.inputDeviceId ? { deviceId: { exact: settings.inputDeviceId } } : {}),
+        echoCancellation: settings.inputProfile === 'isolation',
+        noiseSuppression: settings.inputProfile === 'isolation',
+        autoGainControl: settings.inputProfile === 'isolation',
+      }
+      const stream = await navigator.mediaDevices.getUserMedia({ audio })
+      testStreamRef.current = stream
+      setTesting(true)
+      await loadDevices(false)
+      const context = new AudioContext()
+      const analyser = context.createAnalyser()
+      analyser.fftSize = 256
+      context.createMediaStreamSource(stream).connect(analyser)
+      const values = new Uint8Array(analyser.frequencyBinCount)
+      const draw = () => {
+        analyser.getByteFrequencyData(values)
+        setLevel(Math.min(100, Math.round((values.reduce((sum, value) => sum + value, 0) / values.length) * 1.7)))
+        testFrameRef.current = requestAnimationFrame(draw)
+      }
+      draw()
+    } catch { setTesting(false) }
+  }
+
+  return (
+    <>
+      {open && <div className="play-profile-panel-backdrop" onClick={onClose} />}
+      <div className={`new-conv-panel play-profile-panel play-voice-settings${open ? ' open' : ''}`}>
+        <div className="new-conv-header">
+          <button type="button" className="icon-btn" onClick={onClose}><IconArrowLeft size={20} /></button>
+          <strong>Configurações de voz</strong>
+        </div>
+        <div className="play-group-info-body">
+          <h2>Voz</h2>
+          <div className="play-voice-device-grid">
+            <label>Microfone<select value={settings.inputDeviceId} onChange={(event) => update('inputDeviceId', event.target.value)}><option value="">Padrão do sistema</option>{inputs.filter((device) => device.deviceId !== 'default').map((device, index) => <option key={device.deviceId} value={device.deviceId}>{device.label || `Microfone ${index + 1}`}</option>)}</select></label>
+            <label>Alto-falante<select value={settings.outputDeviceId} onChange={(event) => update('outputDeviceId', event.target.value)}><option value="">Padrão do sistema</option>{outputs.filter((device) => device.deviceId !== 'default').map((device, index) => <option key={device.deviceId} value={device.deviceId}>{device.label || `Saída ${index + 1}`}</option>)}</select></label>
+            <label>Volume do microfone<input type="range" min="0" max="1" step="0.05" value={settings.inputVolume} onChange={(event) => update('inputVolume', Number(event.target.value))} /></label>
+            <label>Volume do alto-falante<input type="range" min="0" max="1" step="0.05" value={settings.outputVolume} onChange={(event) => update('outputVolume', Number(event.target.value))} /></label>
+          </div>
+          <div className="play-mic-test"><button type="button" className="google-btn" onClick={toggleTest}>{testing ? 'Parar teste' : 'Teste do microfone'}</button><div><i style={{ width: `${level}%` }} /></div></div>
+          <button type="button" className="play-device-refresh" onClick={() => loadDevices(true)}>Atualizar dispositivos de áudio</button>
+          <div className="appearance-separator" />
+          <h3>Perfil de entrada</h3>
+          <label className="play-voice-radio"><input type="radio" checked={settings.inputProfile === 'isolation'} onChange={() => update('inputProfile', 'isolation')} /><span><strong>Isolamento de voz</strong><small>Reduz eco e ruído ao redor.</small></span></label>
+          <label className="play-voice-radio"><input type="radio" checked={settings.inputProfile === 'studio'} onChange={() => update('inputProfile', 'studio')} /><span><strong>Estúdio</strong><small>Áudio puro, sem processamento.</small></span></label>
+          <label className="play-voice-toggle"><span><strong>Detecção de voz</strong><small>Transmite sua voz automaticamente, sem apertar para falar.</small></span><input type="checkbox" checked={settings.voiceActivation} onChange={(event) => update('voiceActivation', event.target.checked)} /></label>
+          <p className="play-voice-help">Para manter música e jogos em estéreo com fone Bluetooth, escolha outro microfone como entrada. A detecção de voz precisa manter o microfone selecionado disponível.</p>
+        </div>
+      </div>
+    </>
+  )
+}
+
 function ProfilePanel({ me, open, onClose, onSaved }: { me: Profile; open: boolean; onClose: () => void; onSaved: () => void }) {
   const [loaded, setLoaded] = useState(false)
   const [avatarUrl, setAvatarUrl] = useState<string | null>(me.avatar_url ?? null)
@@ -3493,12 +3631,18 @@ function VoiceChannel({ allow, me, membersById, channel, onParticipantsChange, o
   pipIds: string[]; maximizedId: string | null; onFullscreen: (id: string) => void; onTogglePip: (id: string) => void; onToggleMaximize: (id: string) => void
   onMediaMenu: (id: string, x: number, y: number) => void
 }) {
-  const playMicOptions = { echoCancellation: false, noiseSuppression: false, autoGainControl: false }
+  const voiceSettings = readPlayVoiceSettings()
+  const playMicOptions: AudioCaptureOptions = {
+    ...(voiceSettings.inputDeviceId ? { deviceId: voiceSettings.inputDeviceId } : {}),
+    echoCancellation: voiceSettings.inputProfile === 'isolation',
+    noiseSuppression: voiceSettings.inputProfile === 'isolation',
+    autoGainControl: voiceSettings.inputProfile === 'isolation',
+  }
   const roomRef = useRef<Room | null>(null)
   const [connected, setConnected] = useState(false)
   const [connecting, setConnecting] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [micEnabled, setMicEnabled] = useState(true)
+  const [micEnabled, setMicEnabled] = useState(allow.speak && voiceSettings.voiceActivation)
   const [cameraEnabled, setCameraEnabled] = useState(false)
   const [screenEnabled, setScreenEnabled] = useState(false)
   const [participants, setParticipants] = useState<ParticipantTile[]>([])
@@ -3550,6 +3694,10 @@ function VoiceChannel({ allow, me, membersById, channel, onParticipantsChange, o
           const el = track.attach()
           el.style.display = 'none'
           el.muted = deafenedRef.current
+          el.volume = voiceSettings.outputVolume
+          if (voiceSettings.outputDeviceId && 'setSinkId' in el) {
+            void (el as HTMLAudioElement & { setSinkId: (id: string) => Promise<void> }).setSinkId(voiceSettings.outputDeviceId).catch(() => {})
+          }
           document.body.appendChild(el)
           attachedAudio.current.push(el)
           if (pub.source === Track.Source.ScreenShareAudio) setScreenAudio((prev) => ({ ...prev, [participant.identity]: el }))
@@ -3575,16 +3723,16 @@ function VoiceChannel({ allow, me, membersById, channel, onParticipantsChange, o
         const { token, url } = await fetchLiveKitToken(channel.id)
         if (cancelled) return
         await room.connect(url, token)
-        // No Windows (.exe), o WebView2 pede o dispositivo de "comunicacoes" quando o
-        // cancelamento de eco esta ligado, e o Windows abaixa o audio de todo o resto do PC
-        // (Sonor, YouTube, etc) - desligar aqui evita isso. Ja testamos sem cancelamento de
-        // eco antes (registro do "Modo fone") e nao percebemos diferenca perceptivel na chamada.
-        if (allow.speak) {
+        // Com deteccao de voz, o WebRTC usa supressao de silencio/DTX e transmite quando ha
+        // fala. A captura continua aberta por necessidade tecnica, usando o dispositivo e o
+        // perfil escolhidos nas configuracoes de voz.
+        if (allow.speak && voiceSettings.voiceActivation) {
           await room.localParticipant.setMicrophoneEnabled(true, playMicOptions)
-          await setMediaAudioMode()
-          setTimeout(() => setMediaAudioMode(), 400)
+          setMicEnabled(true)
+        } else {
+          setMicEnabled(false)
         }
-        else setMicEnabled(false)
+        await setMediaAudioMode()
         if (cancelled) { room.disconnect(); return }
         setConnected(true)
         syncParticipants(room)
@@ -3601,6 +3749,7 @@ function VoiceChannel({ allow, me, membersById, channel, onParticipantsChange, o
       roomRef.current = null
       attachedAudio.current.forEach((el) => el.remove())
       attachedAudio.current = []
+      void setMediaAudioMode()
     }
   }, [channel.id])
 
@@ -3618,7 +3767,7 @@ function VoiceChannel({ allow, me, membersById, channel, onParticipantsChange, o
     // ligar o microfone estando ensurdecido tambem volta a ouvir (como no Discord)
     if (next && deafenedRef.current) applyDeafen(false)
     await room.localParticipant.setMicrophoneEnabled(next, next ? playMicOptions : undefined)
-    if (next) await setMediaAudioMode()
+    await setMediaAudioMode()
     setMicEnabled(next)
     syncParticipants(room)
   }

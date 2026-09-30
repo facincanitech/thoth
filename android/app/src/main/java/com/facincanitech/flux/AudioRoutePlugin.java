@@ -39,6 +39,8 @@ public class AudioRoutePlugin extends Plugin {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 am.clearCommunicationDevice();
             } else {
+                am.stopBluetoothSco();
+                am.setBluetoothScoOn(false);
                 am.setSpeakerphoneOn(false);
             }
             am.setMode(AudioManager.MODE_NORMAL);
@@ -54,6 +56,8 @@ public class AudioRoutePlugin extends Plugin {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 am.clearCommunicationDevice();
             } else {
+                am.stopBluetoothSco();
+                am.setBluetoothScoOn(false);
                 am.setSpeakerphoneOn(false);
             }
             // Canais do Play sao salas de voz persistentes, nao ligacoes telefonicas.

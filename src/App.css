@@ -2188,6 +2188,23 @@ body{
 .play-role-emoji-row{display:flex;flex-wrap:wrap;gap:4px}
 .play-role-emoji-row button{min-width:34px;height:34px;border:1px solid var(--line-2);border-radius:8px;background:var(--bg-surface-2);color:var(--text);cursor:pointer;font-size:16px}
 .play-role-emoji-row button.active{border-color:var(--accent-text);background:var(--bg-selected)}
+.play-account-menu{width:min(430px,calc(100vw - 28px));display:flex;flex-direction:column;gap:7px}
+.play-account-menu-category{margin-top:6px;color:var(--muted);font-size:10px;font-weight:750;letter-spacing:.09em;text-transform:uppercase}
+.play-account-menu>button:not(.modal-close){display:grid;grid-template-columns:28px 1fr 18px;align-items:center;gap:10px;width:100%;padding:12px;border:1px solid var(--line-2);border-radius:11px;background:var(--bg-panel);color:var(--text);text-align:left;cursor:pointer}
+.play-account-menu>button span{display:flex;flex-direction:column;gap:2px}.play-account-menu>button small{color:var(--muted);font-size:11px}
+.play-voice-settings .play-group-info-body{padding-bottom:40px}
+.play-voice-settings h2,.play-voice-settings h3{margin:4px 0 14px}
+.play-voice-device-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.play-voice-device-grid label{display:flex;flex-direction:column;gap:7px;font-weight:650;color:var(--text)}
+.play-voice-device-grid select{width:100%;min-width:0;padding:10px;border:1px solid var(--line-2);border-radius:9px;background:var(--input);color:var(--text)}
+.play-voice-device-grid input[type="range"]{width:100%;accent-color:var(--accent-text)}
+.play-mic-test{display:flex;align-items:center;gap:18px;margin:22px 0 8px}.play-mic-test .google-btn{width:auto;flex:none}.play-mic-test>div{height:12px;flex:1;border-radius:9px;background:var(--line);overflow:hidden}.play-mic-test i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,var(--accent-text),var(--green));transition:width 80ms linear}
+.play-device-refresh{border:0;background:none;color:var(--accent-text);padding:5px 0;cursor:pointer;text-align:left;font-size:12px}
+.play-voice-radio,.play-voice-toggle{display:flex;align-items:flex-start;gap:11px;padding:10px 0;color:var(--text)}
+.play-voice-radio span,.play-voice-toggle span{display:flex;flex:1;flex-direction:column;gap:4px}.play-voice-radio small,.play-voice-toggle small{color:var(--muted);font-size:12px;font-weight:400}.play-voice-radio input{margin-top:3px;accent-color:var(--accent-text)}
+.play-voice-toggle{align-items:center;margin-top:10px}.play-voice-toggle input{width:42px;height:22px;accent-color:var(--accent-text)}
+.play-voice-help{margin-top:18px!important;padding:12px;border:1px solid var(--line-2);border-radius:10px;background:var(--bg-panel);font-size:12px!important;line-height:1.5}
+@media(max-width:700px){.play-voice-device-grid{grid-template-columns:1fr}.play-mic-test{align-items:stretch;flex-direction:column;gap:10px}}
 [data-theme="messenger"] .play-app-shell .play-manage-member-row .avatar-sm{width:30px;height:30px;padding:1px;border-width:2px;border-radius:7px}
 
 /* ================================================================
