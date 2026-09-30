@@ -172,10 +172,11 @@ type PlayVoiceSettings = {
   outputVolume: number
   inputProfile: 'isolation' | 'studio'
   voiceActivation: boolean
+  pushToTalkKey: string
 }
 
 const PLAY_VOICE_SETTINGS_KEY = 'thoth-play-voice-settings-v1'
-const DEFAULT_VOICE_SETTINGS: PlayVoiceSettings = { inputDeviceId: '', outputDeviceId: '', inputVolume: 1, outputVolume: 1, inputProfile: 'studio', voiceActivation: true }
+const DEFAULT_VOICE_SETTINGS: PlayVoiceSettings = { inputDeviceId: '', outputDeviceId: '', inputVolume: 1, outputVolume: 1, inputProfile: 'studio', voiceActivation: true, pushToTalkKey: 'Space' }
 
 function readPlayVoiceSettings(): PlayVoiceSettings {
   try {
@@ -195,7 +196,6 @@ export function ThothPlay({ me, onBack, initialInviteCode }: Props) {
   const [myPlayProfile, setMyPlayProfile] = useState<Profile>(me)
   const [playTheme, setPlayTheme] = useState<PlayThemeId>(DEFAULT_PLAY_THEME)
   const [showProfile, setShowProfile] = useState(false)
-  const [showVoiceSettings, setShowVoiceSettings] = useState(false)
   const [myGroups, setMyGroups] = useState<PlayGroup[]>([])
   const [browseGroups, setBrowseGroups] = useState<PlayGroup[]>([])
   const [loading, setLoading] = useState(true)
@@ -544,7 +544,6 @@ export function ThothPlay({ me, onBack, initialInviteCode }: Props) {
           showProfile={showProfile}
           onCloseProfile={() => setShowProfile(false)}
           onProfileSaved={loadMyPlayProfile}
-          onOpenVoiceSettings={() => { setShowProfile(false); setShowVoiceSettings(true) }}
         />
       ) : (
         <main className="play-home">
@@ -614,10 +613,8 @@ export function ThothPlay({ me, onBack, initialInviteCode }: Props) {
           open={showProfile}
           onClose={() => setShowProfile(false)}
           onSaved={loadMyPlayProfile}
-          onOpenVoiceSettings={() => { setShowProfile(false); setShowVoiceSettings(true) }}
         />
       )}
-      <PlayVoiceSettingsPanel open={showVoiceSettings} onClose={() => setShowVoiceSettings(false)} />
     </div>
   )
 }
@@ -1005,13 +1002,12 @@ type GroupViewProps = {
   showProfile: boolean
   onCloseProfile: () => void
   onProfileSaved: () => void
-  onOpenVoiceSettings: () => void
 }
 
 type GroupMember = { profile: Profile; role: string }
 type VoiceParticipantInfo = { id: string; name: string; micOn?: boolean; isScreen?: boolean; videoTrack?: Track; cameraTrack?: Track }
 
-function GroupView({ me, myPlayProfile, group, channels, categories, selectedChannel, messages, liveTyping, draft, onDraftChange, onSend, onSendContent, onSelectChannel, onChannelsChange, onCategoriesChange, onGroupUpdate, onLeftGroup, onExitToMessenger, showProfile, onCloseProfile, onProfileSaved, onOpenVoiceSettings }: GroupViewProps) {
+function GroupView({ me, myPlayProfile, group, channels, categories, selectedChannel, messages, liveTyping, draft, onDraftChange, onSend, onSendContent, onSelectChannel, onChannelsChange, onCategoriesChange, onGroupUpdate, onLeftGroup, onExitToMessenger, showProfile, onCloseProfile, onProfileSaved }: GroupViewProps) {
   const [showNewChannel, setShowNewChannel] = useState(false)
   const [mobileScreen, setMobileScreen] = useState<'channels' | 'chat' | 'members'>('channels')
   const mobileScreenRef = useRef(mobileScreen)
@@ -2059,7 +2055,6 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
               open={showProfile}
               onClose={onCloseProfile}
               onSaved={onProfileSaved}
-              onOpenVoiceSettings={onOpenVoiceSettings}
             />
           </div>
 
@@ -3055,12 +3050,13 @@ function GroupInfoPanel({ group, myRole, members, me, can, open, onClose, onUpda
   )
 }
 
-function PlayVoiceSettingsPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
+function VoiceSettingsFields() {
   const [settings, setSettings] = useState<PlayVoiceSettings>(readPlayVoiceSettings)
   const [inputs, setInputs] = useState<MediaDeviceInfo[]>([])
   const [outputs, setOutputs] = useState<MediaDeviceInfo[]>([])
   const [testing, setTesting] = useState(false)
   const [level, setLevel] = useState(0)
+  const [capturingKey, setCapturingKey] = useState(false)
   const testStreamRef = useRef<MediaStream | null>(null)
   const testFrameRef = useRef<number | null>(null)
 
@@ -3076,11 +3072,21 @@ function PlayVoiceSettingsPanel({ open, onClose }: { open: boolean; onClose: () 
   }
 
   useEffect(() => {
-    if (!open) return
     setSettings(readPlayVoiceSettings())
     loadDevices(false)
     return stopTest
-  }, [open])
+  }, [])
+
+  useEffect(() => {
+    if (!capturingKey) return
+    function onKey(e: KeyboardEvent) {
+      e.preventDefault()
+      update('pushToTalkKey', e.code)
+      setCapturingKey(false)
+    }
+    window.addEventListener('keydown', onKey, { capture: true })
+    return () => window.removeEventListener('keydown', onKey, { capture: true })
+  }, [capturingKey])
 
   function update<K extends keyof PlayVoiceSettings>(key: K, value: PlayVoiceSettings[K]) {
     setSettings((current) => {
@@ -3129,35 +3135,36 @@ function PlayVoiceSettingsPanel({ open, onClose }: { open: boolean; onClose: () 
 
   return (
     <>
-      {open && <div className="play-profile-panel-backdrop" onClick={onClose} />}
-      <div className={`new-conv-panel play-profile-panel play-voice-settings${open ? ' open' : ''}`}>
-        <div className="new-conv-header">
-          <button type="button" className="icon-btn" onClick={onClose}><IconArrowLeft size={20} /></button>
-          <strong>Configurações de voz</strong>
-        </div>
-        <div className="play-group-info-body">
-          <h2>Voz</h2>
-          <div className="play-voice-device-grid">
-            <label>Microfone<select value={settings.inputDeviceId} onChange={(event) => update('inputDeviceId', event.target.value)}><option value="">Padrão do sistema</option>{inputs.filter((device) => device.deviceId !== 'default').map((device, index) => <option key={device.deviceId} value={device.deviceId}>{device.label || `Microfone ${index + 1}`}</option>)}</select></label>
-            <label>Alto-falante<select value={settings.outputDeviceId} onChange={(event) => update('outputDeviceId', event.target.value)}><option value="">Padrão do sistema</option>{outputs.filter((device) => device.deviceId !== 'default').map((device, index) => <option key={device.deviceId} value={device.deviceId}>{device.label || `Saída ${index + 1}`}</option>)}</select></label>
-            <label>Volume do microfone<input type="range" min="0" max="1" step="0.05" value={settings.inputVolume} onChange={(event) => update('inputVolume', Number(event.target.value))} /></label>
-            <label>Volume do alto-falante<input type="range" min="0" max="1" step="0.05" value={settings.outputVolume} onChange={(event) => update('outputVolume', Number(event.target.value))} /></label>
-          </div>
-          <div className="play-mic-test"><button type="button" className="google-btn" onClick={toggleTest}>{testing ? 'Parar teste' : 'Teste do microfone'}</button><div><i style={{ width: `${level}%` }} /></div></div>
-          <button type="button" className="play-device-refresh" onClick={() => loadDevices(true)}>Atualizar dispositivos de áudio</button>
-          <div className="appearance-separator" />
-          <h3>Perfil de entrada</h3>
-          <label className={`play-voice-radio${isTauriDesktop ? ' disabled' : ''}`}><input type="radio" disabled={isTauriDesktop} checked={settings.inputProfile === 'isolation'} onChange={() => update('inputProfile', 'isolation')} /><span><strong>Isolamento de voz</strong><small>{isTauriDesktop ? 'Desativado no EXE para não abafar o áudio do computador.' : 'Reduz eco e ruído ao redor.'}</small></span></label>
-          <label className="play-voice-radio"><input type="radio" checked={settings.inputProfile === 'studio'} onChange={() => update('inputProfile', 'studio')} /><span><strong>Estúdio</strong><small>Áudio puro, sem processamento.</small></span></label>
-          <label className="play-voice-toggle"><span><strong>Detecção de voz</strong><small>Transmite sua voz automaticamente, sem apertar para falar.</small></span><input type="checkbox" checked={settings.voiceActivation} onChange={(event) => update('voiceActivation', event.target.checked)} /></label>
-          <p className="play-voice-help">Para manter música e jogos em estéreo com fone Bluetooth, escolha outro microfone como entrada. A detecção de voz precisa manter o microfone selecionado disponível.</p>
-        </div>
+      <h2>Voz</h2>
+      <div className="play-voice-device-grid">
+        <label>Microfone<select value={settings.inputDeviceId} onChange={(event) => update('inputDeviceId', event.target.value)}><option value="">Padrão do sistema</option>{inputs.filter((device) => device.deviceId !== 'default').map((device, index) => <option key={device.deviceId} value={device.deviceId}>{device.label || `Microfone ${index + 1}`}</option>)}</select></label>
+        <label>Alto-falante<select value={settings.outputDeviceId} onChange={(event) => update('outputDeviceId', event.target.value)}><option value="">Padrão do sistema</option>{outputs.filter((device) => device.deviceId !== 'default').map((device, index) => <option key={device.deviceId} value={device.deviceId}>{device.label || `Saída ${index + 1}`}</option>)}</select></label>
+        <label>Volume do microfone<input type="range" min="0" max="1" step="0.05" value={settings.inputVolume} onChange={(event) => update('inputVolume', Number(event.target.value))} /></label>
+        <label>Volume do alto-falante<input type="range" min="0" max="1" step="0.05" value={settings.outputVolume} onChange={(event) => update('outputVolume', Number(event.target.value))} /></label>
       </div>
+      <div className="play-mic-test"><button type="button" className="google-btn" onClick={toggleTest}>{testing ? 'Parar teste' : 'Teste do microfone'}</button><div><i style={{ width: `${level}%` }} /></div></div>
+      <button type="button" className="play-device-refresh" onClick={() => loadDevices(true)}>Atualizar dispositivos de áudio</button>
+      <div className="appearance-separator" />
+      <h3>Perfil de entrada</h3>
+      <label className={`play-voice-radio${isTauriDesktop ? ' disabled' : ''}`}><input type="radio" disabled={isTauriDesktop} checked={settings.inputProfile === 'isolation'} onChange={() => update('inputProfile', 'isolation')} /><span><strong>Isolamento de voz</strong><small>{isTauriDesktop ? 'Desativado no EXE para não abafar o áudio do computador.' : 'Reduz eco e ruído ao redor.'}</small></span></label>
+      <label className="play-voice-radio"><input type="radio" checked={settings.inputProfile === 'studio'} onChange={() => update('inputProfile', 'studio')} /><span><strong>Estúdio</strong><small>Áudio puro, sem processamento.</small></span></label>
+      <label className="play-voice-toggle"><span><strong>Detecção de voz</strong><small>Transmite sua voz automaticamente, sem apertar para falar.</small></span><input type="checkbox" checked={settings.voiceActivation} onChange={(event) => update('voiceActivation', event.target.checked)} /></label>
+      {!settings.voiceActivation && (
+        <label className="play-voice-radio">
+          <span>
+            <strong>Tecla de apertar para falar</strong>
+            <small>{capturingKey ? 'Aperte a tecla que você quer usar...' : `Tecla atual: ${settings.pushToTalkKey || 'nenhuma escolhida'}`}</small>
+          </span>
+          <button type="button" className="play-device-refresh" onClick={() => setCapturingKey(true)} disabled={capturingKey}>Trocar tecla</button>
+        </label>
+      )}
+      <p className="play-voice-help">Para manter música e jogos em estéreo com fone Bluetooth, escolha outro microfone como entrada. A detecção de voz precisa manter o microfone selecionado disponível.</p>
     </>
   )
 }
 
-function ProfilePanel({ me, open, onClose, onSaved, onOpenVoiceSettings }: { me: Profile; open: boolean; onClose: () => void; onSaved: () => void; onOpenVoiceSettings: () => void }) {
+function ProfilePanel({ me, open, onClose, onSaved }: { me: Profile; open: boolean; onClose: () => void; onSaved: () => void }) {
+  const [tab, setTab] = useState<'perfil' | 'config'>('perfil')
   const [loaded, setLoaded] = useState(false)
   const [avatarUrl, setAvatarUrl] = useState<string | null>(me.avatar_url ?? null)
   const [displayNameDraft, setDisplayNameDraft] = useState(me.display_name || me.username)
@@ -3263,8 +3270,17 @@ function ProfilePanel({ me, open, onClose, onSaved, onOpenVoiceSettings }: { me:
       <div className={`new-conv-panel play-profile-panel${open ? ' open' : ''}`}>
       <div className="new-conv-header">
         <button type="button" className="icon-btn" onClick={onClose}><IconArrowLeft size={20} /></button>
-        <strong>Perfil</strong>
+        <strong>{tab === 'perfil' ? 'Perfil' : 'Configurações'}</strong>
       </div>
+      <div className="play-member-tabs">
+        <button type="button" className={tab === 'perfil' ? 'active' : ''} onClick={() => setTab('perfil')}>Perfil</button>
+        <button type="button" className={tab === 'config' ? 'active' : ''} onClick={() => setTab('config')}>Configurações</button>
+      </div>
+      {tab === 'config' ? (
+        <div className="play-group-info-body">
+          <VoiceSettingsFields />
+        </div>
+      ) : (
       <div className="play-group-info-body">
         <div
           className="profile-banner-preview"
@@ -3406,20 +3422,11 @@ function ProfilePanel({ me, open, onClose, onSaved, onOpenVoiceSettings }: { me:
               ))}
             </div>
 
-            <div className="appearance-separator" />
-
-            <label style={{ marginTop: 14 }}>Configurações</label>
-            <div className="new-conv-option" onClick={onOpenVoiceSettings}>
-              <div className="option-icon"><IconSettingsGear size={20} /></div>
-              <div>
-                <div>Voz</div>
-                <div className="option-subtitle">Microfone, alto-falante e detecção de voz</div>
-              </div>
-            </div>
           </>
         )}
 
       </div>
+      )}
       </div>
       {cropFile && <AvatarCropModal file={cropFile} onCancel={() => setCropFile(null)} onConfirm={handleCropConfirm} />}
     </>
@@ -3818,6 +3825,46 @@ function VoiceChannel({ allow, me, membersById, channel, onParticipantsChange, o
     setMicEnabled(next)
     syncParticipants(room)
   }
+
+  // Apertar-pra-falar: so ativo quando "Deteccao de voz" esta desligada nas configuracoes.
+  // Segura a tecla escolhida (padrao Espaco) pra transmitir, solta pra voltar a mutar.
+  const pttHeldRef = useRef(false)
+  useEffect(() => {
+    if (voiceSettings.voiceActivation || !allow.speak) return
+    async function setMicHeld(next: boolean) {
+      const room = roomRef.current
+      if (!room) return
+      if (next && deafenedRef.current) applyDeafen(false)
+      await room.localParticipant.setMicrophoneEnabled(next, next ? await resolvePlayMicOptions() : undefined)
+      if (next) {
+        const micTrack = room.localParticipant.getTrackPublication(Track.Source.Microphone)?.track?.mediaStreamTrack
+        if (micTrack) micTrack.contentHint = 'music'
+      }
+      await setMediaAudioMode()
+      setMicEnabled(next)
+      syncParticipants(room)
+    }
+    function isTypingTarget(target: EventTarget | null) {
+      const el = target as HTMLElement | null
+      return !!el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable)
+    }
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.code !== voiceSettings.pushToTalkKey || pttHeldRef.current || isTypingTarget(e.target)) return
+      pttHeldRef.current = true
+      setMicHeld(true)
+    }
+    function onKeyUp(e: KeyboardEvent) {
+      if (e.code !== voiceSettings.pushToTalkKey) return
+      pttHeldRef.current = false
+      setMicHeld(false)
+    }
+    window.addEventListener('keydown', onKeyDown)
+    window.addEventListener('keyup', onKeyUp)
+    return () => {
+      window.removeEventListener('keydown', onKeyDown)
+      window.removeEventListener('keyup', onKeyUp)
+    }
+  }, [voiceSettings.voiceActivation, voiceSettings.pushToTalkKey, allow.speak])
 
   async function toggleDeafen() {
     const room = roomRef.current
