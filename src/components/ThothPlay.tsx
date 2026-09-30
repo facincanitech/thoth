@@ -2,7 +2,7 @@ import { createPortal } from 'react-dom'
 import { openPip, closePip, updatePipTrack } from '../lib/pipBridge'
 import { openMainWindow } from '../lib/desktopWindows'
 import { isTauriDesktop } from '../lib/platform'
-import { useEffect, useRef, useState, type ChangeEvent, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type ChangeEvent, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent } from 'react'
 import { Room, RoomEvent, Track, createLocalScreenTracks, type RemoteParticipant, type LocalParticipant, type TrackPublication } from 'livekit-client'
 import { supabase } from '../lib/supabase'
 import { fetchLiveKitToken } from '../lib/livekit'
@@ -1072,8 +1072,28 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
   // quem esta na chamada via o Room sabe quem mais esta la. channel_id -> lista de user_id.
   const [voicePresence, setVoicePresence] = useState<Record<string, string[]>>({})
   const [expandedVoiceIds, setExpandedVoiceIds] = useState<Set<string>>(new Set())
-  const voiceChannelIds = channels.filter((c) => c.kind === 'voice').map((c) => c.id)
+  const voiceChannelIds = useMemo(() => channels.filter((c) => c.kind === 'voice').map((c) => c.id), [channels])
   const voiceChannelIdsKey = voiceChannelIds.join(',')
+
+  useEffect(() => {
+    // Aquece em segundo plano o caminho mais lento da chamada: sessao/token,
+    // descoberta da melhor regiao LiveKit e conexoes DNS/TLS. Ao clicar no
+    // canal, o VoiceChannel reutiliza o token em cache e conecta direto.
+    let cancelled = false
+    const warmRooms: Room[] = []
+    for (const channelId of voiceChannelIds) {
+      fetchLiveKitToken(channelId).then(async ({ token, url }) => {
+        if (cancelled) return
+        const room = new Room()
+        warmRooms.push(room)
+        await room.prepareConnection(url, token)
+      }).catch(() => { /* a conexao normal mantem as tentativas e mostra o erro */ })
+    }
+    return () => {
+      cancelled = true
+      warmRooms.forEach((room) => room.disconnect())
+    }
+  }, [voiceChannelIds])
 
   useEffect(() => {
     if (!voiceChannelIds.length) { setVoicePresence({}); return }
@@ -1094,7 +1114,7 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
       .on('postgres_changes', { event: '*', schema: 'public', table: 'play_voice_presence' }, () => loadPresence())
       .subscribe()
     return () => { cancelled = true; supabase.removeChannel(sub) }
-  }, [voiceChannelIdsKey])
+  }, [voiceChannelIds])
 
   useEffect(() => {
     if (!joinedVoiceChannel) return

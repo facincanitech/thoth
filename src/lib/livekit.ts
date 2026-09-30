@@ -1,10 +1,12 @@
 import { supabase } from './supabase'
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+const TOKEN_CACHE_MS = 45_000
+const tokenCache = new Map<string, { expiresAt: number; promise: Promise<{ token: string; url: string }> }>()
 
 // Token do canal de voz. Tenta ate 3 vezes: erro de rede ("Failed to fetch"), 5xx e 401 (sessao velha - renova e tenta de novo)
 // acontecem quando o Supabase esta instavel, e a 2a tentativa quase sempre passa.
-export async function fetchLiveKitToken(channelId: string): Promise<{ token: string; url: string }> {
+async function requestLiveKitToken(channelId: string): Promise<{ token: string; url: string }> {
   let lastError: Error = new Error('falha ao gerar token do canal de voz')
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
@@ -39,4 +41,16 @@ export async function fetchLiveKitToken(channelId: string): Promise<{ token: str
     await wait(800 * (attempt + 1))
   }
   throw lastError
+}
+
+export function fetchLiveKitToken(channelId: string): Promise<{ token: string; url: string }> {
+  const cached = tokenCache.get(channelId)
+  if (cached && cached.expiresAt > Date.now()) return cached.promise
+
+  const promise = requestLiveKitToken(channelId).catch((error) => {
+    tokenCache.delete(channelId)
+    throw error
+  })
+  tokenCache.set(channelId, { expiresAt: Date.now() + TOKEN_CACHE_MS, promise })
+  return promise
 }
