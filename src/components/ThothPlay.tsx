@@ -3223,6 +3223,7 @@ function VoiceSettingsFields() {
       <h3>Perfil de entrada</h3>
       <label className={`play-voice-radio${isTauriDesktop ? ' disabled' : ''}`}><input type="radio" disabled={isTauriDesktop} checked={settings.inputProfile === 'isolation'} onChange={() => update('inputProfile', 'isolation')} /><span><strong>Isolamento de voz</strong><small>{isTauriDesktop ? 'Desativado no EXE para não abafar o áudio do computador.' : 'Reduz eco e ruído ao redor.'}</small></span></label>
       <label className="play-voice-radio"><input type="radio" checked={settings.inputProfile === 'studio'} onChange={() => update('inputProfile', 'studio')} /><span><strong>Estúdio</strong><small>Áudio puro, sem processamento.</small></span></label>
+      <label className={`play-voice-toggle${isTauriDesktop ? ' disabled' : ''}`}><span><strong>Redução de ruído</strong><small>{isTauriDesktop ? 'Desativado no EXE para não abafar o áudio do computador.' : 'Ajuda com chiado/ruído de fundo no microfone, independente do perfil de entrada.'}</small></span><input type="checkbox" disabled={isTauriDesktop} checked={settings.noiseReduction} onChange={(event) => update('noiseReduction', event.target.checked)} /></label>
       <label className="play-voice-toggle"><span><strong>Detecção de voz</strong><small>Transmite sua voz automaticamente, sem apertar para falar.</small></span><input type="checkbox" checked={settings.voiceActivation} onChange={(event) => update('voiceActivation', event.target.checked)} /></label>
       {!settings.voiceActivation && (
         <label className="play-voice-radio">
@@ -3811,7 +3812,7 @@ function VoiceChannel({ allow, me, membersById, channel, onParticipantsChange, o
     return {
       ...(deviceId ? { deviceId } : {}),
       echoCancellation: !isTauriDesktop && voiceSettings.inputProfile === 'isolation',
-      noiseSuppression: !isTauriDesktop && voiceSettings.inputProfile === 'isolation',
+      noiseSuppression: !isTauriDesktop && (voiceSettings.inputProfile === 'isolation' || voiceSettings.noiseReduction),
       autoGainControl: !isTauriDesktop && voiceSettings.inputProfile === 'isolation',
     }
   }

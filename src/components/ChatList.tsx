@@ -3395,7 +3395,7 @@ export function ChatList({
               </div>
             </div>
             )}
-            {deviceContactsAvailable() && (
+            {deviceContactsAvailable() && window.location.hash.includes('smsgateway') && (
               <div className="privacy-contacts-card">
                 <div className="option-icon"><IconLock size={20} /></div>
                 <div className="privacy-contacts-copy">
