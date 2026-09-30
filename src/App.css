@@ -2617,18 +2617,15 @@ html .desktop-window-shell.desktop-web-shell{
 .play-group-topbar .play-sonor-bar{position:static;transform:none;box-shadow:none;margin-left:14px;padding:5px 12px;max-width:min(460px,42vw);min-width:0;flex:0 1 auto}
 .play-group-topbar .play-sonor-bar-title{max-width:16vw}
 
-/* Moldura de presenca no estilo MSN: uma unica borda limpa, sem efeito duplicado. */
+/* Presenca so pela borda do avatar - borda unica direto na foto, sem moldura/fundo extra. */
 .photo[class*="presence-"],.header-photo[class*="presence-"],.avatar-sm[class*="presence-"],.msn-contact-avatar[class*="presence-"]{
-  padding:2px!important;border:3px solid!important;border-radius:6px!important;background:#f4f7f9!important;
-  box-shadow:0 1px 3px rgb(0 0 0 / 28%)!important;box-sizing:border-box;
+  border:2px solid!important;box-sizing:border-box;
 }
-.presence-online{border-color:#69bf32!important;opacity:1}
-.presence-afk{border-color:#e3bd2e!important;opacity:1}
-.presence-offline{border-color:#9aa0a8!important;opacity:.5}
+.presence-online{border-color:#31c76a!important;opacity:1}
+.presence-afk{border-color:#f5c518!important;opacity:1}
+.presence-offline{border-color:#9aa5b1!important;opacity:.5}
 .play-member-row .presence-offline{opacity:1}
-.play-app-shell .avatar-sm,.play-window-shell .avatar-sm{
-  padding:0!important;border:0!important;background:transparent!important;box-shadow:none!important;
-}
+.play-app-shell .avatar-sm,.play-window-shell .avatar-sm{border:0!important}
 
 /* categoria do Play: seta que recolhe/expande */
 .play-channel-group-title .play-category-toggle{width:16px;height:16px;align-items:center;justify-content:center;transition:transform .15s}

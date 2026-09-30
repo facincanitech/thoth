@@ -195,7 +195,6 @@ export function ThothPlay({ me, onBack, initialInviteCode }: Props) {
   const [myPlayProfile, setMyPlayProfile] = useState<Profile>(me)
   const [playTheme, setPlayTheme] = useState<PlayThemeId>(DEFAULT_PLAY_THEME)
   const [showProfile, setShowProfile] = useState(false)
-  const [showAccountMenu, setShowAccountMenu] = useState(false)
   const [showVoiceSettings, setShowVoiceSettings] = useState(false)
   const [myGroups, setMyGroups] = useState<PlayGroup[]>([])
   const [browseGroups, setBrowseGroups] = useState<PlayGroup[]>([])
@@ -519,7 +518,7 @@ export function ThothPlay({ me, onBack, initialInviteCode }: Props) {
         onExit={onBack}
         me={me}
         myPlayProfile={myPlayProfile}
-        onOpenProfile={() => setShowAccountMenu(true)}
+        onOpenProfile={() => setShowProfile(true)}
       />
 
       {selectedGroup ? (
@@ -542,6 +541,10 @@ export function ThothPlay({ me, onBack, initialInviteCode }: Props) {
           onGroupUpdate={(patch) => setSelectedGroup((g) => (g ? { ...g, ...patch } : g))}
           onLeftGroup={() => { goHome(); loadGroups() }}
           onExitToMessenger={onBack}
+          showProfile={showProfile}
+          onCloseProfile={() => setShowProfile(false)}
+          onProfileSaved={loadMyPlayProfile}
+          onOpenVoiceSettings={() => { setShowProfile(false); setShowVoiceSettings(true) }}
         />
       ) : (
         <main className="play-home">
@@ -605,18 +608,14 @@ export function ThothPlay({ me, onBack, initialInviteCode }: Props) {
         </main>
       )}
 
-      <ProfilePanel me={me} open={showProfile} onClose={() => setShowProfile(false)} onSaved={loadMyPlayProfile} />
-      {showAccountMenu && (
-        <div className="modal-backdrop play-account-menu-backdrop" onClick={() => setShowAccountMenu(false)}>
-          <div className="modal-card play-account-menu" onClick={(event) => event.stopPropagation()}>
-            <h2>Minha conta no Play</h2>
-            <span className="play-account-menu-category">Configurações</span>
-            <button type="button" onClick={() => { setShowAccountMenu(false); setShowVoiceSettings(true) }}><IconSettingsGear size={18} /><span><strong>Voz</strong><small>Microfone, alto-falante e detecção de voz</small></span><IconChevronDown size={16} /></button>
-            <span className="play-account-menu-category">Perfil</span>
-            <button type="button" onClick={() => { setShowAccountMenu(false); setShowProfile(true) }}><IconUser size={18} /><span><strong>Editar perfil</strong><small>Foto, nome, status, aparência e tema</small></span><IconChevronDown size={16} /></button>
-            <button type="button" className="modal-close" onClick={() => setShowAccountMenu(false)}>fechar</button>
-          </div>
-        </div>
+      {!selectedGroup && (
+        <ProfilePanel
+          me={me}
+          open={showProfile}
+          onClose={() => setShowProfile(false)}
+          onSaved={loadMyPlayProfile}
+          onOpenVoiceSettings={() => { setShowProfile(false); setShowVoiceSettings(true) }}
+        />
       )}
       <PlayVoiceSettingsPanel open={showVoiceSettings} onClose={() => setShowVoiceSettings(false)} />
     </div>
@@ -1003,12 +1002,16 @@ type GroupViewProps = {
   onGroupUpdate: (patch: Partial<PlayGroup>) => void
   onLeftGroup: () => void
   onExitToMessenger: () => void
+  showProfile: boolean
+  onCloseProfile: () => void
+  onProfileSaved: () => void
+  onOpenVoiceSettings: () => void
 }
 
 type GroupMember = { profile: Profile; role: string }
 type VoiceParticipantInfo = { id: string; name: string; micOn?: boolean; isScreen?: boolean; videoTrack?: Track; cameraTrack?: Track }
 
-function GroupView({ me, myPlayProfile, group, channels, categories, selectedChannel, messages, liveTyping, draft, onDraftChange, onSend, onSendContent, onSelectChannel, onChannelsChange, onCategoriesChange, onGroupUpdate, onLeftGroup, onExitToMessenger }: GroupViewProps) {
+function GroupView({ me, myPlayProfile, group, channels, categories, selectedChannel, messages, liveTyping, draft, onDraftChange, onSend, onSendContent, onSelectChannel, onChannelsChange, onCategoriesChange, onGroupUpdate, onLeftGroup, onExitToMessenger, showProfile, onCloseProfile, onProfileSaved, onOpenVoiceSettings }: GroupViewProps) {
   const [showNewChannel, setShowNewChannel] = useState(false)
   const [mobileScreen, setMobileScreen] = useState<'channels' | 'chat' | 'members'>('channels')
   const mobileScreenRef = useRef(mobileScreen)
@@ -2050,6 +2053,13 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
               open={showGroupInfo}
               onClose={() => setShowGroupInfo(false)}
               onUpdate={onGroupUpdate}
+            />
+            <ProfilePanel
+              me={me}
+              open={showProfile}
+              onClose={onCloseProfile}
+              onSaved={onProfileSaved}
+              onOpenVoiceSettings={onOpenVoiceSettings}
             />
           </div>
 
@@ -3147,7 +3157,7 @@ function PlayVoiceSettingsPanel({ open, onClose }: { open: boolean; onClose: () 
   )
 }
 
-function ProfilePanel({ me, open, onClose, onSaved }: { me: Profile; open: boolean; onClose: () => void; onSaved: () => void }) {
+function ProfilePanel({ me, open, onClose, onSaved, onOpenVoiceSettings }: { me: Profile; open: boolean; onClose: () => void; onSaved: () => void; onOpenVoiceSettings: () => void }) {
   const [loaded, setLoaded] = useState(false)
   const [avatarUrl, setAvatarUrl] = useState<string | null>(me.avatar_url ?? null)
   const [displayNameDraft, setDisplayNameDraft] = useState(me.display_name || me.username)
@@ -3395,6 +3405,17 @@ function ProfilePanel({ me, open, onClose, onSaved }: { me: Profile; open: boole
                 </button>
               ))}
             </div>
+
+            <div className="appearance-separator" />
+
+            <label style={{ marginTop: 14 }}>Configurações</label>
+            <div className="new-conv-option" onClick={onOpenVoiceSettings}>
+              <div className="option-icon"><IconSettingsGear size={20} /></div>
+              <div>
+                <div>Voz</div>
+                <div className="option-subtitle">Microfone, alto-falante e detecção de voz</div>
+              </div>
+            </div>
           </>
         )}
 
@@ -3637,11 +3658,26 @@ function VoiceChannel({ allow, me, membersById, channel, onParticipantsChange, o
   onMediaMenu: (id: string, x: number, y: number) => void
 }) {
   const voiceSettings = readPlayVoiceSettings()
-  const playMicOptions: AudioCaptureOptions = {
-    ...(voiceSettings.inputDeviceId ? { deviceId: voiceSettings.inputDeviceId } : {}),
-    echoCancellation: !isTauriDesktop && voiceSettings.inputProfile === 'isolation',
-    noiseSuppression: !isTauriDesktop && voiceSettings.inputProfile === 'isolation',
-    autoGainControl: !isTauriDesktop && voiceSettings.inputProfile === 'isolation',
+  // No Windows (.exe) sem microfone escolhido a mao, o navegador pega o dispositivo
+  // "default"/"comunicacoes" do Windows - e essa escolha de dispositivo (nao so as flags
+  // de eco/ruido) que ativa o modo de comunicacoes e abaixa o audio do resto do PC. Pegando
+  // o primeiro microfone fisico de verdade evita isso, sem precisar a pessoa configurar nada.
+  async function resolvePlayMicOptions(): Promise<AudioCaptureOptions> {
+    const voiceSettings = readPlayVoiceSettings()
+    let deviceId = voiceSettings.inputDeviceId || undefined
+    if (!deviceId && isTauriDesktop) {
+      try {
+        const devices = await navigator.mediaDevices.enumerateDevices()
+        const real = devices.find((d) => d.kind === 'audioinput' && d.deviceId && d.deviceId !== 'default' && d.deviceId !== 'communications')
+        if (real) deviceId = real.deviceId
+      } catch { /* segue sem deviceId especifico */ }
+    }
+    return {
+      ...(deviceId ? { deviceId } : {}),
+      echoCancellation: !isTauriDesktop && voiceSettings.inputProfile === 'isolation',
+      noiseSuppression: !isTauriDesktop && voiceSettings.inputProfile === 'isolation',
+      autoGainControl: !isTauriDesktop && voiceSettings.inputProfile === 'isolation',
+    }
   }
   const roomRef = useRef<Room | null>(null)
   const [connected, setConnected] = useState(false)
@@ -3732,7 +3768,7 @@ function VoiceChannel({ allow, me, membersById, channel, onParticipantsChange, o
         // fala. A captura continua aberta por necessidade tecnica, usando o dispositivo e o
         // perfil escolhidos nas configuracoes de voz.
         if (allow.speak && voiceSettings.voiceActivation) {
-          await room.localParticipant.setMicrophoneEnabled(true, playMicOptions)
+          await room.localParticipant.setMicrophoneEnabled(true, await resolvePlayMicOptions())
           const micTrack = room.localParticipant.getTrackPublication(Track.Source.Microphone)?.track?.mediaStreamTrack
           if (micTrack) micTrack.contentHint = 'music'
           setMicEnabled(true)
@@ -3773,7 +3809,7 @@ function VoiceChannel({ allow, me, membersById, channel, onParticipantsChange, o
     const next = !micEnabled
     // ligar o microfone estando ensurdecido tambem volta a ouvir (como no Discord)
     if (next && deafenedRef.current) applyDeafen(false)
-    await room.localParticipant.setMicrophoneEnabled(next, next ? playMicOptions : undefined)
+    await room.localParticipant.setMicrophoneEnabled(next, next ? await resolvePlayMicOptions() : undefined)
     if (next) {
       const micTrack = room.localParticipant.getTrackPublication(Track.Source.Microphone)?.track?.mediaStreamTrack
       if (micTrack) micTrack.contentHint = 'music'
@@ -3796,7 +3832,7 @@ function VoiceChannel({ allow, me, membersById, channel, onParticipantsChange, o
     } else {
       applyDeafen(false)
       if (micBeforeDeafen.current && allow.speak) {
-        await room.localParticipant.setMicrophoneEnabled(true, playMicOptions)
+        await room.localParticipant.setMicrophoneEnabled(true, await resolvePlayMicOptions())
         await setMediaAudioMode()
         setMicEnabled(true)
       }

@@ -25,9 +25,18 @@ import type { Profile } from '../types'
 // No Windows (.exe), o processamento de voz do WebView2 pode tratar toda a sessao como
 // "comunicacoes". Alem do ducking, noise suppression e auto gain deixam os outros audios
 // estreitos/telefonados. No desktop mantemos o microfone cru, como ja fazemos no Thoth Play.
-const micAudioConstraints: boolean | MediaTrackConstraints = isTauriDesktop
-  ? { echoCancellation: false, noiseSuppression: false, autoGainControl: false }
-  : true
+// O "default"/"comunicacoes" tambem e o que faz o Windows abaixar o audio do resto do PC -
+// pegar um microfone fisico de verdade evita isso, sem exigir configuracao manual.
+async function resolveMicAudioConstraints(): Promise<boolean | MediaTrackConstraints> {
+  if (!isTauriDesktop) return true
+  let deviceId: string | undefined
+  try {
+    const devices = await navigator.mediaDevices.enumerateDevices()
+    const real = devices.find((d) => d.kind === 'audioinput' && d.deviceId && d.deviceId !== 'default' && d.deviceId !== 'communications')
+    deviceId = real?.deviceId
+  } catch { /* segue sem deviceId especifico */ }
+  return { echoCancellation: false, noiseSuppression: false, autoGainControl: false, ...(deviceId ? { deviceId } : {}) }
+}
 
 type Direction = 'incoming' | 'outgoing'
 type Status = 'ringing' | 'connecting' | 'connected'
@@ -249,7 +258,7 @@ export const CallOverlay = forwardRef<CallOverlayHandle, Props>(function CallOve
 
     let stream: MediaStream
     try {
-      stream = await navigator.mediaDevices.getUserMedia({ audio: micAudioConstraints, video: req.kind === 'video' })
+      stream = await navigator.mediaDevices.getUserMedia({ audio: await resolveMicAudioConstraints(), video: req.kind === 'video' })
     } catch (err) {
       console.error('getUserMedia failed', err)
       const reason = err instanceof Error ? `${err.name}: ${err.message}` : String(err)
@@ -320,7 +329,7 @@ export const CallOverlay = forwardRef<CallOverlayHandle, Props>(function CallOve
 
     let stream: MediaStream
     try {
-      stream = await navigator.mediaDevices.getUserMedia({ audio: micAudioConstraints, video: s.kind === 'video' })
+      stream = await navigator.mediaDevices.getUserMedia({ audio: await resolveMicAudioConstraints(), video: s.kind === 'video' })
     } catch (err) {
       console.error('getUserMedia failed', err)
       const reason = err instanceof Error ? `${err.name}: ${err.message}` : String(err)
