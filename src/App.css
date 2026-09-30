@@ -1942,9 +1942,9 @@ body{
    no desktop, na lateral. As skins abaixo alteram somente a aparencia. */
 .msn-contacts-window{height:100%;width:100%;max-width:100%;min-width:0;display:flex;flex:1;flex-direction:column;overflow:hidden;background:var(--bg-panel)}
 .msn-identity-card{flex-shrink:0;min-height:96px;display:flex;align-items:center;gap:12px;padding:calc(14px + env(safe-area-inset-top)) 14px 14px;background:var(--bg-surface-2);border-bottom:1px solid var(--line)}
-.msn-avatar-me,.msn-contact-avatar{overflow:hidden;padding:3px;border:3px solid var(--line-2);border-radius:8px;background:var(--avatar-bg);display:grid;place-items:center;flex:none}
+.msn-avatar-me,.msn-contact-avatar{overflow:hidden;border:2px solid rgb(0 0 0 / 35%);border-radius:8px;background:var(--avatar-bg);display:grid;place-items:center;flex:none;box-sizing:border-box}
 .msn-avatar-me{width:64px;height:64px}
-.msn-contact-avatar{width:42px;height:42px;padding:2px;border-width:2px}
+.msn-contact-avatar{width:42px;height:42px}
 .msn-avatar-me img,.msn-contact-avatar img{width:100%;height:100%;object-fit:cover;border-radius:4px}
 .msn-identity-copy{display:flex;flex:1;min-width:0;flex-direction:column}
 .msn-identity-copy strong{font-size:17px;color:var(--text)}
@@ -1980,11 +1980,11 @@ body{
   border-bottom:1px solid #83b9ce;box-shadow:inset 0 1px #fff;
 }
 [data-theme="messenger"] .msn-avatar-me,[data-theme="messenger"] .msn-contact-avatar{
-  overflow:hidden;padding:3px;border:3px solid #42acd2;border-radius:8px;background:linear-gradient(145deg,#f1feff,#6dd3ec 43%,#0788ba);
-  box-shadow:inset 0 2px 2px #ffffffe6,inset 0 -2px 4px #06537847,0 2px 5px #0e4d693d;display:grid;place-items:center;flex:none;
+  overflow:hidden;border:2px solid rgb(0 0 0 / 35%);border-radius:8px;background:var(--avatar-bg);
+  display:grid;place-items:center;flex:none;box-sizing:border-box;
 }
 [data-theme="messenger"] .msn-avatar-me{width:64px;height:64px}
-[data-theme="messenger"] .msn-contact-avatar{width:42px;height:42px;padding:2px;border-width:2px}
+[data-theme="messenger"] .msn-contact-avatar{width:42px;height:42px}
 [data-theme="messenger"] .msn-avatar-me img,[data-theme="messenger"] .msn-contact-avatar img{width:100%;height:100%;object-fit:cover;border-radius:4px}
 [data-theme="messenger"] .msn-identity-copy{display:flex;flex:1;min-width:0;flex-direction:column}
 [data-theme="messenger"] .msn-identity-copy strong{font-size:17px;color:#083e63;text-shadow:0 1px #fff}
@@ -2014,10 +2014,9 @@ body{
 
 /* --- Messenger (web/APK): moldura visual neutra; presenca usa apenas opacidade. --- */
 [data-theme="messenger"] .photo,[data-theme="messenger"] .header-photo,[data-theme="messenger"] .avatar-sm{
-  overflow:hidden;padding:2px;border:3px solid #42acd2;border-radius:8px;background:linear-gradient(145deg,#f1feff,#6dd3ec 43%,#0788ba);
-  box-shadow:inset 0 2px 2px #ffffffe6,inset 0 -2px 4px #06537847,0 2px 5px #0e4d693d;
+  overflow:hidden;border:2px solid rgb(0 0 0 / 35%);border-radius:8px;background:var(--avatar-bg);box-sizing:border-box;
 }
-[data-theme="messenger"] .photo img,[data-theme="messenger"] .header-photo img,[data-theme="messenger"] .avatar-sm img{border-radius:4px}
+[data-theme="messenger"] .photo img,[data-theme="messenger"] .header-photo img,[data-theme="messenger"] .avatar-sm img{border-radius:6px}
 [data-theme="messenger"] .back-mobile,[data-theme="messenger"] .chat-header .icon-btn{color:#1f4d68}
 [data-theme="messenger"] .rail{overflow:hidden}
 [data-theme="messenger"] .rail:after{
@@ -2628,7 +2627,7 @@ html .desktop-window-shell.desktop-web-shell{
 .presence-afk{border-color:#f5c518!important;opacity:1}
 .presence-offline{border-color:#9aa5b1!important;opacity:.5}
 .play-member-row .presence-offline{opacity:1}
-.play-app-shell .avatar-sm,.play-window-shell .avatar-sm{border:0!important}
+.play-app-shell .avatar-sm,.play-window-shell .avatar-sm{border:0!important;padding:0!important}
 
 /* categoria do Play: seta que recolhe/expande */
 .play-channel-group-title .play-category-toggle{width:16px;height:16px;align-items:center;justify-content:center;transition:transform .15s}
