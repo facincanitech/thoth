@@ -246,7 +246,7 @@
   --play-canvas:#ffffff;--play-heading:#000000;--play-cyan:#ff0000;--shadow:0 10px 28px #0000002e;
   background:var(--bg-deep);color:var(--text);
 }
-.play-window-shell .titlebar{background:linear-gradient(#000000,#000000)!important;border-bottom:1px solid #000000;text-shadow:none;box-shadow:0 1px var(--play-cyan)}
+.play-window-shell .titlebar{background:linear-gradient(#000000,#000000)!important;border-bottom:1px solid #000000;text-shadow:none;box-shadow:none}
 .play-window-shell .titlebar-logo{filter:drop-shadow(0 0 4px #ff0000)}
 .play-window-shell .window-controls button{border-left-color:#ffffff1f}
 .play-window-shell .window-controls button:hover{background:#ffffff1a}

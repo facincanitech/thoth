@@ -16,8 +16,11 @@ type DeviceContactsPlugin = {
   openSettings(): Promise<void>
   getContacts(): Promise<{ contacts: DeviceContact[] }>
   shareInvite(options: { text: string; phone?: string }): Promise<void>
-  sendVerificationSms(options: { to: string; text: string }): Promise<void>
+  sendVerificationSms(options: { to: string; text: string; subscriptionId?: number }): Promise<void>
+  getSimOptions(): Promise<{ sims: { subscriptionId: number; simSlot: number; label: string }[] }>
 }
+
+export type SimOption = { subscriptionId: number; simSlot: number; label: string }
 
 const NativeContacts = registerPlugin<DeviceContactsPlugin>('DeviceContacts')
 
@@ -70,7 +73,19 @@ export async function shareThothInvite(name?: string, phone?: string) {
   else await navigator.clipboard.writeText(text)
 }
 
-export async function sendVerificationSms(to: string, text: string) {
+export async function sendVerificationSms(to: string, text: string, subscriptionId?: number) {
   if (!deviceContactsAvailable()) throw new Error('SMS so funciona pelo APK')
-  await NativeContacts.sendVerificationSms({ to, text })
+  await NativeContacts.sendVerificationSms({ to, text, subscriptionId })
+}
+
+// So retorna mais de 1 item em aparelho com 2 chips ativos - nesse caso a pessoa precisa
+// escolher por qual numero mandar o SMS de confirmacao, o Android nao adivinha sozinho.
+export async function getSimOptions(): Promise<SimOption[]> {
+  if (!deviceContactsAvailable()) return []
+  try {
+    const result = await NativeContacts.getSimOptions()
+    return result.sims || []
+  } catch {
+    return []
+  }
 }

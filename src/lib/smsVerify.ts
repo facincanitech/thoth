@@ -17,9 +17,9 @@ export async function createSmsVerificationCode(): Promise<string> {
   return data as string
 }
 
-export async function sendSmsVerification(code: string) {
+export async function sendSmsVerification(code: string, subscriptionId?: number) {
   if (!GATEWAY_NUMBER) throw new Error('numero gateway nao configurado')
-  await sendVerificationSms(GATEWAY_NUMBER, `Verificar ${code}`)
+  await sendVerificationSms(GATEWAY_NUMBER, `Verificar ${code}`, subscriptionId)
 }
 
 export async function getSmsVerificationStatus(code: string): Promise<{ consumed: boolean; phoneLast4: string }> {

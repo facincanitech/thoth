@@ -28,8 +28,10 @@ import {
   requestContactsPermission,
   selectOwnPhoneNumber,
   shareThothInvite,
+  getSimOptions,
   type ContactsPermissionState,
   type DeviceContact,
+  type SimOption,
 } from '../lib/deviceContacts'
 import { whatsappVerifyAvailable, createWhatsAppVerificationCode, whatsappVerifyUrl, getWhatsAppVerificationStatus } from '../lib/whatsappVerify'
 import { smsVerifyAvailable, createSmsVerificationCode, sendSmsVerification, getSmsVerificationStatus } from '../lib/smsVerify'
@@ -499,6 +501,8 @@ export function ChatList({
   const [smsCode, setSmsCode] = useState<string | null>(null)
   const [smsPolling, setSmsPolling] = useState(false)
   const [smsSending, setSmsSending] = useState(false)
+  const [simOptions, setSimOptions] = useState<SimOption[]>([])
+  const [selectedSim, setSelectedSim] = useState<number | null>(null)
   const [gatewayEnabled, setGatewayEnabled] = useState(false)
   const [gatewayToken, setGatewayToken] = useState('')
   const [gatewayWebhookUrl, setGatewayWebhookUrl] = useState('https://eeyypnkbiejvficybhxu.supabase.co/functions/v1/sms-webhook')
@@ -578,7 +582,12 @@ export function ChatList({
       setContactsMessage('Número vinculado à sua conta.')
     } catch (cause) {
       console.error('link phone failed', cause)
-      setContactsMessage(getErrorMessage(cause).includes('already linked') ? 'Este número já está vinculado a outra conta.' : 'Não foi possível vincular o número.')
+      const message = getErrorMessage(cause)
+      setContactsMessage(
+        message.includes('already linked') ? 'Este número já está vinculado a outra conta.'
+        : message.includes('PHONE_COOLDOWN') ? 'Você só pode trocar o número vinculado uma vez a cada 30 dias.'
+        : 'Não foi possível vincular o número.',
+      )
     } finally {
       setContactsLoading(false)
     }
@@ -656,7 +665,7 @@ export function ChatList({
     setSmsSending(true)
     try {
       const code = await createSmsVerificationCode()
-      await sendSmsVerification(code)
+      await sendSmsVerification(code, selectedSim ?? undefined)
       setSmsCode(code)
     } catch (cause) {
       console.error('sms verification failed', cause)
@@ -665,6 +674,16 @@ export function ChatList({
       setSmsSending(false)
     }
   }
+
+  // Celular com 2 chips: o Android nao sabe sozinho por qual numero a pessoa quer confirmar, tem
+  // que deixar escolher. So carrega quando o recurso de SMS esta de fato disponivel.
+  useEffect(() => {
+    if (!smsVerifyAvailable()) return
+    getSimOptions().then((sims) => {
+      setSimOptions(sims)
+      if (sims.length > 0) setSelectedSim((current) => current ?? sims[0].subscriptionId)
+    })
+  }, [])
 
   useEffect(() => {
     if (!smsCode) return
@@ -1165,7 +1184,11 @@ export function ChatList({
       const contactQuery = (contactOverride || dmEmail).trim()
       const isHandle = contactQuery.startsWith('@')
       const isEmail = !isHandle && contactQuery.includes('@')
+      const isPhoneLike = !isHandle && !isEmail && /^\d{10,13}$/.test(contactQuery.replace(/\D/g, ''))
       if (!contactQuery) return
+      if (isPhoneLike && PHONE_LINK_ENABLED && !phoneLinked) {
+        throw new Error('Vincule o seu próprio número primeiro (logo abaixo) pra poder buscar gente pelo telefone.')
+      }
       if (isEmail && contactQuery.toLowerCase() === me.email) throw new Error('Esse é você')
       if (isHandle && contactQuery.slice(1).toLowerCase() === me.username.toLowerCase()) throw new Error('Esse é você')
 
@@ -2929,9 +2952,19 @@ export function ChatList({
                   {smsVerifyAvailable() && !whatsappCode && (
                     <div className="whatsapp-verify-block">
                       {!smsCode ? (
-                        <button type="button" className="whatsapp-verify-btn" disabled={smsSending} onClick={startSmsVerification}>
-                          {smsSending ? 'Mandando SMS…' : 'Confirmar número por SMS'}
-                        </button>
+                        <>
+                          {simOptions.length > 1 && (
+                            <label className="invite-code" style={{ display: 'block', marginBottom: 4 }}>
+                              Mandar pelo chip:
+                              <select value={selectedSim ?? ''} onChange={(e) => setSelectedSim(Number(e.target.value))} style={{ marginLeft: 6 }}>
+                                {simOptions.map((sim) => <option key={sim.subscriptionId} value={sim.subscriptionId}>{sim.label}</option>)}
+                              </select>
+                            </label>
+                          )}
+                          <button type="button" className="whatsapp-verify-btn" disabled={smsSending} onClick={startSmsVerification}>
+                            {smsSending ? 'Mandando SMS…' : 'Confirmar número por SMS'}
+                          </button>
+                        </>
                       ) : (
                         <small className="invite-code">{smsPolling ? 'SMS enviado, esperando confirmação…' : ''}</small>
                       )}
@@ -3338,9 +3371,19 @@ export function ChatList({
                 {smsVerifyAvailable() && !whatsappCode && (
                   <div className="whatsapp-verify-block">
                     {!smsCode ? (
-                      <button type="button" className="whatsapp-verify-btn" disabled={smsSending} onClick={startSmsVerification}>
-                        {smsSending ? 'Mandando SMS…' : 'Confirmar número por SMS'}
-                      </button>
+                      <>
+                        {simOptions.length > 1 && (
+                          <label className="invite-code" style={{ display: 'block', marginBottom: 4 }}>
+                            Mandar pelo chip:
+                            <select value={selectedSim ?? ''} onChange={(e) => setSelectedSim(Number(e.target.value))} style={{ marginLeft: 6 }}>
+                              {simOptions.map((sim) => <option key={sim.subscriptionId} value={sim.subscriptionId}>{sim.label}</option>)}
+                            </select>
+                          </label>
+                        )}
+                        <button type="button" className="whatsapp-verify-btn" disabled={smsSending} onClick={startSmsVerification}>
+                          {smsSending ? 'Mandando SMS…' : 'Confirmar número por SMS'}
+                        </button>
+                      </>
                     ) : (
                       <small className="invite-code">{smsPolling ? 'SMS enviado, esperando confirmação…' : ''}</small>
                     )}

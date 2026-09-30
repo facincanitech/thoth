@@ -173,11 +173,19 @@ type PlayVoiceSettings = {
   inputProfile: 'isolation' | 'studio'
   voiceActivation: boolean
   pushToTalkKey: string
-  noiseReduction: boolean
+  noiseReduction: 'off' | 'low' | 'medium' | 'high'
 }
 
 const PLAY_VOICE_SETTINGS_KEY = 'thoth-play-voice-settings-v1'
-const DEFAULT_VOICE_SETTINGS: PlayVoiceSettings = { inputDeviceId: '', outputDeviceId: '', inputVolume: 1, outputVolume: 1, inputProfile: 'studio', voiceActivation: true, pushToTalkKey: 'Space', noiseReduction: false }
+const DEFAULT_VOICE_SETTINGS: PlayVoiceSettings = { inputDeviceId: '', outputDeviceId: '', inputVolume: 1, outputVolume: 1, inputProfile: 'studio', voiceActivation: true, pushToTalkKey: 'Space', noiseReduction: 'off' }
+// Compressor dinamico aplicado no microfone quando a reducao de ruido esta ligada - atenua
+// ruido de fundo baixo antes de virar fala alta o bastante pra passar do limiar (threshold).
+// Quanto mais agressivo o nivel, mais baixo o limiar e maior a taxa de compressao.
+const NOISE_REDUCTION_PRESETS: Record<'low' | 'medium' | 'high', { threshold: number; ratio: number; knee: number }> = {
+  low: { threshold: -50, ratio: 4, knee: 30 },
+  medium: { threshold: -40, ratio: 8, knee: 24 },
+  high: { threshold: -30, ratio: 16, knee: 18 },
+}
 // Dispara sempre que alguem muda as configuracoes de voz (volume, ruido etc.) - a tela de
 // configuracoes e a chamada em si sao componentes separados sem estado compartilhado, o
 // localStorage sozinho nao avisa ninguem na mesma aba (o evento "storage" so dispara em OUTRAS
@@ -188,6 +196,10 @@ const VOICE_SETTINGS_CHANGED_EVENT = 'thoth-play-voice-settings-changed'
 function readPlayVoiceSettings(): PlayVoiceSettings {
   try {
     const settings = { ...DEFAULT_VOICE_SETTINGS, ...JSON.parse(localStorage.getItem(PLAY_VOICE_SETTINGS_KEY) || '{}') }
+    // Config antiga guardava true/false (so liga/desliga); normaliza pro novo formato com nivel.
+    if (typeof (settings.noiseReduction as unknown) === 'boolean') {
+      settings.noiseReduction = settings.noiseReduction ? 'medium' : 'off'
+    }
     // No WebView2, qualquer processamento de captura pode recolocar toda a sessao na
     // categoria de comunicacao. Desktop fica sempre cru; isolamento continua no APK/web.
     return isTauriDesktop ? { ...settings, inputProfile: 'studio' } : settings
@@ -3223,7 +3235,17 @@ function VoiceSettingsFields() {
       <h3>Perfil de entrada</h3>
       <label className={`play-voice-radio${isTauriDesktop ? ' disabled' : ''}`}><input type="radio" disabled={isTauriDesktop} checked={settings.inputProfile === 'isolation'} onChange={() => update('inputProfile', 'isolation')} /><span><strong>Isolamento de voz</strong><small>{isTauriDesktop ? 'Desativado no EXE para não abafar o áudio do computador.' : 'Reduz eco e ruído ao redor.'}</small></span></label>
       <label className="play-voice-radio"><input type="radio" checked={settings.inputProfile === 'studio'} onChange={() => update('inputProfile', 'studio')} /><span><strong>Estúdio</strong><small>Áudio puro, sem processamento.</small></span></label>
-      <label className={`play-voice-toggle${isTauriDesktop ? ' disabled' : ''}`}><span><strong>Redução de ruído</strong><small>{isTauriDesktop ? 'Desativado no EXE para não abafar o áudio do computador.' : 'Ajuda com chiado/ruído de fundo no microfone, independente do perfil de entrada.'}</small></span><input type="checkbox" disabled={isTauriDesktop} checked={settings.noiseReduction} onChange={(event) => update('noiseReduction', event.target.checked)} /></label>
+      <div className="appearance-separator" />
+      <h3>Redução de ruído</h3>
+      <span className="play-share-menu-hint" style={{ display: 'block', marginBottom: 6 }}>
+        {isTauriDesktop ? 'Desativado no EXE para não abafar o áudio do computador.' : 'Atenua chiado/ruído de fundo no microfone, independente do perfil de entrada. Quanto mais alto o nível, mais agressivo o corte.'}
+      </span>
+      {(['off', 'low', 'medium', 'high'] as const).map((level) => (
+        <label key={level} className={`play-voice-radio${isTauriDesktop && level !== 'off' ? ' disabled' : ''}`}>
+          <input type="radio" disabled={isTauriDesktop && level !== 'off'} checked={settings.noiseReduction === level} onChange={() => update('noiseReduction', level)} />
+          <span><strong>{level === 'off' ? 'Desligado' : level === 'low' ? 'Baixo' : level === 'medium' ? 'Médio' : 'Alto'}</strong></span>
+        </label>
+      ))}
       <label className="play-voice-toggle"><span><strong>Detecção de voz</strong><small>Transmite sua voz automaticamente, sem apertar para falar.</small></span><input type="checkbox" checked={settings.voiceActivation} onChange={(event) => update('voiceActivation', event.target.checked)} /></label>
       {!settings.voiceActivation && (
         <label className="play-voice-radio">
@@ -3657,8 +3679,9 @@ function FullscreenOverlay({ name, track, onClose }: { name: string; track: Trac
   )
 }
 
-function VoiceTile({ p, avatarUrl, startedAt, maximized, inPip, screenAudio, onFullscreen, onToggleMaximize, onMediaMenu, onVolumeMenu }: {
-  p: ParticipantTile; avatarUrl: string | null; startedAt?: number; maximized: boolean; inPip: boolean; screenAudio?: HTMLMediaElement
+function VoiceTile({ p, avatarUrl, bannerColor, bannerImageUrl, startedAt, maximized, inPip, screenAudio, onFullscreen, onToggleMaximize, onMediaMenu, onVolumeMenu }: {
+  p: ParticipantTile; avatarUrl: string | null; bannerColor?: string | null; bannerImageUrl?: string | null
+  startedAt?: number; maximized: boolean; inPip: boolean; screenAudio?: HTMLMediaElement
   onFullscreen: (id: string) => void; onTogglePip: (id: string) => void; onToggleMaximize: (id: string) => void
   onMediaMenu: (id: string, x: number, y: number) => void; onVolumeMenu: (id: string, x: number, y: number) => void
 }) {
@@ -3701,6 +3724,7 @@ function VoiceTile({ p, avatarUrl, startedAt, maximized, inPip, screenAudio, onF
       </div>
       <div
         className="play-voice-tile-stage"
+        style={!showVideo ? (bannerImageUrl ? { backgroundImage: 'url(' + bannerImageUrl + ')', backgroundSize: 'cover', backgroundPosition: '50% 50%' } : { background: bannerColor || 'var(--bg-panel)' }) : undefined}
         onClick={() => { if (showVideo && !ownScreen) onToggleMaximize(p.id) }}
         onContextMenu={(e) => { e.preventDefault(); if (showVideo && !ownScreen) onMediaMenu(p.id, e.clientX, e.clientY) }}
       >
@@ -3751,6 +3775,10 @@ function VoiceChannel({ allow, me, membersById, channel, onParticipantsChange, o
   const voiceSettingsRef = useRef<PlayVoiceSettings>(voiceSettings)
   const micGainNodeRef = useRef<GainNode | null>(null)
   const micAudioCtxRef = useRef<AudioContext | null>(null)
+  const localSpeakingRef = useRef(false)
+  const speakingAnalyserRef = useRef<AnalyserNode | null>(null)
+  const speakingLoopRef = useRef<number | null>(null)
+  const speakingHangoverRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   useEffect(() => {
     function onSettingsChanged(e: Event) {
       const next = (e as CustomEvent<PlayVoiceSettings>).detail
@@ -3786,14 +3814,67 @@ function VoiceChannel({ allow, me, membersById, channel, onParticipantsChange, o
       const gain = ctx.createGain()
       gain.gain.value = voiceSettingsRef.current.inputVolume
       source.connect(gain)
+      let node: AudioNode = gain
+      const noiseLevel = voiceSettingsRef.current.noiseReduction
+      if (noiseLevel !== 'off') {
+        const preset = NOISE_REDUCTION_PRESETS[noiseLevel]
+        const compressor = ctx.createDynamicsCompressor()
+        compressor.threshold.value = preset.threshold
+        compressor.ratio.value = preset.ratio
+        compressor.knee.value = preset.knee
+        compressor.attack.value = 0.003
+        compressor.release.value = 0.25
+        gain.connect(compressor)
+        node = compressor
+      }
       const dest = ctx.createMediaStreamDestination()
-      gain.connect(dest)
+      node.connect(dest)
       const processedTrack = dest.stream.getAudioTracks()[0]
       micGainNodeRef.current = gain
       await pub.track.replaceTrack(processedTrack, true)
+      startLocalSpeakingDetection(ctx, node)
     } catch (err) {
       console.error('mic gain setup failed', err)
     }
+  }
+
+  // O track publicado depois do GainNode acima e sintetico (saida de AudioContext, nao mais o
+  // MediaStreamTrack cru do microfone) - em alguns navegadores/WebView o servidor do LiveKit nao
+  // consegue calcular o nivel de audio desse tipo de track pra detectar quem esta falando, entao
+  // so a SUA propria borda verde parava de acender (participantes remotos, sem esse processamento,
+  // continuavam normais). Detecta localmente com um AnalyserNode e sobrepoe isSpeaking so pra
+  // voce em syncParticipants, sem depender do RoomEvent.ActiveSpeakersChanged do servidor.
+  function startLocalSpeakingDetection(ctx: AudioContext, node: AudioNode) {
+    if (speakingLoopRef.current != null) cancelAnimationFrame(speakingLoopRef.current)
+    const analyser = ctx.createAnalyser()
+    analyser.fftSize = 512
+    analyser.smoothingTimeConstant = 0.6
+    node.connect(analyser)
+    speakingAnalyserRef.current = analyser
+    const data = new Uint8Array(analyser.frequencyBinCount)
+    const THRESHOLD = 12
+    const HANGOVER_MS = 400
+    const loop = () => {
+      analyser.getByteFrequencyData(data)
+      const level = data.reduce((sum, v) => sum + v, 0) / data.length
+      if (level > THRESHOLD) {
+        if (speakingHangoverRef.current) { clearTimeout(speakingHangoverRef.current); speakingHangoverRef.current = null }
+        if (!localSpeakingRef.current) {
+          localSpeakingRef.current = true
+          const room = roomRef.current
+          if (room) syncParticipants(room)
+        }
+      } else if (localSpeakingRef.current && !speakingHangoverRef.current) {
+        speakingHangoverRef.current = setTimeout(() => {
+          localSpeakingRef.current = false
+          speakingHangoverRef.current = null
+          const room = roomRef.current
+          if (room) syncParticipants(room)
+        }, HANGOVER_MS)
+      }
+      speakingLoopRef.current = requestAnimationFrame(loop)
+    }
+    loop()
   }
   // No Windows (.exe) sem microfone escolhido a mao, o navegador pega o dispositivo
   // "default"/"comunicacoes" do Windows - e essa escolha de dispositivo (nao so as flags
@@ -3812,7 +3893,7 @@ function VoiceChannel({ allow, me, membersById, channel, onParticipantsChange, o
     return {
       ...(deviceId ? { deviceId } : {}),
       echoCancellation: !isTauriDesktop && voiceSettings.inputProfile === 'isolation',
-      noiseSuppression: !isTauriDesktop && (voiceSettings.inputProfile === 'isolation' || voiceSettings.noiseReduction),
+      noiseSuppression: !isTauriDesktop && (voiceSettings.inputProfile === 'isolation' || voiceSettings.noiseReduction !== 'off'),
       autoGainControl: !isTauriDesktop && voiceSettings.inputProfile === 'isolation',
     }
   }
@@ -3869,13 +3950,14 @@ function VoiceChannel({ allow, me, membersById, channel, onParticipantsChange, o
       const videoPub = screenPub || camPub
       if (screenPub) { if (!shareStart.current[p.identity]) shareStart.current[p.identity] = Date.now() }
       else delete shareStart.current[p.identity]
+      const isLocal = p === room.localParticipant
       return {
         id: p.identity,
         name: p.name || p.identity,
-        isLocal: p === room.localParticipant,
+        isLocal,
         micOn: p.isMicrophoneEnabled,
         isScreen: !!screenPub,
-        isSpeaking: p.isSpeaking,
+        isSpeaking: isLocal ? localSpeakingRef.current : p.isSpeaking,
         videoTrack: videoPub?.track,
         cameraTrack: screenPub ? camPub?.track : undefined,
       }
@@ -3963,6 +4045,10 @@ function VoiceChannel({ allow, me, membersById, channel, onParticipantsChange, o
       roomRef.current = null
       attachedAudio.current.forEach((el) => el.remove())
       attachedAudio.current = []
+      if (speakingLoopRef.current != null) cancelAnimationFrame(speakingLoopRef.current)
+      if (speakingHangoverRef.current) clearTimeout(speakingHangoverRef.current)
+      micAudioCtxRef.current?.close().catch(() => {})
+      micAudioCtxRef.current = null
       void setMediaAudioMode()
     }
   }, [channel.id])
@@ -4127,6 +4213,8 @@ function VoiceChannel({ allow, me, membersById, channel, onParticipantsChange, o
                 key={p.id}
                 p={p}
                 avatarUrl={(p.isLocal ? me.avatar_url : membersById[p.id.replace(':cam', '')]?.avatar_url) || null}
+                bannerColor={(p.isLocal ? me.banner_color : membersById[p.id.replace(':cam', '')]?.banner_color) || null}
+                bannerImageUrl={(p.isLocal ? me.banner_image_url : membersById[p.id.replace(':cam', '')]?.banner_image_url) || null}
                 startedAt={shareStart.current[p.id.replace(':cam', '')]}
                 maximized={maximizedId === p.id}
                 inPip={pipIds.includes(p.id)}
@@ -4184,6 +4272,7 @@ function VoiceChannel({ allow, me, membersById, channel, onParticipantsChange, o
                     </div>
                     <button type="button" className="google-btn" onClick={chooseScreen}>{screenEnabled ? 'Trocar tela ou janela' : 'Escolher tela ou janela'}</button>
                     {screenEnabled && <button type="button" className="settings-danger-btn" onClick={stopScreenShare}>Parar de compartilhar</button>}
+                    <small className="play-share-menu-hint">Compartilhamento dura no máximo {shareLimit} minutos e encerra sozinho depois disso.</small>
                   </div>
                 </>
               )}

@@ -27,7 +27,8 @@ import java.util.Map;
     name = "DeviceContacts",
     permissions = {
         @Permission(alias = "contacts", strings = { Manifest.permission.READ_CONTACTS }),
-        @Permission(alias = "sendSms", strings = { Manifest.permission.SEND_SMS })
+        @Permission(alias = "sendSms", strings = { Manifest.permission.SEND_SMS }),
+        @Permission(alias = "readPhoneState", strings = { Manifest.permission.READ_PHONE_STATE })
     }
 )
 public class DeviceContactsPlugin extends Plugin {
@@ -225,18 +226,68 @@ public class DeviceContactsPlugin extends Plugin {
     private void doSendVerificationSms(PluginCall call) {
         String to = call.getString("to", "");
         String text = call.getString("text", "");
+        Integer subscriptionId = call.getInt("subscriptionId");
         if (to.isEmpty() || text.isEmpty()) {
             call.reject("to e text sao obrigatorios");
             return;
         }
         try {
-            android.telephony.SmsManager smsManager = android.telephony.SmsManager.getDefault();
+            android.telephony.SmsManager smsManager = (subscriptionId != null && subscriptionId >= 0)
+                ? android.telephony.SmsManager.getSmsManagerForSubscriptionId(subscriptionId)
+                : android.telephony.SmsManager.getDefault();
             java.util.ArrayList<String> parts = smsManager.divideMessage(text);
             smsManager.sendMultipartTextMessage(to, null, parts, null, null);
             call.resolve();
         } catch (Exception error) {
             call.reject("falha ao enviar sms: " + error.getMessage());
         }
+    }
+
+    // Celular com 2 chips nao tem como adivinhar sozinho qual numero a pessoa quer confirmar -
+    // o Android manda pelo chip "padrao" de SMS do sistema, que pode nao ser o mesmo numero que
+    // esta sendo vinculado. Lista os chips ativos (sem o numero em si, que a maioria das
+    // operadoras/Android recentes bloqueia ler) pra pessoa escolher por qual enviar.
+    @PluginMethod
+    public void getSimOptions(PluginCall call) {
+        if (getPermissionState("readPhoneState") != PermissionState.GRANTED) {
+            requestPermissionForAlias("readPhoneState", call, "readPhoneStatePermissionCallback");
+            return;
+        }
+        doGetSimOptions(call);
+    }
+
+    @PermissionCallback
+    private void readPhoneStatePermissionCallback(PluginCall call) {
+        if (getPermissionState("readPhoneState") != PermissionState.GRANTED) {
+            call.reject("permissao negada");
+            return;
+        }
+        doGetSimOptions(call);
+    }
+
+    private void doGetSimOptions(PluginCall call) {
+        JSArray sims = new JSArray();
+        try {
+            android.telephony.SubscriptionManager subscriptionManager =
+                (android.telephony.SubscriptionManager) getContext().getSystemService(android.content.Context.TELEPHONY_SUBSCRIPTION_SERVICE);
+            java.util.List<android.telephony.SubscriptionInfo> list = subscriptionManager != null
+                ? subscriptionManager.getActiveSubscriptionInfoList() : null;
+            if (list != null) {
+                for (android.telephony.SubscriptionInfo info : list) {
+                    JSObject sim = new JSObject();
+                    sim.put("subscriptionId", info.getSubscriptionId());
+                    sim.put("simSlot", info.getSimSlotIndex() + 1);
+                    CharSequence label = info.getDisplayName();
+                    sim.put("label", label != null ? label.toString() : ("Chip " + (info.getSimSlotIndex() + 1)));
+                    sims.put(sim);
+                }
+            }
+        } catch (SecurityException ignored) {
+            // sem permissao de verdade (raro chegar aqui, ja checamos antes) - devolve lista vazia
+        }
+        JSObject result = new JSObject();
+        result.put("sims", sims);
+        call.resolve(result);
     }
 
     private String permissionLabel(PermissionState state) {
