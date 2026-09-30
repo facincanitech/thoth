@@ -132,7 +132,7 @@ body{
 .rail-symbol svg{width:19px;height:19px}
 .rail-label{font-size:9px;line-height:1.2;font-weight:650;white-space:nowrap}
 .rail .spacer{flex:1}
-.avatar-sm{width:24px;height:24px;border-radius:8px;overflow:hidden;object-fit:cover;border:1px solid var(--line-2);background:var(--btn-custom,var(--avatar-bg));color:var(--on-button,inherit);display:grid;place-items:center;font-size:12px;font-weight:700}
+.avatar-sm{width:24px;height:24px;border-radius:8px;overflow:hidden;object-fit:cover;background:var(--btn-custom,var(--avatar-bg));color:var(--on-button,inherit);display:grid;place-items:center;font-size:12px;font-weight:700;box-sizing:border-box}
 .avatar-sm img{width:100%;height:100%;object-fit:cover;display:block}
 
 /* chats column */
@@ -266,7 +266,7 @@ body{
   min-height:84px;background:var(--rail-bg,var(--bg-surface));color:var(--rail-icon,inherit);border-bottom:1px solid var(--line);
   display:flex;align-items:center;padding:14px 28px;gap:13px;flex-shrink:0;
 }
-.header-photo{width:44px;height:44px;flex-shrink:0;border-radius:14px;overflow:hidden;background:var(--avatar-bg);display:grid;place-items:center;font-weight:700;border:3px solid transparent}
+.header-photo{width:44px;height:44px;flex-shrink:0;border-radius:14px;overflow:hidden;background:var(--avatar-bg);display:grid;place-items:center;font-weight:700;box-sizing:border-box}
 .header-photo img{width:100%;height:100%;object-fit:cover;display:block}
 /* Presenca sem bolinhas: o proprio avatar comunica o estado em todas as
    plataformas e temas. AFK continua visivel como online; offline fica a 50%. */
@@ -1477,7 +1477,7 @@ body{
   color:#fff;border:1px solid #3b8308;
   box-shadow:inset 0 1px rgb(255 255 255 / 72%),0 2px 5px rgb(0 70 103 / 30%);
 }
-[data-theme="frutiger"] .rail-account .avatar-sm{border-color:rgb(255 255 255 / 75%);box-shadow:0 1px 4px rgb(0 61 95 / 35%)}
+[data-theme="frutiger"] .rail-account .avatar-sm{box-shadow:0 1px 4px rgb(0 61 95 / 35%)}
 
 [data-theme="frutiger"] .chats{
   background:linear-gradient(180deg,rgb(246 253 255 / 96%),rgb(219 243 253 / 96%));
@@ -1942,7 +1942,7 @@ body{
    no desktop, na lateral. As skins abaixo alteram somente a aparencia. */
 .msn-contacts-window{height:100%;width:100%;max-width:100%;min-width:0;display:flex;flex:1;flex-direction:column;overflow:hidden;background:var(--bg-panel)}
 .msn-identity-card{flex-shrink:0;min-height:96px;display:flex;align-items:center;gap:12px;padding:calc(14px + env(safe-area-inset-top)) 14px 14px;background:var(--bg-surface-2);border-bottom:1px solid var(--line)}
-.msn-avatar-me,.msn-contact-avatar{overflow:hidden;border:2px solid rgb(0 0 0 / 35%);border-radius:8px;background:var(--avatar-bg);display:grid;place-items:center;flex:none;box-sizing:border-box}
+.msn-avatar-me,.msn-contact-avatar{overflow:hidden;border-radius:8px;background:var(--avatar-bg);display:grid;place-items:center;flex:none;box-sizing:border-box}
 .msn-avatar-me{width:64px;height:64px}
 .msn-contact-avatar{width:42px;height:42px}
 .msn-avatar-me img,.msn-contact-avatar img{width:100%;height:100%;object-fit:cover;border-radius:4px}
@@ -1980,7 +1980,7 @@ body{
   border-bottom:1px solid #83b9ce;box-shadow:inset 0 1px #fff;
 }
 [data-theme="messenger"] .msn-avatar-me,[data-theme="messenger"] .msn-contact-avatar{
-  overflow:hidden;border:2px solid rgb(0 0 0 / 35%);border-radius:8px;background:var(--avatar-bg);
+  overflow:hidden;border-radius:8px;background:var(--avatar-bg);
   display:grid;place-items:center;flex:none;box-sizing:border-box;
 }
 [data-theme="messenger"] .msn-avatar-me{width:64px;height:64px}
@@ -2014,7 +2014,7 @@ body{
 
 /* --- Messenger (web/APK): moldura visual neutra; presenca usa apenas opacidade. --- */
 [data-theme="messenger"] .photo,[data-theme="messenger"] .header-photo,[data-theme="messenger"] .avatar-sm{
-  overflow:hidden;border:2px solid rgb(0 0 0 / 35%);border-radius:8px;background:var(--avatar-bg);box-sizing:border-box;
+  overflow:hidden;border-radius:8px;background:var(--avatar-bg);box-sizing:border-box;
 }
 [data-theme="messenger"] .photo img,[data-theme="messenger"] .header-photo img,[data-theme="messenger"] .avatar-sm img{border-radius:6px}
 [data-theme="messenger"] .back-mobile,[data-theme="messenger"] .chat-header .icon-btn{color:#1f4d68}
@@ -2081,10 +2081,9 @@ body{
 
 /* Play: moldura das fotos menor e proporcional (o tema Messenger deixava 3px de borda
    numa foto de 24px, sobrando quase so moldura) */
-[data-theme="messenger"] .play-app-shell .avatar-sm{width:34px;height:34px;padding:1px;border-width:2px;border-radius:7px}
+[data-theme="messenger"] .play-app-shell .avatar-sm{width:34px;height:34px;border-radius:7px}
 [data-theme="messenger"] .play-app-shell .avatar-sm img{border-radius:5px}
-[data-theme="messenger"] .play-app-shell .play-channel-voice-member .avatar-sm{width:26px;height:26px;padding:1px;border-width:2px}
-[data-theme="messenger"] .play-app-shell .play-voice-avatar{border:2px solid #42acd2;padding:1px}
+[data-theme="messenger"] .play-app-shell .play-channel-voice-member .avatar-sm{width:26px;height:26px}
 
 /* Bots no Play: painel com botoes, selo APP, barra da radio */
 .play-bot-badge{font-size:10px;font-weight:700;padding:1px 5px;border-radius:4px;background:var(--accent-text);color:var(--bg-panel)}
@@ -2206,7 +2205,7 @@ body{
 .play-voice-toggle{align-items:center;margin-top:10px}.play-voice-toggle input{width:42px;height:22px;accent-color:var(--accent-text)}
 .play-voice-help{margin-top:18px!important;padding:12px;border:1px solid var(--line-2);border-radius:10px;background:var(--bg-panel);font-size:12px!important;line-height:1.5}
 @media(max-width:700px){.play-voice-device-grid{grid-template-columns:1fr}.play-mic-test{align-items:stretch;flex-direction:column;gap:10px}}
-[data-theme="messenger"] .play-app-shell .play-manage-member-row .avatar-sm{width:30px;height:30px;padding:1px;border-width:2px;border-radius:7px}
+[data-theme="messenger"] .play-app-shell .play-manage-member-row .avatar-sm{width:30px;height:30px;border-radius:7px}
 
 /* ================================================================
    CYBERPUNK — tema opcional do Messenger
@@ -2320,7 +2319,7 @@ body{
 [data-theme="light"] .chat:hover{background:#eef4fb}
 [data-theme="light"] .chat.selected{background:#e1ebf7;border-color:#b2c9e1}
 [data-theme="light"] .chat.selected::before{top:0;bottom:0;width:4px;border-radius:0;background:var(--retro-pink)}
-[data-theme="light"] .photo,[data-theme="light"] .header-photo,[data-theme="light"] .avatar-sm{border-radius:2px;border-color:#b1c7df;background:#edf3fa}
+[data-theme="light"] .photo,[data-theme="light"] .header-photo,[data-theme="light"] .avatar-sm{border-radius:2px;background:#edf3fa}
 [data-theme="light"] .chat-header{min-height:70px;background:#fff;border-bottom:4px solid #d9e6f5}
 [data-theme="light"] .messages{background:#fff;padding-top:20px}
 [data-theme="light"] .date{border-radius:2px;background:#e5eef8;border-color:#bfd0e3}
@@ -2348,7 +2347,7 @@ body{
 [data-theme="cyberpunk"] .out .bubble .message-time,[data-theme="cyberpunk"] .out .bubble .checks{color:#e8ee17}
 [data-theme="cyberpunk"] .date{color:#9fc8d4;background:#06131dcc;border-color:#20e7ff66;box-shadow:0 0 12px #20e7ff12}
 [data-theme="cyberpunk"] .chat-header{background:linear-gradient(90deg,rgb(4 14 23 / 96%),rgb(7 18 28 / 78%)),url('/themes/cyberpunk-city.png') center 35%/cover;border-bottom-color:#20e7ff80;box-shadow:inset 0 -1px #ff3cac38}
-[data-theme="cyberpunk"] .header-photo,[data-theme="cyberpunk"] .photo,[data-theme="cyberpunk"] .avatar-sm{clip-path:polygon(7px 0,100% 0,100% calc(100% - 7px),calc(100% - 7px) 100%,0 100%,0 7px);border-color:#20e7ff;box-shadow:0 0 11px #20e7ff4f}
+[data-theme="cyberpunk"] .header-photo,[data-theme="cyberpunk"] .photo,[data-theme="cyberpunk"] .avatar-sm{clip-path:polygon(7px 0,100% 0,100% calc(100% - 7px),calc(100% - 7px) 100%,0 100%,0 7px);box-shadow:0 0 11px #20e7ff4f}
 [data-theme="cyberpunk"] .composer{background:linear-gradient(180deg,rgb(6 18 28 / 96%),rgb(3 10 17 / 98%));border-top-color:#20e7ff70;box-shadow:0 -5px 24px #0008}
 [data-theme="cyberpunk"] .composer-icons{border-color:#20e7ff55;background:linear-gradient(90deg,#07141e,#101024);box-shadow:inset 0 1px #20e7ff24}
 [data-theme="cyberpunk"] .send,[data-theme="cyberpunk"] .send-text{background:#e8ee17;color:#071015;border-color:#ffff62;box-shadow:0 0 18px #e8ee174c}
@@ -2365,7 +2364,7 @@ body{
 [data-theme="cyberpunk"] .header-actions .icon-btn{color:#ff4fad;background:#11152b;border-color:#393761;box-shadow:none}
 [data-theme="cyberpunk"] .header-actions .icon-btn:hover{color:#fff;background:#251333;border-color:#ff3cac;box-shadow:0 0 12px #ff3cac44}
 [data-theme="cyberpunk"] .bubble .author-label{color:#ff65b7!important;opacity:1}
-[data-theme="cyberpunk"] .photo,[data-theme="cyberpunk"] .header-photo,[data-theme="cyberpunk"] .avatar-sm{border-color:#414b78!important;box-shadow:0 0 0 1px #10182d,0 2px 8px #0008}
+[data-theme="cyberpunk"] .photo,[data-theme="cyberpunk"] .header-photo,[data-theme="cyberpunk"] .avatar-sm{box-shadow:0 0 0 1px #10182d,0 2px 8px #0008}
 [data-theme="cyberpunk"] .messages,[data-theme="cyberpunk"] .composer,[data-theme="cyberpunk"] .composer-icons{border-color:#2a3865!important}
 
 /* MATRIX ---------------------------------------------------------- */
@@ -2432,7 +2431,7 @@ body{
 [data-theme="wood"] .chat{border-radius:5px}
 [data-theme="wood"] .chat.selected{background:#553721;border-color:#86603e}
 [data-theme="wood"] .chat.selected::before{background:#e0b873}
-[data-theme="wood"] .photo,[data-theme="wood"] .header-photo,[data-theme="wood"] .avatar-sm{border-radius:4px;border-color:#b18455;background:#4b2e1d;box-shadow:0 2px 5px #120703}
+[data-theme="wood"] .photo,[data-theme="wood"] .header-photo,[data-theme="wood"] .avatar-sm{border-radius:4px;background:#4b2e1d;box-shadow:0 2px 5px #120703}
 [data-theme="wood"] .messages{background:linear-gradient(rgb(239 225 200 / 94%),rgb(225 205 171 / 96%)),url('/themes/walnut-grain.png') center/520px auto;color:#3e291b}
 [data-theme="wood"] .date{color:#64452d;background:#e5cfaa;border-color:#b89468}
 [data-theme="wood"] .bubble{border:1px solid #a9825c;border-radius:8px;box-shadow:0 2px 5px rgb(50 25 10 / 13%)}
@@ -2451,7 +2450,7 @@ body{
 [data-theme="dark"] .msn-contact-list{background:linear-gradient(#0f1620,#0b1119)}
 [data-theme="dark"] .msn-contact{border-bottom:1px solid #263244;border-radius:4px}
 [data-theme="dark"] .msn-contact:active{background:#243451;border-color:#40516a}
-[data-theme="dark"] .msn-avatar-me,[data-theme="dark"] .msn-contact-avatar{border-color:#53647b;background:#263447;box-shadow:inset 0 1px #ffffff18,0 2px 5px #0005}
+[data-theme="dark"] .msn-avatar-me,[data-theme="dark"] .msn-contact-avatar{background:#263447;box-shadow:inset 0 1px #ffffff18,0 2px 5px #0005}
 [data-theme="dark"] .msn-contact-list details summary{color:#c2ccdc}
 
 [data-theme="contrast"] .msn-identity-card{background:#000;border-bottom:2px solid #fff}
@@ -2461,7 +2460,7 @@ body{
 [data-theme="contrast"] .msn-contact{border-bottom:1px solid #fff;border-radius:0}
 [data-theme="contrast"] .msn-contact:active{background:#fff;color:#000}
 [data-theme="contrast"] .msn-contact:active strong,[data-theme="contrast"] .msn-contact:active small{color:#000}
-[data-theme="contrast"] .msn-avatar-me,[data-theme="contrast"] .msn-contact-avatar{border:2px solid #fff;border-radius:0;background:#000}
+[data-theme="contrast"] .msn-avatar-me,[data-theme="contrast"] .msn-contact-avatar{border-radius:0;background:#000}
 
 [data-theme="light"] .msn-contacts-window{background:#fff;border:1px solid #9fb8d4}
 [data-theme="light"] .msn-identity-card{background:linear-gradient(#f8fbff,#d9e6f5);border-bottom:1px solid #9fb8d4}
@@ -2472,7 +2471,7 @@ body{
 [data-theme="light"] .msn-contact-list details summary{color:#315d9b;border-bottom:1px solid #c9d7e7}
 [data-theme="light"] .msn-contact{border-radius:1px;border-bottom:1px solid #e1e8f1}
 [data-theme="light"] .msn-contact:active{background:#e1ebf7;border-color:#b2c9e1}
-[data-theme="light"] .msn-avatar-me,[data-theme="light"] .msn-contact-avatar{border-color:#b1c7df;border-radius:2px;background:#edf3fa;box-shadow:0 1px 3px #315d9b24}
+[data-theme="light"] .msn-avatar-me,[data-theme="light"] .msn-contact-avatar{border-radius:2px;background:#edf3fa;box-shadow:0 1px 3px #315d9b24}
 [data-theme="light"] .msn-unread{border-radius:2px;background:var(--retro-pink)}
 
 [data-theme="cyberpunk"] .msn-contacts-window{background:linear-gradient(rgb(5 7 16 / 42%),rgb(12 7 25 / 62%)),url('/themes/cyberpunk-city.png') center bottom/auto 100% fixed;backdrop-filter:blur(3px)}
@@ -2483,7 +2482,7 @@ body{
 [data-theme="cyberpunk"] .msn-contact-list details summary{color:#20e7ff;text-shadow:0 0 7px #20e7ff77}
 [data-theme="cyberpunk"] .msn-contact{border-radius:0;border-bottom:1px solid #174554;clip-path:polygon(6px 0,100% 0,100% calc(100% - 6px),calc(100% - 6px) 100%,0 100%,0 6px)}
 [data-theme="cyberpunk"] .msn-contact:active{background:linear-gradient(90deg,#e8ee172e,#0b1822dd);border-color:#e8ee17;box-shadow:inset 3px 0 #e8ee17,0 0 14px #e8ee1717}
-[data-theme="cyberpunk"] .msn-avatar-me,[data-theme="cyberpunk"] .msn-contact-avatar{border-radius:0;border-color:#20e7ff;background:#101329;box-shadow:0 0 10px #20e7ff55;clip-path:polygon(6px 0,100% 0,100% calc(100% - 6px),calc(100% - 6px) 100%,0 100%,0 6px)}
+[data-theme="cyberpunk"] .msn-avatar-me,[data-theme="cyberpunk"] .msn-contact-avatar{border-radius:0;background:#101329;box-shadow:0 0 10px #20e7ff55;clip-path:polygon(6px 0,100% 0,100% calc(100% - 6px),calc(100% - 6px) 100%,0 100%,0 6px)}
 [data-theme="cyberpunk"] .msn-unread{border-radius:0;color:#110518;background:#ff3cac;box-shadow:0 0 8px #ff3cac88}
 
 [data-theme="matrix"] .msn-contacts-window{background:#010502}
@@ -2495,7 +2494,7 @@ body{
 [data-theme="matrix"] .msn-contact-list details summary{color:#43ff6d;text-shadow:0 0 6px #18d94a66}
 [data-theme="matrix"] .msn-contact{border-radius:0;border-bottom:1px solid #0d4820}
 [data-theme="matrix"] .msn-contact:active{background:#092d12;border-color:#35ff65}
-[data-theme="matrix"] .msn-avatar-me,[data-theme="matrix"] .msn-contact-avatar{border-radius:0;border-color:#20df50;background:#05170a;box-shadow:0 0 8px #20df5044}
+[data-theme="matrix"] .msn-avatar-me,[data-theme="matrix"] .msn-contact-avatar{border-radius:0;background:#05170a;box-shadow:0 0 8px #20df5044}
 [data-theme="matrix"] .msn-unread{border-radius:0;color:#001707;background:#36ff67;box-shadow:0 0 8px #20df5077}
 
 [data-theme="wood"] .msn-contacts-window{background:rgb(37 20 12 / 96%)}
@@ -2506,7 +2505,7 @@ body{
 [data-theme="wood"] .msn-contact-list details summary{color:#efc47f;text-shadow:0 1px #160a05}
 [data-theme="wood"] .msn-contact{border-radius:4px;border-bottom:1px solid #624128}
 [data-theme="wood"] .msn-contact:active{background:#553721;border-color:#b9874f}
-[data-theme="wood"] .msn-avatar-me,[data-theme="wood"] .msn-contact-avatar{border-radius:4px;border-color:#b18455;background:#4b2e1d;box-shadow:0 2px 5px #120703}
+[data-theme="wood"] .msn-avatar-me,[data-theme="wood"] .msn-contact-avatar{border-radius:4px;background:#4b2e1d;box-shadow:0 2px 5px #120703}
 [data-theme="wood"] .msn-unread{color:#3b210f;background:linear-gradient(#efd49f,#c69655);box-shadow:0 1px 4px #13080399}
 
 /* As opcoes continuam reconheciveis mesmo antes do proprio tema estar ativo. */
@@ -2616,18 +2615,12 @@ html .desktop-window-shell.desktop-web-shell{
 .play-group-topbar .play-sonor-bar{position:static;transform:none;box-shadow:none;margin-left:14px;padding:5px 12px;max-width:min(460px,42vw);min-width:0;flex:0 1 auto}
 .play-group-topbar .play-sonor-bar-title{max-width:16vw}
 
-/* Presenca so pela borda do avatar - borda unica direto na foto, sem moldura/fundo extra.
-   .msn-contact-avatar/.msn-avatar-me tem padding+borda decorativa propria do tema (grid de
-   temas la em cima) que criava um vao entre essa borda e a foto - zerado aqui quando tem
-   presenca, senao a borda de presenca fica "flutuando" longe do pixel da foto. */
-.photo[class*="presence-"],.header-photo[class*="presence-"],.avatar-sm[class*="presence-"],.msn-contact-avatar[class*="presence-"],.msn-avatar-me[class*="presence-"]{
-  border:2px solid!important;padding:0!important;box-sizing:border-box;
-}
-.presence-online{border-color:#31c76a!important;opacity:1}
-.presence-afk{border-color:#f5c518!important;opacity:1}
-.presence-offline{border-color:#9aa5b1!important;opacity:.5}
+/* AVATAR SEM BORDA - decisao consciente (borda dava problema repetido de duplicar/sobrepor entre
+   temas). Presenca so por opacidade: online/AFK 100% visivel, offline 50%. Nenhuma outra regra
+   neste arquivo deve voltar a declarar border/border-color pra .photo/.header-photo/.avatar-sm/
+   .msn-contact-avatar/.msn-avatar-me - se precisar mudar isso, mexe so aqui. */
+.photo,.header-photo,.avatar-sm,.msn-contact-avatar,.msn-avatar-me{border:0;box-sizing:border-box}
 .play-member-row .presence-offline{opacity:1}
-.play-app-shell .avatar-sm,.play-window-shell .avatar-sm{border:0!important;padding:0!important}
 
 /* categoria do Play: seta que recolhe/expande */
 .play-channel-group-title .play-category-toggle{width:16px;height:16px;align-items:center;justify-content:center;transition:transform .15s}

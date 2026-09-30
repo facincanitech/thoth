@@ -72,14 +72,15 @@
   border-color:#d1bba94d;box-shadow:inset 0 1px #d1bba947;
 }
 .desktop-window-shell .rail-account .avatar-sm{
-  width:36px;height:36px;padding:3px;border:2px solid #dd9e62!important;border-radius:8px;
+  width:36px;height:36px;border-radius:8px;
   background:linear-gradient(145deg,#d1bba9,#cb9c43 48%,#83561f);color:#694b1a;
   box-shadow:inset 0 1px #d1bba9,0 2px 5px #5037126b;
 }
 .desktop-window-shell .rail-account .avatar-sm img{border-radius:4px}
-/* Moldura "vidro" MSN neutra. Presenca nao usa bolinhas nem troca a cor da
-   moldura: online/AFK fica 100% visivel e offline fica com 50% de opacidade. */
-.photo,.header-photo,.avatar-sm,.msn-avatar-frame,.msn-contact-avatar,.msn-avatar-me{overflow:hidden;padding:3px;border:3px solid #a57136!important;border-radius:8px;background:linear-gradient(145deg,#e5bb8a,#c99b40 43%,#83561f);box-shadow:inset 0 2px 2px #d1bba9e6,inset 0 -2px 4px #5d411747,0 2px 5px #573c193d}.photo{width:42px;height:42px}.header-photo{width:61px;height:61px}.photo img,.header-photo img,.avatar-sm img{width:100%;height:100%;object-fit:cover;border-radius:4px}
+/* Borda de avatar vem so da regra unica no fim deste arquivo (procure "BORDA DE AVATAR - FONTE
+   UNICA") - nao declarar border/padding/gradiente aqui de novo, foi exatamente isso que causava
+   2 bordas sobrepostas (moldura decorativa + cor de presenca por cima). */
+.photo,.header-photo,.avatar-sm,.msn-avatar-frame,.msn-contact-avatar,.msn-avatar-me{overflow:hidden;border-radius:8px;background:#deb98a}.photo{width:42px;height:42px}.header-photo{width:61px;height:61px}.photo img,.header-photo img,.avatar-sm img{width:100%;height:100%;object-fit:cover;border-radius:6px}
 .presence-online,.presence-afk{opacity:1}
 .presence-offline{opacity:.5}
 .desktop-chat-shell .main{width:100%;display:flex}.chat-header{min-height:96px;padding:13px 17px;background:radial-gradient(circle at 82% -35%,#d1bba9,transparent 48%),linear-gradient(#e5bf89,#d6ac79);border-bottom:1px solid #b98a4e;color:#4e3b18}.header-name{font-size:17px;display:flex;align-items:center;flex-wrap:wrap;gap:8px}.header-status-phrase{font-size:12px;font-weight:400;font-style:italic;color:#795e34}.header-actions{align-self:stretch;align-items:center}.messages{padding:17px 20px;background:#d1bba9}.desktop-chat-shell .message.in{justify-content:flex-start;margin:0 0 16px}.desktop-chat-shell .message.out{justify-content:flex-end;margin:0 0 16px}.desktop-chat-shell .bubble{max-width:100%;padding:0;background:transparent!important;border:0!important;box-shadow:none!important;color:#4c331a}.author-label{color:#795622!important;font-weight:bold}.out .author-label{color:#734c22!important}.composer{min-height:136px;padding:0;background:#dcb794;border-top:1px solid #b98e52;color:#4e3b18;flex-direction:column;align-items:stretch;flex-wrap:nowrap}.composer-icons{order:-1;width:100%;padding:4px 8px;border:0;border-bottom:1px solid #c09962;border-radius:0;background:linear-gradient(#dfb897,#d4b688)}.composer-input-row{padding:9px}.input{min-height:78px;border:1px solid #b38548;border-radius:0;background:#d1bba9}.send,.send-text{border:1px solid #654819;border-radius:3px;background:linear-gradient(#bc7734,#845b25 52%,#70511e);color:#d1bba9}.compose-btn{color:#795e34}.compose-btn:hover{background:#d1bba9b3;color:#76541a}.compose-btn.active{background:linear-gradient(#d6a363,#c89447)!important;color:#4f3715!important;box-shadow:inset 0 1px 3px #47301059}.compose-btn.recording{background:linear-gradient(#d6a366,#b47b36)!important;color:#d1bba9!important}.compose-btn.active[title="Chamar atenção"]{background:linear-gradient(#d9a750,#9b6c28)!important;color:#4d3013!important}.icon-btn{color:#4e3b18}
@@ -154,7 +155,7 @@
   background:radial-gradient(circle at 88% -35%,#d1bba9 0 12%,transparent 48%),linear-gradient(180deg,#e5b989,#d8ad79);
   border-bottom:1px solid #ba874a;box-shadow:inset 0 1px #d1bba9;
 }
-.msn-avatar-me{width:70px;height:70px;border-width:3px!important;box-shadow:inset 0 1px #d1bba9,0 3px 7px #53371247}
+.msn-avatar-me{width:70px;height:70px;box-shadow:inset 0 1px #d1bba9,0 3px 7px #53371247}
 .msn-identity-copy strong{font-size:18px;line-height:1.15;color:#523215;text-shadow:0 1px #d1bba9}
 .msn-presence{margin-top:4px;font-size:12px;line-height:1.35;color:#735830}
 .msn-mail-button{width:36px;height:36px;border:1px solid transparent;border-radius:7px;display:grid;place-items:center}
@@ -310,7 +311,7 @@
 .play-window-shell .play-channel-item:hover{background:#d1bba97a;border-color:var(--line-2)}
 .play-window-shell .play-channel-item.active{color:var(--play-heading);background:linear-gradient(var(--play-glass-top),#dbaa74);border-color:#bc7f3c;box-shadow:inset 0 1px #d1bba9,0 1px 3px #53391226}
 .play-window-shell .play-channel-voice-member{min-height:32px;padding:6px 8px 6px 37px;color:var(--text);font-size:13px}
-.play-window-shell .play-channel-voice-member .avatar-sm{border:2px solid #cd965e;border-radius:5px}
+.play-window-shell .play-channel-voice-member .avatar-sm{border-radius:5px}
 
 .play-window-shell .play-text-channel,.play-window-shell .play-voice-channel{
   margin-left:6px;background:var(--play-canvas);border:1px solid var(--line);border-radius:5px;box-shadow:inset 0 1px #d1bba9bf;
@@ -326,7 +327,7 @@
 .play-window-shell .play-message-row strong{font-size:14px;color:var(--play-heading)}
 .play-window-shell .play-message-time{font-size:11px;color:var(--muted)}
 .play-window-shell .play-message-body p{margin-top:3px;font-size:14px;line-height:1.35;color:var(--text-base)}
-.play-window-shell .play-message .avatar-sm{width:36px;height:36px;padding:2px;border:2px solid #c98f53;border-radius:7px;background:linear-gradient(#e6b98d,#d0985d);box-shadow:inset 0 0 0 1px #d1bba9,0 1px 4px #4f361138}
+.play-window-shell .play-message .avatar-sm{width:36px;height:36px;border-radius:7px}
 .play-window-shell .play-composer{padding:9px;border-top:1px solid var(--line);background:linear-gradient(var(--bg-panel),var(--play-glass-bottom))}
 .play-window-shell .play-composer input{height:45px;border:1px solid #bb833d;border-radius:4px;padding:0 13px;background:var(--input);color:var(--text-base);box-shadow:inset 0 1px 3px #4730101f}
 .play-window-shell .play-composer input:focus{outline:1px solid var(--play-cyan);outline-offset:0}
@@ -341,7 +342,7 @@
 .play-window-shell .play-member-tabs button.active{background:linear-gradient(#a9732a,#8d5422);border-color:#7c581d;color:#d1bba9;box-shadow:inset 0 1px #d1bba98c,0 0 5px #91632047}
 .play-window-shell .play-member-group-title{padding:12px 7px 6px;border-bottom:1px solid var(--line-2);font-size:12px;font-weight:700;color:var(--play-heading)}
 .play-window-shell .play-member-row{min-height:58px;padding:7px;font-size:14px;font-weight:700;color:var(--play-heading)}
-.play-window-shell .play-member-row .avatar-sm{width:42px;height:42px;padding:3px;border:2px solid #c98f53;border-radius:7px;background:linear-gradient(#e6b98d,#d0985d);box-shadow:inset 0 0 0 1px #d1bba9,0 1px 4px #4f361138}
+.play-window-shell .play-member-row .avatar-sm{width:42px;height:42px;border-radius:7px}
 .play-window-shell .play-member-row>svg{color:var(--accent-text)}
 .play-window-shell .play-member-row.offline{opacity:.5}
 
@@ -393,8 +394,8 @@
   .play-window-shell .play-composer input{border-color:#7c521e;box-shadow:inset 0 1px 4px #140f0b88}
   .play-window-shell .play-member-tabs button{background:linear-gradient(#4b3018,#352310);box-shadow:inset 0 1px #cf853329}
   .play-window-shell .play-member-tabs button.active{background:linear-gradient(#8f6222,#6b501a);box-shadow:inset 0 1px #d68b4659,0 0 7px #9f652347}
-  .play-window-shell .play-member-row .avatar-sm{border-color:#8a5e2a;background:linear-gradient(#503e1a,#362410);box-shadow:inset 0 0 0 1px #442b15,0 1px 4px #140f0b88}
-  .play-window-shell .play-message .avatar-sm{border-color:#8a5e2a;background:linear-gradient(#503e1a,#362410);box-shadow:inset 0 0 0 1px #442b15,0 1px 4px #140f0b88}
+  .play-window-shell .play-member-row .avatar-sm{background:linear-gradient(#503e1a,#362410)}
+  .play-window-shell .play-message .avatar-sm{background:linear-gradient(#503e1a,#362410)}
 }
 
 .msn-login-paste{display:flex;gap:6px;margin-top:14px;width:min(320px,90%)}
@@ -402,9 +403,7 @@
 .msn-login-paste button{height:30px;padding:0 12px;border:1px solid #7e5a1d;background:linear-gradient(#b2732d,#8d5422);color:#d1bba9;cursor:pointer}
 .msn-login-paste button:disabled{opacity:.5;cursor:default}
 
-/* Play desktop: foto de quem esta na voz (lista de canais) sumia por causa da borda/padding genericos do avatar */
-.play-window-shell .play-channel-voice-member{padding-left:30px}
-.play-window-shell .play-channel-voice-member .avatar-sm{width:28px!important;height:28px!important;padding:1px!important;border:2px solid #c98f53!important;border-radius:6px!important;background:linear-gradient(#e6b98d,#d0985d)!important}
+.play-window-shell .play-channel-voice-member .avatar-sm{width:28px!important;height:28px!important;border-radius:6px!important}
 .play-window-shell .play-channel-voice-member .avatar-sm img{border-radius:4px}
 /* espaco entre o botao do Play e o primeiro servidor (a moldura do selecionado encostava) */
 .play-window-shell .play-icon-rail-home{margin-bottom:18px}
@@ -412,13 +411,14 @@
 .play-window-shell .play-icon-rail-groups,.play-window-shell .play-icon-rail{scrollbar-width:none}
 .play-window-shell .play-icon-rail-groups::-webkit-scrollbar{display:none}
 /* Play desktop: moldura das fotos nas listas de gerenciar (membros/banidos/cargos) menor */
-.play-window-shell .play-manage-member-row .avatar-sm,.play-window-shell .play-role-check-row .avatar-sm{width:30px!important;height:30px!important;padding:1px!important;border:2px solid #c98f53!important;border-radius:6px!important}
+.play-window-shell .play-manage-member-row .avatar-sm,.play-window-shell .play-role-check-row .avatar-sm{width:30px!important;height:30px!important;border-radius:6px!important}
 
-/* Moldura de presenca MSN, unica e limpa; no Play as fotos ficam sem moldura. */
-.photo[class*="presence-"],.header-photo[class*="presence-"],.avatar-sm[class*="presence-"],.msn-contact-avatar[class*="presence-"]{padding:2px!important;border:3px solid!important;border-radius:6px!important;background:#d4b59a!important;box-shadow:0 1px 3px #140f0b47!important;box-sizing:border-box!important}
-.presence-online{border-color:#925f31!important;opacity:1!important}.presence-afk{border-color:#a97f30!important;opacity:1!important}.presence-offline{border-color:#a58854!important;opacity:.5!important}
+/* AVATAR SEM BORDA (desktop) - decisao consciente. Presenca so por opacidade: online/AFK 100%
+   visivel, offline 50%. Nenhuma outra regra deste arquivo deve voltar a declarar border/padding/
+   gradiente em .photo/.header-photo/.avatar-sm/.msn-contact-avatar/.msn-avatar-me. */
+.photo,.header-photo,.avatar-sm,.msn-contact-avatar,.msn-avatar-me{border:0!important;box-sizing:border-box!important}
+.presence-online,.presence-afk{opacity:1!important}.presence-offline{opacity:.5!important}
 .play-member-row .presence-offline{opacity:1!important}
-.play-app-shell .avatar-sm,.play-window-shell .avatar-sm{padding:0!important;border:0!important;background:transparent!important;box-shadow:none!important}
 
 /* Chat Frutiger Aero desktop: mensagens precisam manter bolhas visiveis como os demais temas. */
 .desktop-chat-shell .bubble{max-width:min(620px,82%)!important;padding:10px 13px 8px!important;border:1px solid #c49b64!important;border-radius:10px!important;box-shadow:0 2px 8px #4c331a16!important}
