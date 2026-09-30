@@ -2617,9 +2617,12 @@ html .desktop-window-shell.desktop-web-shell{
 .play-group-topbar .play-sonor-bar{position:static;transform:none;box-shadow:none;margin-left:14px;padding:5px 12px;max-width:min(460px,42vw);min-width:0;flex:0 1 auto}
 .play-group-topbar .play-sonor-bar-title{max-width:16vw}
 
-/* Presenca so pela borda do avatar - borda unica direto na foto, sem moldura/fundo extra. */
-.photo[class*="presence-"],.header-photo[class*="presence-"],.avatar-sm[class*="presence-"],.msn-contact-avatar[class*="presence-"]{
-  border:2px solid!important;box-sizing:border-box;
+/* Presenca so pela borda do avatar - borda unica direto na foto, sem moldura/fundo extra.
+   .msn-contact-avatar/.msn-avatar-me tem padding+borda decorativa propria do tema (grid de
+   temas la em cima) que criava um vao entre essa borda e a foto - zerado aqui quando tem
+   presenca, senao a borda de presenca fica "flutuando" longe do pixel da foto. */
+.photo[class*="presence-"],.header-photo[class*="presence-"],.avatar-sm[class*="presence-"],.msn-contact-avatar[class*="presence-"],.msn-avatar-me[class*="presence-"]{
+  border:2px solid!important;padding:0!important;box-sizing:border-box;
 }
 .presence-online{border-color:#31c76a!important;opacity:1}
 .presence-afk{border-color:#f5c518!important;opacity:1}
