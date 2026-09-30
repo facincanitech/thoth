@@ -3382,7 +3382,7 @@ function VoiceChannel({ allow, me, membersById, channel, onParticipantsChange, o
   const micBeforeDeafen = useRef(true)
   const [shareMenuOpen, setShareMenuOpen] = useState(false)
   const [shareQuality, setShareQuality] = useState<'480' | '720'>('720')
-  const [shareLimit, setShareLimit] = useState<10 | 20 | 30>(30)
+  const [shareLimit, setShareLimit] = useState<10 | 20 | 30 | 60>(30)
   const [shareNotice, setShareNotice] = useState<string | null>(null)
   const attachedAudio = useRef<HTMLMediaElement[]>([])
 
@@ -3609,7 +3609,7 @@ function VoiceChannel({ allow, me, membersById, channel, onParticipantsChange, o
                     <strong>{screenEnabled ? 'Compartilhando sua tela' : 'Compartilhar tela'}</strong>
                     <span className="play-share-menu-label">Duração máxima</span>
                     <div className="play-share-quality">
-                      {([10, 20, 30] as const).map((m) => (
+                      {([10, 20, 30, 60] as const).map((m) => (
                         <button key={m} type="button" className={shareLimit === m ? 'active' : ''} onClick={() => setShareLimit(m)}>{m} min</button>
                       ))}
                     </div>
