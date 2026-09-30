@@ -18,7 +18,7 @@ const RADIO_PROXY = 'https://eeyypnkbiejvficybhxu.supabase.co/functions/v1/radio
 // content), mesmo a radio funcionando normal em outros apps sem essa restricao. Em vez
 // de tirar essas radios da lista, repassa pelo nosso proxy (https) que busca o stream
 // http por baixo e devolve pro navegador como se fosse https.
-function toPlayableUrl(url: string): string {
+export function toPlayableUrl(url: string): string {
   if (url.toLowerCase().startsWith('http://')) {
     return `${RADIO_PROXY}?url=${encodeURIComponent(url)}`
   }

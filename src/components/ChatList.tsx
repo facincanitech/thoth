@@ -32,6 +32,8 @@ import {
   type DeviceContact,
 } from '../lib/deviceContacts'
 import { whatsappVerifyAvailable, createWhatsAppVerificationCode, whatsappVerifyUrl, getWhatsAppVerificationStatus } from '../lib/whatsappVerify'
+import { smsVerifyAvailable, createSmsVerificationCode, sendSmsVerification, getSmsVerificationStatus } from '../lib/smsVerify'
+import { getSmsGatewayStatus, enableSmsGateway, disableSmsGateway } from '../lib/smsGateway'
 import { PHONE_LINK_ENABLED } from '../lib/featureFlags'
 import {
   IconArchive,
@@ -494,6 +496,14 @@ export function ChatList({
   const [phoneManualConfirm, setPhoneManualConfirm] = useState('')
   const [whatsappCode, setWhatsappCode] = useState<string | null>(null)
   const [whatsappPolling, setWhatsappPolling] = useState(false)
+  const [smsCode, setSmsCode] = useState<string | null>(null)
+  const [smsPolling, setSmsPolling] = useState(false)
+  const [smsSending, setSmsSending] = useState(false)
+  const [gatewayEnabled, setGatewayEnabled] = useState(false)
+  const [gatewayToken, setGatewayToken] = useState('')
+  const [gatewayWebhookUrl, setGatewayWebhookUrl] = useState('https://eeyypnkbiejvficybhxu.supabase.co/functions/v1/sms-webhook')
+  const [gatewayBusy, setGatewayBusy] = useState(false)
+  const [gatewayShow, setGatewayShow] = useState(false)
   const [desktopOverlayEnabled, setDesktopOverlayEnabled] = useState(desktopToastEnabled)
 
   const [accountView, setAccountView] = useState<AccountView>('root')
@@ -579,7 +589,13 @@ export function ChatList({
     setContactsMessage(null)
     let phone = ''
     try {
-      phone = await selectOwnPhoneNumber()
+      // O seletor nativo do Android (Play Services) pode ficar preso sem nunca resolver nem
+      // rejeitar em alguns aparelhos/situacoes - sem esse timeout, contactsLoading travava
+      // pra sempre, desabilitando a tela inteira (inclusive o "Vincular" da digitacao manual).
+      phone = await Promise.race([
+        selectOwnPhoneNumber(),
+        new Promise<string>((_, reject) => setTimeout(() => reject(new Error('timeout')), 10000)),
+      ])
     } catch (cause) {
       console.error('phone hint failed', cause)
     }
@@ -633,6 +649,77 @@ export function ChatList({
       clearInterval(interval)
     }
   }, [whatsappCode])
+
+  // Verificacao real via SMS (o app manda sozinho, sem abrir o Mensagens) - ver src/lib/smsVerify.ts
+  async function startSmsVerification() {
+    setContactsMessage(null)
+    setSmsSending(true)
+    try {
+      const code = await createSmsVerificationCode()
+      await sendSmsVerification(code)
+      setSmsCode(code)
+    } catch (cause) {
+      console.error('sms verification failed', cause)
+      setContactsMessage('Não consegui mandar o SMS agora. Confirma a permissão de SMS e tenta de novo.')
+    } finally {
+      setSmsSending(false)
+    }
+  }
+
+  useEffect(() => {
+    if (!smsCode) return
+    let cancelled = false
+    setSmsPolling(true)
+    const interval = setInterval(async () => {
+      try {
+        const status = await getSmsVerificationStatus(smsCode)
+        if (cancelled) return
+        if (status.consumed) {
+          clearInterval(interval)
+          setSmsPolling(false)
+          setSmsCode(null)
+          await loadPhoneDiscovery()
+          setContactsMessage('Número verificado por SMS! ✅')
+          if (contactsPermission === 'granted') await syncDeviceContacts()
+        }
+      } catch (cause) {
+        console.error('sms verification poll failed', cause)
+      }
+    }, 3000)
+    return () => {
+      cancelled = true
+      clearInterval(interval)
+    }
+  }, [smsCode])
+
+  // Tela avancada, escondida - so pra transformar ESTE celular no "servidor" que recebe SMS de
+  // verdade e repassa pra Edge Function. Ninguem alem de quem sabe o token consegue ativar.
+  async function loadGatewayStatus() {
+    try {
+      const status = await getSmsGatewayStatus()
+      setGatewayEnabled(status.enabled)
+      if (status.webhookUrl) setGatewayWebhookUrl(status.webhookUrl)
+    } catch (cause) {
+      console.error('load sms gateway status failed', cause)
+    }
+  }
+
+  async function toggleGateway() {
+    setGatewayBusy(true)
+    try {
+      if (gatewayEnabled) {
+        await disableSmsGateway()
+        setGatewayEnabled(false)
+      } else {
+        const result = await enableSmsGateway(gatewayToken.trim(), gatewayWebhookUrl.trim())
+        setGatewayEnabled(result.enabled)
+      }
+    } catch (cause) {
+      console.error('toggle sms gateway failed', cause)
+    } finally {
+      setGatewayBusy(false)
+    }
+  }
 
   async function removeLinkedPhone() {
     setContactsLoading(true)
@@ -2815,27 +2902,83 @@ export function ChatList({
               {error && <span className="auth-error">{error}</span>}
             </div>
 
-            {PHONE_LINK_ENABLED && !phoneLinked && whatsappVerifyAvailable() && (
+            {PHONE_LINK_ENABLED && !phoneLinked && (
               <div className="privacy-contacts-card" style={{ margin: '0 0 14px' }}>
                 <div className="option-icon"><IconUser size={20} /></div>
                 <div className="privacy-contacts-copy">
                   <strong>Facilite ser encontrado</strong>
-                  <span>Confirme seu número pra seus contatos te acharem mais rápido.</span>
-                  <div className="whatsapp-verify-block">
-                    {!whatsappCode ? (
-                      <button type="button" className="whatsapp-verify-btn" onClick={startWhatsAppVerification}>
-                        Configurar número pelo WhatsApp
-                      </button>
-                    ) : (
-                      <>
-                        <small>Mande esta mensagem pro nosso WhatsApp pra confirmar que o número é seu:</small>
-                        <a className="whatsapp-verify-btn" href={whatsappVerifyUrl(whatsappCode)} target="_blank" rel="noreferrer">
-                          Abrir WhatsApp e enviar "{whatsappCode}"
-                        </a>
-                        <small className="invite-code">{whatsappPolling ? 'Esperando você mandar a mensagem…' : ''}</small>
-                      </>
-                    )}
-                  </div>
+                  <span>Vincule seu número pra seus contatos te acharem mais rápido, e a agenda já sincroniza na hora.</span>
+
+                  {whatsappVerifyAvailable() && (
+                    <div className="whatsapp-verify-block">
+                      {!whatsappCode ? (
+                        <button type="button" className="whatsapp-verify-btn" onClick={startWhatsAppVerification}>
+                          Configurar número pelo WhatsApp
+                        </button>
+                      ) : (
+                        <>
+                          <small>Mande esta mensagem pro nosso WhatsApp pra confirmar que o número é seu:</small>
+                          <a className="whatsapp-verify-btn" href={whatsappVerifyUrl(whatsappCode)} target="_blank" rel="noreferrer">
+                            Abrir WhatsApp e enviar "{whatsappCode}"
+                          </a>
+                          <small className="invite-code">{whatsappPolling ? 'Esperando você mandar a mensagem…' : ''}</small>
+                        </>
+                      )}
+                    </div>
+                  )}
+                  {smsVerifyAvailable() && !whatsappCode && (
+                    <div className="whatsapp-verify-block">
+                      {!smsCode ? (
+                        <button type="button" className="whatsapp-verify-btn" disabled={smsSending} onClick={startSmsVerification}>
+                          {smsSending ? 'Mandando SMS…' : 'Confirmar número por SMS'}
+                        </button>
+                      ) : (
+                        <small className="invite-code">{smsPolling ? 'SMS enviado, esperando confirmação…' : ''}</small>
+                      )}
+                    </div>
+                  )}
+
+                  {deviceContactsAvailable() ? (
+                    <button type="button" className="chip-btn" style={{ marginTop: 8 }} disabled={contactsLoading} onClick={changeLinkedPhone}>Vincular número</button>
+                  ) : (
+                    <small className="invite-code">O número é vinculado pelo APK.</small>
+                  )}
+                  {deviceContactsAvailable() && !phoneManualEntry && (
+                    <button type="button" className="chip-btn" onClick={() => setPhoneManualEntry(true)}>ou digitar o número na mão</button>
+                  )}
+                  {deviceContactsAvailable() && phoneManualEntry && (() => {
+                    const draftDigits = normalizePhoneForCompare(phoneManualDraft)
+                    const confirmDigits = normalizePhoneForCompare(phoneManualConfirm)
+                    const bothFilled = phoneManualDraft.trim() && phoneManualConfirm.trim()
+                    const matches = !!bothFilled && draftDigits === confirmDigits
+                    return (
+                      <div className="privacy-contacts-manual-phone-block">
+                        <small className="privacy-contacts-warning">
+                          Só vincule um número que seja de fato seu — vincular o número de outra pessoa quebra os Termos de Uso e pode ter sua conta banida. Digite duas vezes pra confirmar.
+                        </small>
+                        <div className="privacy-contacts-manual-phone">
+                          <input
+                            type="tel"
+                            placeholder="Seu número, ex.: 11987654321"
+                            value={phoneManualDraft}
+                            onChange={(e) => setPhoneManualDraft(e.target.value)}
+                          />
+                        </div>
+                        <div className="privacy-contacts-manual-phone">
+                          <input
+                            type="tel"
+                            placeholder="Digite de novo pra confirmar"
+                            value={phoneManualConfirm}
+                            onChange={(e) => setPhoneManualConfirm(e.target.value)}
+                            onKeyDown={(e) => { if (e.key === 'Enter' && matches) linkPhoneNumber(phoneManualDraft.trim()) }}
+                          />
+                        </div>
+                        <button type="button" className="google-btn" style={{ marginTop: 8 }} disabled={contactsLoading || !matches} onClick={() => linkPhoneNumber(phoneManualDraft.trim())}>Vincular</button>
+                        {!!bothFilled && !matches && <small className="privacy-contacts-warning">Os dois números digitados são diferentes.</small>}
+                      </div>
+                    )
+                  })()}
+                  {contactsMessage && <span className="invite-code contacts-message">{contactsMessage}</span>}
                 </div>
               </div>
             )}
@@ -3192,6 +3335,17 @@ export function ChatList({
                     )}
                   </div>
                 )}
+                {smsVerifyAvailable() && !whatsappCode && (
+                  <div className="whatsapp-verify-block">
+                    {!smsCode ? (
+                      <button type="button" className="whatsapp-verify-btn" disabled={smsSending} onClick={startSmsVerification}>
+                        {smsSending ? 'Mandando SMS…' : 'Confirmar número por SMS'}
+                      </button>
+                    ) : (
+                      <small className="invite-code">{smsPolling ? 'SMS enviado, esperando confirmação…' : ''}</small>
+                    )}
+                  </div>
+                )}
 
                 <div className="privacy-contacts-actions">
                   {deviceContactsAvailable() ? (
@@ -3232,14 +3386,36 @@ export function ChatList({
                           onChange={(e) => setPhoneManualConfirm(e.target.value)}
                           onKeyDown={(e) => { if (e.key === 'Enter' && matches) linkPhoneNumber(phoneManualDraft.trim()) }}
                         />
-                        <button type="button" disabled={contactsLoading || !matches} onClick={() => linkPhoneNumber(phoneManualDraft.trim())}>Vincular</button>
                       </div>
+                      <button type="button" className="google-btn" style={{ marginTop: 8 }} disabled={contactsLoading || !matches} onClick={() => linkPhoneNumber(phoneManualDraft.trim())}>Vincular</button>
                       {!!bothFilled && !matches && <small className="privacy-contacts-warning">Os dois números digitados são diferentes.</small>}
                     </div>
                   )
                 })()}
               </div>
             </div>
+            )}
+            {deviceContactsAvailable() && (
+              <div className="privacy-contacts-card">
+                <div className="option-icon"><IconLock size={20} /></div>
+                <div className="privacy-contacts-copy">
+                  <strong>Celular-servidor de SMS</strong>
+                  <span>{gatewayEnabled ? 'Ativo neste aparelho.' : 'Avançado — só pra quem sabe o token.'}</span>
+                  {!gatewayShow ? (
+                    <button type="button" className="chip-btn" onClick={() => { setGatewayShow(true); loadGatewayStatus() }}>Configurar</button>
+                  ) : (
+                    <>
+                      <small>URL da função</small>
+                      <input type="text" value={gatewayWebhookUrl} onChange={(e) => setGatewayWebhookUrl(e.target.value)} disabled={gatewayEnabled} />
+                      <small style={{ marginTop: 6 }}>Token compartilhado</small>
+                      <input type="password" placeholder="cole o SMS_GATEWAY_TOKEN aqui" value={gatewayToken} onChange={(e) => setGatewayToken(e.target.value)} disabled={gatewayEnabled} />
+                      <button type="button" className="google-btn" style={{ marginTop: 8 }} disabled={gatewayBusy || (!gatewayEnabled && !gatewayToken.trim())} onClick={toggleGateway}>
+                        {gatewayBusy ? 'Aguarde…' : gatewayEnabled ? 'Desativar' : 'Ativar neste celular'}
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
             )}
             <div className="privacy-contacts-card">
               <div className="option-icon"><IconUser size={20} /></div>

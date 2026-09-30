@@ -37,6 +37,11 @@ CLAUDE.md
 src-tauri/target/
 src-tauri/gen/
 
+# Copias locais de APK/exe feitas pelos scripts de publish (o release do GitHub e o unico lugar
+# onde esses binarios ficam de verdade)
+.legacy-release-upload/
+build-artifacts/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

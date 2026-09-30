@@ -16,6 +16,7 @@ type DeviceContactsPlugin = {
   openSettings(): Promise<void>
   getContacts(): Promise<{ contacts: DeviceContact[] }>
   shareInvite(options: { text: string; phone?: string }): Promise<void>
+  sendVerificationSms(options: { to: string; text: string }): Promise<void>
 }
 
 const NativeContacts = registerPlugin<DeviceContactsPlugin>('DeviceContacts')
@@ -67,4 +68,9 @@ export async function shareThothInvite(name?: string, phone?: string) {
   }
   if (navigator.share) await navigator.share({ title: 'Convite para o Thoth Messenger', text })
   else await navigator.clipboard.writeText(text)
+}
+
+export async function sendVerificationSms(to: string, text: string) {
+  if (!deviceContactsAvailable()) throw new Error('SMS so funciona pelo APK')
+  await NativeContacts.sendVerificationSms({ to, text })
 }

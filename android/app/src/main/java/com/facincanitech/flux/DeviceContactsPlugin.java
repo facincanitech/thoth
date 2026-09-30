@@ -25,7 +25,10 @@ import java.util.Map;
 
 @CapacitorPlugin(
     name = "DeviceContacts",
-    permissions = @Permission(alias = "contacts", strings = { Manifest.permission.READ_CONTACTS })
+    permissions = {
+        @Permission(alias = "contacts", strings = { Manifest.permission.READ_CONTACTS }),
+        @Permission(alias = "sendSms", strings = { Manifest.permission.SEND_SMS })
+    }
 )
 public class DeviceContactsPlugin extends Plugin {
     @PluginMethod
@@ -197,6 +200,43 @@ public class DeviceContactsPlugin extends Plugin {
             getActivity().startActivity(Intent.createChooser(send, "Convidar para o Thoth"));
         }
         call.resolve();
+    }
+
+    // Manda o SMS de verificacao sozinho, sem abrir o app de Mensagens - so pede SEND_SMS na
+    // hora que a pessoa usa esse recurso especifico (nunca no startup).
+    @PluginMethod
+    public void sendVerificationSms(PluginCall call) {
+        if (getPermissionState("sendSms") != PermissionState.GRANTED) {
+            requestPermissionForAlias("sendSms", call, "sendSmsPermissionCallback");
+            return;
+        }
+        doSendVerificationSms(call);
+    }
+
+    @PermissionCallback
+    private void sendSmsPermissionCallback(PluginCall call) {
+        if (getPermissionState("sendSms") != PermissionState.GRANTED) {
+            call.reject("permissao negada");
+            return;
+        }
+        doSendVerificationSms(call);
+    }
+
+    private void doSendVerificationSms(PluginCall call) {
+        String to = call.getString("to", "");
+        String text = call.getString("text", "");
+        if (to.isEmpty() || text.isEmpty()) {
+            call.reject("to e text sao obrigatorios");
+            return;
+        }
+        try {
+            android.telephony.SmsManager smsManager = android.telephony.SmsManager.getDefault();
+            java.util.ArrayList<String> parts = smsManager.divideMessage(text);
+            smsManager.sendMultipartTextMessage(to, null, parts, null, null);
+            call.resolve();
+        } catch (Exception error) {
+            call.reject("falha ao enviar sms: " + error.getMessage());
+        }
     }
 
     private String permissionLabel(PermissionState state) {

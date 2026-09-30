@@ -860,7 +860,7 @@ export function MainPanel({ me, conversation, onBack, onConversationUpdate, bloc
 
   useEffect(() => {
     const audio = sonorAudioRef.current
-    if (audio) audio.volume = sonorVolume
+    if (audio) audio.volume = sonorVolume ** 3
   }, [sonorVolume, sonorSession?.stream_url])
 
   function handleSonorVolumeChange(value: number) {
@@ -1330,9 +1330,10 @@ export function MainPanel({ me, conversation, onBack, onConversationUpdate, bloc
         await postBotReply(bot.id, 'não tem nada tocando agora pra salvar')
         return
       }
-      const { error } = await supabase.from('sonor_favorites').insert({
-        user_id: me.id, name: sonorSession.title, stream_url: sonorSession.stream_url, is_hls: sonorSession.is_hls,
-      })
+      const { error } = await supabase.from('sonor_favorites').upsert(
+        { user_id: me.id, name: sonorSession.title, stream_url: sonorSession.stream_url, is_hls: sonorSession.is_hls },
+        { onConflict: 'user_id,stream_url', ignoreDuplicates: true },
+      )
       await postBotReply(bot.id, error ? 'não consegui salvar essa rádio' : `salvei "${sonorSession.title}" nas suas favoritas`)
       return
     }

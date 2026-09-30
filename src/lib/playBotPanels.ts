@@ -11,6 +11,8 @@ function panelForBot(bot: Pick<Bot, 'slug'>) {
       { id: 'stop', label: 'Parar', action: 'sonor_stop' },
       { id: 'save', label: 'Salvar atual', action: 'sonor_save' },
       { id: 'favs', label: 'Favoritos', action: 'sonor_favs' },
+      { id: 'sync', label: 'Sincronizar biblioteca', action: 'sonor_sync' },
+      { id: 'download', label: 'Baixar o app Sonor', action: 'sonor_download' },
     ] as PlayBotButton[],
   }
   if (bot.slug === 'zelador') return {

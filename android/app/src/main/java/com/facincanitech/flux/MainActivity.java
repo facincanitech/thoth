@@ -13,6 +13,7 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(AudioRoutePlugin.class);
         registerPlugin(AppUpdatePlugin.class);
         registerPlugin(DeviceContactsPlugin.class);
+        registerPlugin(SmsGatewayPlugin.class);
         super.onCreate(savedInstanceState);
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE);
 

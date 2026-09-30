@@ -19,7 +19,7 @@ import {
   IconAttach, IconSearch, IconSend, IconSmile, IconSettingsGear, IconTrash, IconUser, IconMinusCircle, IconVideo, IconVideoOff,
 } from './icons'
 import { BANNER_COLORS } from './ChatList'
-import { fetchRandomStation, searchPublicStations, isHlsStream, type RadioStation } from '../lib/sonor'
+import { fetchRandomStation, searchPublicStations, isHlsStream, toPlayableUrl, type RadioStation } from '../lib/sonor'
 import { DEFAULT_PLAY_THEME, PLAY_THEMES, normalizePlayTheme, type PlayThemeId } from '../lib/playThemes'
 import { openDirectMessage } from '../lib/directMessage'
 import { ensurePlayBotPanel } from '../lib/playBotPanels'
@@ -173,10 +173,17 @@ type PlayVoiceSettings = {
   inputProfile: 'isolation' | 'studio'
   voiceActivation: boolean
   pushToTalkKey: string
+  noiseReduction: boolean
 }
 
 const PLAY_VOICE_SETTINGS_KEY = 'thoth-play-voice-settings-v1'
-const DEFAULT_VOICE_SETTINGS: PlayVoiceSettings = { inputDeviceId: '', outputDeviceId: '', inputVolume: 1, outputVolume: 1, inputProfile: 'studio', voiceActivation: true, pushToTalkKey: 'Space' }
+const DEFAULT_VOICE_SETTINGS: PlayVoiceSettings = { inputDeviceId: '', outputDeviceId: '', inputVolume: 1, outputVolume: 1, inputProfile: 'studio', voiceActivation: true, pushToTalkKey: 'Space', noiseReduction: false }
+// Dispara sempre que alguem muda as configuracoes de voz (volume, ruido etc.) - a tela de
+// configuracoes e a chamada em si sao componentes separados sem estado compartilhado, o
+// localStorage sozinho nao avisa ninguem na mesma aba (o evento "storage" so dispara em OUTRAS
+// abas). Sem isso, mexer no slider durante a chamada nao tinha efeito nenhum (so pegava valor
+// novo na proxima vez que entrasse na chamada).
+const VOICE_SETTINGS_CHANGED_EVENT = 'thoth-play-voice-settings-changed'
 
 function readPlayVoiceSettings(): PlayVoiceSettings {
   try {
@@ -190,6 +197,7 @@ function readPlayVoiceSettings(): PlayVoiceSettings {
 
 function writePlayVoiceSettings(settings: PlayVoiceSettings) {
   try { localStorage.setItem(PLAY_VOICE_SETTINGS_KEY, JSON.stringify(settings)) } catch { /* ignore */ }
+  window.dispatchEvent(new CustomEvent(VOICE_SETTINGS_CHANGED_EVENT, { detail: settings }))
 }
 
 export function ThothPlay({ me, onBack, initialInviteCode }: Props) {
@@ -259,14 +267,25 @@ export function ThothPlay({ me, onBack, initialInviteCode }: Props) {
   }, [playTheme])
 
   async function fetchChannels(groupId: string) {
-    const { data } = await supabase.from('play_channels').select('*').eq('group_id', groupId).order('position', { ascending: true })
+    const { data, error } = await supabase.from('play_channels').select('*').eq('group_id', groupId).order('position', { ascending: true })
+    if (error) {
+      // Erro de rede/RLS nao pode virar "lista vazia" silenciosa - ja aconteceu de um delete
+      // seguido desse refetch falhar e sumir com TODOS os canais na tela (dado continuava
+      // intacto no banco, so a UI que ficou errada). Mantem o que ja estava mostrado.
+      console.error('fetch play channels failed', error)
+      return channels
+    }
     const list = (data || []) as PlayChannel[]
     setChannels(list)
     return list
   }
 
   async function fetchCategories(groupId: string) {
-    const { data } = await supabase.from('play_categories').select('*').eq('group_id', groupId).order('position', { ascending: true })
+    const { data, error } = await supabase.from('play_categories').select('*').eq('group_id', groupId).order('position', { ascending: true })
+    if (error) {
+      console.error('fetch play categories failed', error)
+      return categories
+    }
     const list = (data || []) as PlayCategory[]
     setCategories(list)
     return list
@@ -1524,7 +1543,7 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
   }, [sonorSession?.stream_url, sonorSession?.is_hls])
 
   useEffect(() => {
-    if (sonorAudioRef.current) sonorAudioRef.current.volume = sonorVolume
+    if (sonorAudioRef.current) sonorAudioRef.current.volume = sonorVolume ** 3
     try { localStorage.setItem('ferus-sonor-volume', String(sonorVolume)) } catch { /* ignore */ }
   }, [sonorVolume, sonorSession?.stream_url])
 
@@ -1651,6 +1670,42 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
     setSonorSession(null)
   }
 
+  // Puxa a biblioteca de radios salvas no app Sonor (mesmo login Google) e importa pro
+  // sonor_favorites daqui. Usa o access_token do Google da sessao atual, pedido na hora do
+  // clique (nunca guardado) - se a sessao nao tiver mais esse token (login antigo), a pessoa
+  // so precisa sair e entrar de novo, sem quebrar nada silenciosamente depois. Retorna null
+  // em erro, ou a quantidade de radios novas importadas.
+  async function syncSonorLibrary(): Promise<number | null> {
+    if (!me) return null
+    const { data: sessionData } = await supabase.auth.getSession()
+    const providerToken = sessionData.session?.provider_token
+    if (!providerToken) return null
+    try {
+      const res = await fetch('https://xtdydmfxqxsujrqdtrkn.supabase.co/functions/v1/radio-favoritos-externas', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization:
+            'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh0ZHlkbWZ4cXhzdWpycWR0cmtuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcwMjI4MjMsImV4cCI6MjEwMjU5ODgyM30.16DYgh8unDuQXsxyj071uq2gKWeH-47QQ-Nq8UY0hdw',
+        },
+        body: JSON.stringify({ accessToken: providerToken }),
+      })
+      if (!res.ok) return null
+      const payload = await res.json() as { favoritos?: { nome: string; url: string }[] }
+      const favoritos = payload.favoritos || []
+      if (favoritos.length === 0) return 0
+      const rows = favoritos.map((f) => ({
+        user_id: me.id, name: f.nome, stream_url: toPlayableUrl(f.url), is_hls: isHlsStream(f.url),
+      }))
+      const { error } = await supabase.from('sonor_favorites').upsert(rows, { onConflict: 'user_id,stream_url', ignoreDuplicates: true })
+      if (error) { console.error('sonor library sync insert failed', error); return null }
+      return rows.length
+    } catch (err) {
+      console.error('sonor library sync failed', err)
+      return null
+    }
+  }
+
   // Resposta de comando: so quem rodou ve, e some depois de 1 minuto (p_ephemeral)
   async function postBot(slug: string, channelId: string, text: string) {
     const { error } = await supabase.rpc('post_play_bot_message', { p_channel_id: channelId, p_bot_slug: slug, p_content: text, p_ephemeral: true })
@@ -1686,7 +1741,10 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
     }
     if (action === 'sonor_save') {
       if (!sonorSession) { setSonorNotice('nenhuma rádio tocando agora'); return }
-      const { error } = await supabase.from('sonor_favorites').insert({ user_id: me.id, name: sonorSession.title, stream_url: sonorSession.stream_url, is_hls: sonorSession.is_hls })
+      const { error } = await supabase.from('sonor_favorites').upsert(
+        { user_id: me.id, name: sonorSession.title, stream_url: sonorSession.stream_url, is_hls: sonorSession.is_hls },
+        { onConflict: 'user_id,stream_url', ignoreDuplicates: true },
+      )
       setSonorNotice(error ? 'não consegui salvar' : sonorSession.title + ' salva nos seus favoritos')
       return
     }
@@ -1694,6 +1752,23 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
       const { data } = await supabase.from('sonor_favorites').select('name, stream_url').eq('user_id', me.id).order('created_at', { ascending: false })
       setSonorFavs((data || []).map((r) => ({ name: r.name as string, url: r.stream_url as string, country: '' })))
       setSonorModal('favs')
+      return
+    }
+    if (action === 'sonor_download') {
+      window.open('https://facincanitech.github.io/Sonor/', '_blank', 'noopener')
+      return
+    }
+    if (action === 'sonor_sync') {
+      setSonorBusy(true)
+      const imported = await syncSonorLibrary()
+      setSonorBusy(false)
+      setSonorNotice(
+        imported === null
+          ? 'não consegui sincronizar - entra de novo com o Google e tenta outra vez'
+          : imported === 0
+            ? 'nenhuma rádio nova encontrada na sua biblioteca do Sonor'
+            : `${imported} rádio(s) importada(s) da sua biblioteca do Sonor`,
+      )
       return
     }
     if (action.startsWith('zelador_d')) {
@@ -3508,6 +3583,7 @@ type ParticipantTile = {
   isLocal: boolean
   micOn: boolean
   isScreen: boolean
+  isSpeaking: boolean
   videoTrack?: Track
   cameraTrack?: Track
 }
@@ -3580,10 +3656,10 @@ function FullscreenOverlay({ name, track, onClose }: { name: string; track: Trac
   )
 }
 
-function VoiceTile({ p, avatarUrl, startedAt, maximized, inPip, screenAudio, onFullscreen, onToggleMaximize, onMediaMenu }: {
+function VoiceTile({ p, avatarUrl, startedAt, maximized, inPip, screenAudio, onFullscreen, onToggleMaximize, onMediaMenu, onVolumeMenu }: {
   p: ParticipantTile; avatarUrl: string | null; startedAt?: number; maximized: boolean; inPip: boolean; screenAudio?: HTMLMediaElement
   onFullscreen: (id: string) => void; onTogglePip: (id: string) => void; onToggleMaximize: (id: string) => void
-  onMediaMenu: (id: string, x: number, y: number) => void
+  onMediaMenu: (id: string, x: number, y: number) => void; onVolumeMenu: (id: string, x: number, y: number) => void
 }) {
   const videoElRef = useRef<HTMLVideoElement | null>(null)
   const [paused, setPaused] = useState(false)
@@ -3612,8 +3688,11 @@ function VoiceTile({ p, avatarUrl, startedAt, maximized, inPip, screenAudio, onF
   const showVideo = !!p.videoTrack && (!ownScreen || showOwnPreview)
 
   return (
-    <div className={'play-voice-tile' + (maximized ? ' maximized' : '')}>
-      <div className="play-voice-tile-head">
+    <div className={'play-voice-tile' + (maximized ? ' maximized' : '') + (p.isSpeaking && p.micOn ? ' speaking' : '')}>
+      <div
+        className="play-voice-tile-head"
+        onContextMenu={(e) => { if (p.isLocal) return; e.preventDefault(); onVolumeMenu(p.id, e.clientX, e.clientY) }}
+      >
         {p.micOn ? <IconMic size={13} /> : <IconMicOff size={13} />}
         <span>{p.name}{p.isLocal ? ' (você)' : ''}</span>
         {p.isScreen && <em>transmitindo</em>}
@@ -3665,6 +3744,56 @@ function VoiceChannel({ allow, me, membersById, channel, onParticipantsChange, o
   onMediaMenu: (id: string, x: number, y: number) => void
 }) {
   const voiceSettings = readPlayVoiceSettings()
+  // Mantido atualizado ao vivo (evento VOICE_SETTINGS_CHANGED_EVENT) pra volume/dispositivo de
+  // saida e ganho do microfone reagirem na hora, mesmo com a chamada ja conectada - "voiceSettings"
+  // acima e so o valor inicial (fica parado, preso no fechamento do efeito de conexao).
+  const voiceSettingsRef = useRef<PlayVoiceSettings>(voiceSettings)
+  const micGainNodeRef = useRef<GainNode | null>(null)
+  const micAudioCtxRef = useRef<AudioContext | null>(null)
+  useEffect(() => {
+    function onSettingsChanged(e: Event) {
+      const next = (e as CustomEvent<PlayVoiceSettings>).detail
+      voiceSettingsRef.current = next
+      for (const [identity, els] of Object.entries(participantAudioEls.current)) {
+        const pv = participantVolumesRef.current[identity] ?? 1
+        els.forEach((el) => {
+          el.volume = next.outputVolume * pv
+          if (next.outputDeviceId && 'setSinkId' in el) {
+            void (el as HTMLAudioElement & { setSinkId: (id: string) => Promise<void> }).setSinkId(next.outputDeviceId).catch(() => {})
+          }
+        })
+      }
+      if (micGainNodeRef.current) micGainNodeRef.current.gain.value = next.inputVolume
+    }
+    window.addEventListener(VOICE_SETTINGS_CHANGED_EVENT, onSettingsChanged)
+    return () => window.removeEventListener(VOICE_SETTINGS_CHANGED_EVENT, onSettingsChanged)
+  }, [])
+  // "Volume do microfone" so tinha efeito nenhum - o slider gravava o valor mas nada lia ele de
+  // volta. Aqui monta um GainNode de verdade (Web Audio) entre o mic cru e o que e publicado pro
+  // LiveKit, e troca o track publicado pelo processado - dai o slider passa a afetar de verdade,
+  // inclusive ao vivo durante a chamada (via onSettingsChanged acima).
+  async function applyMicGainProcessing() {
+    try {
+      const room = roomRef.current
+      const pub = room?.localParticipant.getTrackPublication(Track.Source.Microphone)
+      const rawTrack = pub?.track?.mediaStreamTrack
+      if (!room || !pub?.track || !rawTrack) return
+      const ctx = micAudioCtxRef.current || new AudioContext()
+      micAudioCtxRef.current = ctx
+      if (ctx.state === 'suspended') await ctx.resume()
+      const source = ctx.createMediaStreamSource(new MediaStream([rawTrack]))
+      const gain = ctx.createGain()
+      gain.gain.value = voiceSettingsRef.current.inputVolume
+      source.connect(gain)
+      const dest = ctx.createMediaStreamDestination()
+      gain.connect(dest)
+      const processedTrack = dest.stream.getAudioTracks()[0]
+      micGainNodeRef.current = gain
+      await pub.track.replaceTrack(processedTrack, true)
+    } catch (err) {
+      console.error('mic gain setup failed', err)
+    }
+  }
   // No Windows (.exe) sem microfone escolhido a mao, o navegador pega o dispositivo
   // "default"/"comunicacoes" do Windows - e essa escolha de dispositivo (nao so as flags
   // de eco/ruido) que ativa o modo de comunicacoes e abaixa o audio do resto do PC. Pegando
@@ -3705,13 +3834,37 @@ function VoiceChannel({ allow, me, membersById, channel, onParticipantsChange, o
   const shareLimit = 60
   const [shareNotice, setShareNotice] = useState<string | null>(null)
   const attachedAudio = useRef<HTMLMediaElement[]>([])
+  const participantAudioEls = useRef<Record<string, HTMLMediaElement[]>>({})
+  const [participantVolumes, setParticipantVolumes] = useState<Record<string, number>>(() => {
+    try { return JSON.parse(localStorage.getItem('thoth-play-participant-volumes') || '{}') } catch { return {} }
+  })
+  const participantVolumesRef = useRef(participantVolumes)
+  useEffect(() => { participantVolumesRef.current = participantVolumes }, [participantVolumes])
+  const [volumeMenu, setVolumeMenu] = useState<{ id: string; x: number; y: number } | null>(null)
+
+  // Volume individual por participante (tipo Discord) - multiplica em cima do volume geral de
+  // saida. Guardado por localStorage (nao por pessoa especifica, so pelo identity/id do perfil)
+  // pra persistir entre chamadas.
+  function setParticipantVolume(id: string, v: number) {
+    setParticipantVolumes((prev) => {
+      const next = { ...prev, [id]: v }
+      try { localStorage.setItem('thoth-play-participant-volumes', JSON.stringify(next)) } catch { /* ignore */ }
+      return next
+    })
+    const els = participantAudioEls.current[id] || []
+    els.forEach((el) => { el.volume = voiceSettingsRef.current.outputVolume * v })
+  }
 
   function syncParticipants(room: Room) {
     const all: (LocalParticipant | RemoteParticipant)[] = [room.localParticipant, ...Array.from(room.remoteParticipants.values())]
     const tiles: ParticipantTile[] = all.map((p) => {
       const pubs = Array.from(p.trackPublications.values() as IterableIterator<TrackPublication>)
-      const screenPub = pubs.find((pub) => pub.source === Track.Source.ScreenShare && !!pub.track)
-      const camPub = pubs.find((pub) => pub.source === Track.Source.Camera && !!pub.track)
+      // LiveKit so desublica (remove pub.track de vez) a transmissao de tela ao desligar, mas a
+      // camera so MUTA a publicacao existente (pub.track continua presente, so congela preto) -
+      // sem o !pub.isMuted aqui, uma camera desligada ainda contava como "video ao vivo" e
+      // aparecia como quadro preto congelado em vez de voltar pra foto de perfil/avatar.
+      const screenPub = pubs.find((pub) => pub.source === Track.Source.ScreenShare && !!pub.track && !pub.isMuted)
+      const camPub = pubs.find((pub) => pub.source === Track.Source.Camera && !!pub.track && !pub.isMuted)
       const videoPub = screenPub || camPub
       if (screenPub) { if (!shareStart.current[p.identity]) shareStart.current[p.identity] = Date.now() }
       else delete shareStart.current[p.identity]
@@ -3721,6 +3874,7 @@ function VoiceChannel({ allow, me, membersById, channel, onParticipantsChange, o
         isLocal: p === room.localParticipant,
         micOn: p.isMicrophoneEnabled,
         isScreen: !!screenPub,
+        isSpeaking: p.isSpeaking,
         videoTrack: videoPub?.track,
         cameraTrack: screenPub ? camPub?.track : undefined,
       }
@@ -3742,12 +3896,16 @@ function VoiceChannel({ allow, me, membersById, channel, onParticipantsChange, o
           const el = track.attach()
           el.style.display = 'none'
           el.muted = deafenedRef.current
-          el.volume = voiceSettings.outputVolume
+          const pv = participantVolumesRef.current[participant.identity] ?? 1
+          el.volume = voiceSettings.outputVolume * pv
           if (voiceSettings.outputDeviceId && 'setSinkId' in el) {
             void (el as HTMLAudioElement & { setSinkId: (id: string) => Promise<void> }).setSinkId(voiceSettings.outputDeviceId).catch(() => {})
           }
           document.body.appendChild(el)
           attachedAudio.current.push(el)
+          const list = participantAudioEls.current[participant.identity] || []
+          list.push(el)
+          participantAudioEls.current[participant.identity] = list
           if (pub.source === Track.Source.ScreenShareAudio) setScreenAudio((prev) => ({ ...prev, [participant.identity]: el }))
         }
         syncParticipants(room)
@@ -3755,6 +3913,8 @@ function VoiceChannel({ allow, me, membersById, channel, onParticipantsChange, o
       .on(RoomEvent.TrackUnsubscribed, (track, pub, participant) => {
         if (track.kind === Track.Kind.Audio) {
           track.detach().forEach((el) => { el.remove(); attachedAudio.current = attachedAudio.current.filter((x) => x !== el) })
+          const list = participantAudioEls.current[participant.identity]
+          if (list) participantAudioEls.current[participant.identity] = list.filter((el) => el.isConnected)
           if (pub.source === Track.Source.ScreenShareAudio) {
             setScreenAudio((prev) => { const next = { ...prev }; delete next[participant.identity]; return next })
           }
@@ -3765,6 +3925,8 @@ function VoiceChannel({ allow, me, membersById, channel, onParticipantsChange, o
       .on(RoomEvent.TrackUnmuted, () => syncParticipants(room))
       .on(RoomEvent.LocalTrackPublished, () => syncParticipants(room))
       .on(RoomEvent.LocalTrackUnpublished, () => syncParticipants(room))
+      // Borda verde tipo Discord em quem esta falando agora (detecta pelo nivel de audio do mic).
+      .on(RoomEvent.ActiveSpeakersChanged, () => syncParticipants(room))
 
     ;(async () => {
       try {
@@ -3776,8 +3938,9 @@ function VoiceChannel({ allow, me, membersById, channel, onParticipantsChange, o
         // perfil escolhidos nas configuracoes de voz.
         if (allow.speak && voiceSettings.voiceActivation) {
           await room.localParticipant.setMicrophoneEnabled(true, await resolvePlayMicOptions())
+          await applyMicGainProcessing()
           const micTrack = room.localParticipant.getTrackPublication(Track.Source.Microphone)?.track?.mediaStreamTrack
-          if (micTrack) micTrack.contentHint = 'music'
+          if (micTrack) micTrack.contentHint = 'music' // setado depois do gain pra valer no track final, nao no cru substituido
           setMicEnabled(true)
         } else {
           setMicEnabled(false)
@@ -3818,6 +3981,7 @@ function VoiceChannel({ allow, me, membersById, channel, onParticipantsChange, o
     if (next && deafenedRef.current) applyDeafen(false)
     await room.localParticipant.setMicrophoneEnabled(next, next ? await resolvePlayMicOptions() : undefined)
     if (next) {
+      await applyMicGainProcessing()
       const micTrack = room.localParticipant.getTrackPublication(Track.Source.Microphone)?.track?.mediaStreamTrack
       if (micTrack) micTrack.contentHint = 'music'
     }
@@ -3837,6 +4001,7 @@ function VoiceChannel({ allow, me, membersById, channel, onParticipantsChange, o
       if (next && deafenedRef.current) applyDeafen(false)
       await room.localParticipant.setMicrophoneEnabled(next, next ? await resolvePlayMicOptions() : undefined)
       if (next) {
+        await applyMicGainProcessing()
         const micTrack = room.localParticipant.getTrackPublication(Track.Source.Microphone)?.track?.mediaStreamTrack
         if (micTrack) micTrack.contentHint = 'music'
       }
@@ -3880,6 +4045,9 @@ function VoiceChannel({ allow, me, membersById, channel, onParticipantsChange, o
       applyDeafen(false)
       if (micBeforeDeafen.current && allow.speak) {
         await room.localParticipant.setMicrophoneEnabled(true, await resolvePlayMicOptions())
+        await applyMicGainProcessing()
+        const micTrack = room.localParticipant.getTrackPublication(Track.Source.Microphone)?.track?.mediaStreamTrack
+        if (micTrack) micTrack.contentHint = 'music'
         await setMediaAudioMode()
         setMicEnabled(true)
       }
@@ -3966,9 +4134,28 @@ function VoiceChannel({ allow, me, membersById, channel, onParticipantsChange, o
                 onTogglePip={onTogglePip}
                 onToggleMaximize={onToggleMaximize}
                 onMediaMenu={onMediaMenu}
+                onVolumeMenu={(id, x, y) => setVolumeMenu({ id, x, y })}
               />
             ))}
           </div>
+          {volumeMenu && (
+            <>
+              <div className="play-group-menu-backdrop" onClick={() => setVolumeMenu(null)} onContextMenu={(e) => { e.preventDefault(); setVolumeMenu(null) }} />
+              <div
+                className="play-group-menu play-volume-menu"
+                style={{ position: 'fixed', top: Math.max(8, Math.min(volumeMenu.y, window.innerHeight - 90)), left: Math.max(8, Math.min(volumeMenu.x, window.innerWidth - 220)), minWidth: 200 }}
+              >
+                <span className="play-volume-menu-label">
+                  Volume de {participants.find((p) => p.id === volumeMenu.id)?.name || ''}: {Math.round((participantVolumes[volumeMenu.id] ?? 1) * 100)}%
+                </span>
+                <input
+                  type="range" min="0" max="2" step="0.05"
+                  value={participantVolumes[volumeMenu.id] ?? 1}
+                  onChange={(e) => setParticipantVolume(volumeMenu.id, Number(e.target.value))}
+                />
+              </div>
+            </>
+          )}
           <div className="play-voice-controls">
             <button type="button" className={'icon-btn' + (micEnabled ? '' : ' off')} onClick={toggleMic} disabled={!allow.speak} title={!allow.speak ? 'Seu cargo não pode falar na chamada' : micEnabled ? 'Mutar microfone' : 'Ativar microfone'}>
               {micEnabled ? <IconMic size={20} /> : <IconMicOff size={20} />}
