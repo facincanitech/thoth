@@ -126,6 +126,7 @@ body{
   display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
   border-radius:12px;cursor:pointer;transition:background .16s ease,color .16s ease;
 }
+.rail-item>.rail-link{aspect-ratio:1;min-height:0}
 .rail-link[aria-current="page"]{background:var(--btn-custom,var(--bg-selected));color:var(--on-button,var(--accent-text))}
 .rail-symbol{display:grid;place-items:center;width:22px;height:21px}
 .rail-symbol svg{width:19px;height:19px}
@@ -270,7 +271,7 @@ body{
 /* Presenca sem bolinhas: o proprio avatar comunica o estado em todas as
    plataformas e temas. AFK continua visivel como online; offline fica a 50%. */
 .presence-online,.presence-afk{opacity:1}
-.presence-offline{opacity:1}
+.presence-offline{opacity:.5}
 .header-text{min-width:0;flex:1}
 .header-name{font-weight:650;font-size:16px;display:flex;align-items:center;gap:6px;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;line-height:1.5}
 .header-last-seen{display:block;margin-top:-1px;color:var(--muted);font-size:11px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -765,6 +766,9 @@ body{
   width:44px;height:44px;border-radius:14px;background:var(--btn-custom,var(--accent-dim-bg));color:var(--on-button,var(--accent-text));
   display:grid;place-items:center;font-size:20px;font-weight:700;flex-shrink:0;
 }
+[data-theme="dark"] .option-icon{
+  background:linear-gradient(145deg,#17212e,#1c2938);border:1px solid #2d3b4e;color:#65bdec;
+}
 .new-conv-form{
   padding:18px 22px;display:flex;flex-direction:column;gap:10px;
   flex:1;min-height:0;overflow-y:auto;
@@ -1046,6 +1050,11 @@ body{
   width:44px;height:44px;border:0;border-radius:50%;background:transparent;
   color:var(--text-secondary);font-size:20px;cursor:pointer;flex-shrink:0;
 }
+[data-theme="dark"] .nudge-btn,
+[data-theme="dark"] .compose-btn[title="Chamar atenção"],
+[data-theme="dark"] .compose-btn.active[title="Chamar atenção"]{
+  border-color:transparent!important;background:transparent!important;color:#d8aa2b!important;box-shadow:none!important;
+}
 
 /* winks */
 .wink-overlay{position:fixed;inset:0;z-index:200;pointer-events:none;overflow:hidden}
@@ -1312,6 +1321,7 @@ body{
   .rail-brand,.rail .spacer{display:none}
   .rail-item{flex:1;max-width:100px}
   .rail-link{min-height:55px;padding:5px 4px;gap:3px;border-radius:12px}
+  .rail-item>.rail-link{aspect-ratio:auto;min-height:55px}
   .rail-label{font-size:10px}
   .rail-symbol{height:25px}
   .rail-account .avatar-sm{width:25px;height:25px;border-radius:8px}
@@ -1402,6 +1412,8 @@ body{
   .request-menu button:hover{background:var(--bg-surface-2)}
   .context-menu button:hover{background:var(--bg-surface-2)}
   .nudge-btn:hover{background:var(--bg-surface-2);color:var(--text-base)}
+  [data-theme="dark"] .nudge-btn:hover,
+  [data-theme="dark"] .compose-btn[title="Chamar atenção"]:hover{background:transparent!important;color:#f0c84b!important}
   .wink-picker-add:hover{opacity:1}
   .wink-manager-item:hover{background:var(--bg-surface-2)}
   .community-sidebar-nav:hover{background:var(--bg-surface-2)}
@@ -1763,7 +1775,6 @@ body{
 .play-message-row strong{font-size:13px}
 .play-message-time{font-size:11px;color:var(--muted)}
 .play-replay-btn{margin-left:auto;display:inline-flex;align-items:center;gap:3px;border:0;background:none;color:var(--accent-text);font-size:11px;cursor:pointer;padding:0}
-.play-replay-flag{display:inline-flex;align-items:center;justify-content:center;width:13px;height:13px;border-radius:50%;background:#e5484d;color:#fff;font-size:10px;font-weight:700}
 .play-message-body p{margin:2px 0 0;font-size:14.5px;line-height:1.4}
 .play-message-live .play-message-body p{font-style:italic;color:var(--text-secondary)}
 .play-composer{display:flex;gap:10px;padding:14px 20px;border-top:1px solid var(--line);flex-shrink:0}
@@ -2301,6 +2312,21 @@ body{
 [data-theme="cyberpunk"] .composer{background:linear-gradient(180deg,rgb(6 18 28 / 96%),rgb(3 10 17 / 98%));border-top-color:#20e7ff70;box-shadow:0 -5px 24px #0008}
 [data-theme="cyberpunk"] .composer-icons{border-color:#20e7ff55;background:linear-gradient(90deg,#07141e,#101024);box-shadow:inset 0 1px #20e7ff24}
 [data-theme="cyberpunk"] .send,[data-theme="cyberpunk"] .send-text{background:#e8ee17;color:#071015;border-color:#ffff62;box-shadow:0 0 18px #e8ee174c}
+[data-theme="cyberpunk"] .rail-link{color:#d5ddff;text-shadow:0 1px 2px #000}
+[data-theme="cyberpunk"] .rail-link .rail-symbol{color:#c8d5ff;filter:drop-shadow(0 0 4px #20e7ff55)}
+[data-theme="cyberpunk"] .rail-link .rail-label{color:#d5ddff}
+[data-theme="cyberpunk"] .rail-link[aria-current="page"] .rail-symbol,
+[data-theme="cyberpunk"] .rail-link[aria-current="page"] .rail-label{color:#061019}
+[data-theme="cyberpunk"] .thoth-store{background:#070b18!important}
+[data-theme="cyberpunk"] .store-hero,[data-theme="cyberpunk"] .store-card,[data-theme="cyberpunk"] .store-category-tile{background:#10152b;border-color:#2a3865;box-shadow:0 10px 28px #0008}
+[data-theme="cyberpunk"] .header-name,[data-theme="cyberpunk"] .header-name .styled-name{color:#f4f7ff!important;-webkit-text-fill-color:#f4f7ff!important;text-shadow:none!important}
+[data-theme="cyberpunk"] .chat-header .status,[data-theme="cyberpunk"] .header-status-phrase{color:#c7d0ea!important;opacity:1}
+[data-theme="cyberpunk"] .back-mobile{color:#20e7ff!important}
+[data-theme="cyberpunk"] .header-actions .icon-btn{color:#ff4fad;background:#11152b;border-color:#393761;box-shadow:none}
+[data-theme="cyberpunk"] .header-actions .icon-btn:hover{color:#fff;background:#251333;border-color:#ff3cac;box-shadow:0 0 12px #ff3cac44}
+[data-theme="cyberpunk"] .bubble .author-label{color:#ff65b7!important;opacity:1}
+[data-theme="cyberpunk"] .photo,[data-theme="cyberpunk"] .header-photo,[data-theme="cyberpunk"] .avatar-sm{border-color:#414b78!important;box-shadow:0 0 0 1px #10182d,0 2px 8px #0008}
+[data-theme="cyberpunk"] .messages,[data-theme="cyberpunk"] .composer,[data-theme="cyberpunk"] .composer-icons{border-color:#2a3865!important}
 
 /* MATRIX ---------------------------------------------------------- */
 [data-theme="matrix"]{
@@ -2320,6 +2346,8 @@ body{
 [data-theme="matrix"] .rail-link[aria-current="page"]{color:#001b07;background:#29e759;box-shadow:0 0 14px #20e55077}
 [data-theme="matrix"] .chats{background:#020904;border-right-color:#104a21}
 [data-theme="matrix"] .top,[data-theme="matrix"] .chat-header{background:linear-gradient(#06170b,#020904);border-bottom-color:#125224}
+[data-theme="matrix"] .main{background:#010502;border-color:#071d0c}
+[data-theme="matrix"] .chat-header,[data-theme="matrix"] .messages,[data-theme="matrix"] .composer,[data-theme="matrix"] .composer-icons{border-color:#0a2a12!important;box-shadow:none!important}
 [data-theme="matrix"] .search,[data-theme="matrix"] .input{border-radius:0;border-color:#135c28;background:#010703}
 [data-theme="matrix"] .search input,[data-theme="matrix"] .input textarea{color:#caffd4;-webkit-text-fill-color:#caffd4}
 [data-theme="matrix"] .search input::placeholder,[data-theme="matrix"] .input textarea::placeholder{color:#5ca66d;opacity:1}
@@ -2548,12 +2576,18 @@ html .desktop-window-shell.desktop-web-shell{
 .play-group-topbar .play-sonor-bar{position:static;transform:none;box-shadow:none;margin-left:14px;padding:5px 12px;max-width:min(460px,42vw);min-width:0;flex:0 1 auto}
 .play-group-topbar .play-sonor-bar-title{max-width:16vw}
 
-/* Presenca so pela borda do avatar; a foto permanece inteira em qualquer estado. */
-.avatar-sm.presence-online,.avatar-sm.presence-afk,.avatar-sm.presence-offline{border:2px solid;box-sizing:border-box}
-.presence-online{border-color:#31c76a!important}
-.presence-afk{border-color:#f5c518!important}
-.presence-offline{border-color:#9aa5b1!important}
+/* Moldura de presenca no estilo MSN: uma unica borda limpa, sem efeito duplicado. */
+.photo[class*="presence-"],.header-photo[class*="presence-"],.avatar-sm[class*="presence-"],.msn-contact-avatar[class*="presence-"]{
+  padding:2px!important;border:3px solid!important;border-radius:6px!important;background:#f4f7f9!important;
+  box-shadow:0 1px 3px rgb(0 0 0 / 28%)!important;box-sizing:border-box;
+}
+.presence-online{border-color:#69bf32!important;opacity:1}
+.presence-afk{border-color:#e3bd2e!important;opacity:1}
+.presence-offline{border-color:#9aa0a8!important;opacity:.5}
 .play-member-row .presence-offline{opacity:1}
+.play-app-shell .avatar-sm,.play-window-shell .avatar-sm{
+  padding:0!important;border:0!important;background:transparent!important;box-shadow:none!important;
+}
 
 /* categoria do Play: seta que recolhe/expande */
 .play-channel-group-title .play-category-toggle{width:16px;height:16px;align-items:center;justify-content:center;transition:transform .15s}

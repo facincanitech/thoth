@@ -72,6 +72,9 @@ html,body,#root{background:#070b10!important;color:#eef4ff!important}
 .search,.input,.msn-search-row input{background:#0a111a!important;color:#eef4ff!important;border-color:#40526a!important}
 .chat,.msn-contact,.name,.preview,.time,.status,.header-name,.header-text{color:#eef4ff!important}
 .chat.selected,.msn-contact:hover,.msn-contact:active{background:#24354a!important;border-color:#65bdec!important}
+.option-icon{background:linear-gradient(145deg,#17212e,#1c2938)!important;border:1px solid #2d3b4e!important;color:#65bdec!important}
+.nudge-btn,.compose-btn[title="Chamar atenção"],.compose-btn.active[title="Chamar atenção"]{border-color:transparent!important;background:transparent!important;color:#d8aa2b!important;box-shadow:none!important}
+.nudge-btn:hover,.compose-btn[title="Chamar atenção"]:hover{background:transparent!important;color:#f0c84b!important}
 `,
   retro: `
 :root{--bg-deep:#d9e6f5;--bg-panel:#fff;--bg-surface:#fff;--bg-surface-2:#edf3fa;--bg-selected:#e1ebf7;--line:#9fb8d4;--line-2:#c4d3e5;--text:#30405a;--text-base:#30405a;--text-secondary:#4d6380;--muted:#70839a;--accent-text:#315d9b;--input:#fff;--rail-bg:#d5e3f3;--rail-icon:#315d9b;--green:#315d9b;--on-button:#fff}
@@ -130,6 +133,19 @@ body{background:#050710 url('../src/assets/themes/cyberpunk-city.png') center bo
 .msn-contact:hover{background:#182b4d!important;border-color:#20e7ff!important;box-shadow:inset 3px 0 #ff3cac!important}
 .msn-avatar-me,.msn-contact-avatar,.header-photo{border-radius:0!important;border-color:#20e7ff!important;background:#101329!important;box-shadow:0 0 11px #20e7ff66!important}
 .send,.send-text{background:linear-gradient(135deg,#20e7ff,#a23cff)!important;color:#061019!important;border-color:#20e7ff!important;box-shadow:0 0 13px #20e7ff55!important}
+.desktop-window-shell .rail-link{color:#d5ddff!important;text-shadow:0 1px 2px #000!important}
+.desktop-window-shell .rail-link .rail-symbol{color:#c8d5ff!important;filter:drop-shadow(0 0 4px #20e7ff55)!important}
+.desktop-window-shell .rail-link .rail-label{color:#d5ddff!important}
+.desktop-window-shell .rail-link[aria-current="page"] .rail-symbol,.desktop-window-shell .rail-link[aria-current="page"] .rail-label{color:#061019!important}
+.thoth-store{background:#070b18!important}.store-hero,.store-card,.store-category-tile{background:#10152b!important;border-color:#2a3865!important;box-shadow:0 10px 28px #0008!important}
+.desktop-chat-shell .header-name,.desktop-chat-shell .header-name .styled-name{color:#f4f7ff!important;-webkit-text-fill-color:#f4f7ff!important;text-shadow:none!important}
+.desktop-chat-shell .chat-header .status,.desktop-chat-shell .header-status-phrase{color:#c7d0ea!important;opacity:1!important}
+.desktop-chat-shell .back-mobile{color:#20e7ff!important}
+.desktop-chat-shell .header-actions .icon-btn{color:#ff4fad!important;background:#11152b!important;border-color:#393761!important;box-shadow:none!important}
+.desktop-chat-shell .header-actions .icon-btn:hover{color:#fff!important;background:#251333!important;border-color:#ff3cac!important;box-shadow:0 0 12px #ff3cac44!important}
+.desktop-chat-shell .bubble .author-label{color:#ff65b7!important;opacity:1!important}
+.msn-avatar-me,.msn-contact-avatar,.header-photo{border-color:#414b78!important;box-shadow:0 0 0 1px #10182d,0 2px 8px #0008!important}
+.desktop-chat-shell .messages,.desktop-chat-shell .composer,.desktop-chat-shell .composer-icons{border-color:#2a3865!important}
 `,
   matrix: `
 :root{--bg-deep:#010502;--bg-panel:#031008;--bg-surface:#05170a;--bg-surface-2:#071e0c;--bg-selected:#0b3214;--line:#0d4820;--line-2:#126329;--text:#caffd4;--text-base:#d5ffdc;--text-secondary:#8cdb9b;--muted:#5ca66d;--accent-text:#36ff67;--input:#020b04;--rail-bg:#020a04;--rail-icon:#77cb88;--green:#20df50;--on-button:#001707}
@@ -156,6 +172,8 @@ html,body,#root{background:#010502!important;color:#caffd4!important}
 .msn-contact-list details summary{color:#43ff6d!important;text-shadow:0 0 6px #18d94a66!important;border-bottom:1px solid #0d4820!important}
 .msn-contact:hover{background:#092d12!important;border-color:#35ff65!important;box-shadow:inset 3px 0 #35ff65!important}
 .msn-avatar-me,.msn-contact-avatar,.header-photo{border-radius:0!important;border-color:#20df50!important;background:#05170a!important;box-shadow:0 0 9px #20df5055!important}
+.desktop-chat-shell .main{background:#010502!important;border-top:1px solid #071d0c!important}
+.desktop-chat-shell .chat-header,.desktop-chat-shell .messages,.desktop-chat-shell .composer,.desktop-chat-shell .composer-icons{border-color:#0a2a12!important;box-shadow:none!important}
 `,
   wood: `
 :root{--bg-deep:#1a0e08;--bg-panel:#2a180f;--bg-surface:#372116;--bg-surface-2:#42291b;--bg-selected:#5b3b25;--line:#624128;--line-2:#795438;--text:#f5e4c9;--text-base:#f5e4c9;--text-secondary:#d9c09f;--muted:#b89b79;--accent-text:#efc47f;--input:#201109;--rail-bg:#241209;--rail-icon:#e4c69f;--green:#c49553;--on-button:#3b210f}
@@ -210,6 +228,15 @@ const desktopFoundation = `
 .desktop-chat-shell .input textarea::placeholder{color:var(--muted)!important;opacity:1!important}
 `
 
+// A moldura de presenca precisa manter as mesmas cores em todos os temas e
+// vencer os acabamentos individuais gerados acima.
+const presenceFoundation = `
+.photo[class*="presence-"],.header-photo[class*="presence-"],.avatar-sm[class*="presence-"],.msn-contact-avatar[class*="presence-"]{padding:2px!important;border:3px solid!important;border-radius:6px!important;background:#f4f7f9!important;box-shadow:0 1px 3px rgb(0 0 0 / 28%)!important;box-sizing:border-box!important}
+.presence-online{border-color:#69bf32!important;opacity:1!important}.presence-afk{border-color:#e3bd2e!important;opacity:1!important}.presence-offline{border-color:#9aa0a8!important;opacity:.5!important}
+.play-member-row .presence-offline{opacity:1!important}
+.play-app-shell .avatar-sm,.play-window-shell .avatar-sm{padding:0!important;border:0!important;background:transparent!important;box-shadow:none!important}
+`
+
 const HEX = /#([0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{3,4})\b/g
 const RGB = /rgba?\(\s*([\d.]+)[\s,]+([\d.]+)[\s,]+([\d.]+)(?:\s*[,/]\s*([\d.]+%?))?\s*\)/g
 
@@ -240,6 +267,7 @@ for (const [name, fn] of Object.entries(themes)) {
   if (name !== 'retro') css = css.replace(/color-scheme:\s*light/g, 'color-scheme:dark')
   css += desktopFoundation
   css += extras[name] || ''
+  css += presenceFoundation
   // a barra de titulo nao precisa seguir o tema do Windows aqui (o tema do app manda)
   fs.writeFileSync(path.join(dir, `thothmessenger-${name}.css`), `/* GERADO por gen-themes.mjs a partir de thothmessenger.css - nao editar */\n` + css)
   console.log('gerado', name)

@@ -116,34 +116,42 @@ export function Rail({ me, onRequireAuth, onNewConversation, onOpenAccount, onOp
           </span>
         )}
       </div>
-      <button type="button" className="rail-item rail-link" title="Status" onClick={handleStatusClick}
-        aria-current={activeSection === 'status' ? 'page' : undefined}>
-        <span className="rail-symbol"><IconStatus size={22} /></span>
-        <span className="rail-label">Status</span>
-      </button>
-      <button type="button" className="rail-item rail-link" title="Espaços (grupos e comunidades)" onClick={handleGroupsClick}
-        aria-current={activeSection === 'groups' || activeSection === 'communities' ? 'page' : undefined}>
-        <span className="rail-symbol"><IconGroup /></span>
-        <span className="rail-label">Espaços</span>
-      </button>
-      <button type="button" className="rail-item rail-link" title="Thoth Play" onClick={handlePlayClick}
-        aria-current={activeSection === 'play' ? 'page' : undefined}>
-        <span className="rail-symbol"><IconGamepad /></span>
-        <span className="rail-label">Play</span>
-      </button>
+      <div className="rail-item">
+        <button type="button" className="rail-link" title="Status" onClick={handleStatusClick}
+          aria-current={activeSection === 'status' ? 'page' : undefined}>
+          <span className="rail-symbol"><IconStatus size={22} /></span>
+          <span className="rail-label">Status</span>
+        </button>
+      </div>
+      <div className="rail-item">
+        <button type="button" className="rail-link" title="Espaços (grupos e comunidades)" onClick={handleGroupsClick}
+          aria-current={activeSection === 'groups' || activeSection === 'communities' ? 'page' : undefined}>
+          <span className="rail-symbol"><IconGroup /></span>
+          <span className="rail-label">Espaços</span>
+        </button>
+      </div>
+      <div className="rail-item">
+        <button type="button" className="rail-link" title="Thoth Play" onClick={handlePlayClick}
+          aria-current={activeSection === 'play' ? 'page' : undefined}>
+          <span className="rail-symbol"><IconGamepad /></span>
+          <span className="rail-label">Play</span>
+        </button>
+      </div>
       <div className="spacer" />
-      <button
-        type="button"
-        className="rail-item rail-link rail-account"
-        onClick={handleAvatarClick}
-        aria-current={activeSection === 'account' ? 'page' : undefined}
-        title={me ? `${displayName(me)} — conta` : 'Entrar'}
-      >
-        <span className="avatar-sm">
-          {me?.avatar_url ? <img src={me.avatar_url} alt="" /> : <IconUser size={18} />}
-        </span>
-        <span className="rail-label">{me ? 'Perfil' : 'Entrar'}</span>
-      </button>
+      <div className="rail-item">
+        <button
+          type="button"
+          className="rail-link rail-account"
+          onClick={handleAvatarClick}
+          aria-current={activeSection === 'account' ? 'page' : undefined}
+          title={me ? `${displayName(me)} — conta` : 'Entrar'}
+        >
+          <span className="avatar-sm">
+            {me?.avatar_url ? <img src={me.avatar_url} alt="" /> : <IconUser size={18} />}
+          </span>
+          <span className="rail-label">{me ? 'Perfil' : 'Entrar'}</span>
+        </button>
+      </div>
     </aside>
   )
 }

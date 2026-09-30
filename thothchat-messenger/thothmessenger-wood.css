@@ -81,7 +81,7 @@
    moldura: online/AFK fica 100% visivel e offline fica com 50% de opacidade. */
 .photo,.header-photo,.avatar-sm,.msn-avatar-frame,.msn-contact-avatar,.msn-avatar-me{overflow:hidden;padding:3px;border:3px solid #a57136!important;border-radius:8px;background:linear-gradient(145deg,#e5bb8a,#c99b40 43%,#83561f);box-shadow:inset 0 2px 2px #d1bba9e6,inset 0 -2px 4px #5d411747,0 2px 5px #573c193d}.photo{width:42px;height:42px}.header-photo{width:61px;height:61px}.photo img,.header-photo img,.avatar-sm img{width:100%;height:100%;object-fit:cover;border-radius:4px}
 .presence-online,.presence-afk{opacity:1}
-.presence-offline{opacity:1}
+.presence-offline{opacity:.5}
 .desktop-chat-shell .main{width:100%;display:flex}.chat-header{min-height:96px;padding:13px 17px;background:radial-gradient(circle at 82% -35%,#d1bba9,transparent 48%),linear-gradient(#e5bf89,#d6ac79);border-bottom:1px solid #b98a4e;color:#4e3b18}.header-name{font-size:17px;display:flex;align-items:center;flex-wrap:wrap;gap:8px}.header-status-phrase{font-size:12px;font-weight:400;font-style:italic;color:#795e34}.header-actions{align-self:stretch;align-items:center}.messages{padding:17px 20px;background:#d1bba9}.desktop-chat-shell .message.in{justify-content:flex-start;margin:0 0 16px}.desktop-chat-shell .message.out{justify-content:flex-end;margin:0 0 16px}.desktop-chat-shell .bubble{max-width:100%;padding:0;background:transparent!important;border:0!important;box-shadow:none!important;color:#4c331a}.author-label{color:#795622!important;font-weight:bold}.out .author-label{color:#734c22!important}.composer{min-height:136px;padding:0;background:#dcb794;border-top:1px solid #b98e52;color:#4e3b18;flex-direction:column;align-items:stretch;flex-wrap:nowrap}.composer-icons{order:-1;width:100%;padding:4px 8px;border:0;border-bottom:1px solid #c09962;border-radius:0;background:linear-gradient(#dfb897,#d4b688)}.composer-input-row{padding:9px}.input{min-height:78px;border:1px solid #b38548;border-radius:0;background:#d1bba9}.send,.send-text{border:1px solid #654819;border-radius:3px;background:linear-gradient(#bc7734,#845b25 52%,#70511e);color:#d1bba9}.compose-btn{color:#795e34}.compose-btn:hover{background:#d1bba9b3;color:#76541a}.compose-btn.active{background:linear-gradient(#d6a363,#c89447)!important;color:#4f3715!important;box-shadow:inset 0 1px 3px #47301059}.compose-btn.recording{background:linear-gradient(#d6a366,#b47b36)!important;color:#d1bba9!important}.compose-btn.active[title="Chamar atenção"]{background:linear-gradient(#d9a750,#9b6c28)!important;color:#4d3013!important}.icon-btn{color:#4e3b18}
 .emoji-picker,.wink-picker,.attach-menu,.request-menu,.filter-popup,.modal-card,.profile-popup{border:1px solid #a87e43;border-radius:5px;background:linear-gradient(#d1bba9,#d8b489);box-shadow:0 6px 18px #47301047}.emoji-picker button,.wink-picker-grid button{border:1px solid transparent;background:#d1bba9}.nudge-btn,.compose-btn[title="Chamar atenção"]{border-color:#99652d!important;background:linear-gradient(#e0b073,#ce9937)!important;color:#6f441c!important}
 /* reservas para componentes MSN que serao ligados depois */
@@ -414,6 +414,12 @@
 /* Play desktop: moldura das fotos nas listas de gerenciar (membros/banidos/cargos) menor */
 .play-window-shell .play-manage-member-row .avatar-sm,.play-window-shell .play-role-check-row .avatar-sm{width:30px!important;height:30px!important;padding:1px!important;border:2px solid #c98f53!important;border-radius:6px!important}
 
+/* Moldura de presenca MSN, unica e limpa; no Play as fotos ficam sem moldura. */
+.photo[class*="presence-"],.header-photo[class*="presence-"],.avatar-sm[class*="presence-"],.msn-contact-avatar[class*="presence-"]{padding:2px!important;border:3px solid!important;border-radius:6px!important;background:#d4b59a!important;box-shadow:0 1px 3px #140f0b47!important;box-sizing:border-box!important}
+.presence-online{border-color:#925f31!important;opacity:1!important}.presence-afk{border-color:#a97f30!important;opacity:1!important}.presence-offline{border-color:#a58854!important;opacity:.5!important}
+.play-member-row .presence-offline{opacity:1!important}
+.play-app-shell .avatar-sm,.play-window-shell .avatar-sm{padding:0!important;border:0!important;background:transparent!important;box-shadow:none!important}
+
 /* Chat Frutiger Aero desktop: mensagens precisam manter bolhas visiveis como os demais temas. */
 .desktop-chat-shell .bubble{max-width:min(620px,82%)!important;padding:10px 13px 8px!important;border:1px solid #c49b64!important;border-radius:10px!important;box-shadow:0 2px 8px #4c331a16!important}
 .desktop-chat-shell .message-text-bubble{max-width:min(40ch,calc(100% - 48px))!important}
@@ -465,3 +471,8 @@ body{background:#1b0f09 url('../src/assets/themes/walnut-grain.png') center/420p
 .msn-contact-list details summary{color:#efc47f!important;text-shadow:0 1px #160a05!important;border-bottom:1px solid #624128!important}
 .msn-contact:hover{background:#553721!important;border-color:#b9874f!important;box-shadow:inset 3px 0 #efc47f!important}
 .msn-avatar-me,.msn-contact-avatar,.header-photo{border-radius:4px!important;border-color:#b18455!important;background:#4b2e1d!important;box-shadow:0 2px 6px #120703!important}
+
+.photo[class*="presence-"],.header-photo[class*="presence-"],.avatar-sm[class*="presence-"],.msn-contact-avatar[class*="presence-"]{padding:2px!important;border:3px solid!important;border-radius:6px!important;background:#f4f7f9!important;box-shadow:0 1px 3px rgb(0 0 0 / 28%)!important;box-sizing:border-box!important}
+.presence-online{border-color:#69bf32!important;opacity:1!important}.presence-afk{border-color:#e3bd2e!important;opacity:1!important}.presence-offline{border-color:#9aa0a8!important;opacity:.5!important}
+.play-member-row .presence-offline{opacity:1!important}
+.play-app-shell .avatar-sm,.play-window-shell .avatar-sm{padding:0!important;border:0!important;background:transparent!important;box-shadow:none!important}
