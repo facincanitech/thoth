@@ -6,6 +6,7 @@ import { WINKS, playWinkEffect, playCustomWinkEffect } from '../lib/winks'
 import { getCustomWinks, saveCustomWink, deleteCustomWink, fileToDataUrl, type CustomWink } from '../lib/customWinks'
 import { getCustomStickers, saveCustomSticker, deleteCustomSticker, uploadStickerImage, resizeStickerImage, type CustomSticker } from '../lib/stickers'
 import { searchGifs, type GifResult } from '../lib/gifSearch'
+import { readMediaFavorites, recordMediaFavorite, saveMediaFavorites, type MediaFavorite, type MediaFavoriteKind } from '../lib/mediaFavorites'
 import { formatLastSeenClock, getPresenceColor } from '../lib/presence'
 import { useDesktopLayout } from '../lib/useDesktopLayout'
 import { openDirectMessage } from '../lib/directMessage'
@@ -77,6 +78,13 @@ function formatDateLabel(iso: string): string {
   if (isSameDay(iso, today.toISOString())) return 'Hoje'
   if (isSameDay(iso, yesterday.toISOString())) return 'Ontem'
   return d.toLocaleDateString('pt-BR')
+}
+
+function renderChatText(content: string) {
+  const parts = content.split(/(\p{Extended_Pictographic}(?:\uFE0F|\u200D\p{Extended_Pictographic})*)/gu)
+  return parts.map((part, index) => /\p{Extended_Pictographic}/u.test(part)
+    ? <span className="chat-emoji" key={`${index}-${part}`}>{part}</span>
+    : part)
 }
 
 // fecha um popup (menu/picker) ao clicar ou tocar fora de qualquer um dos elementos passados em `refs`
@@ -207,6 +215,57 @@ export function MainPanel({ me, conversation, onBack, onConversationUpdate, bloc
   const [gifResults, setGifResults] = useState<GifResult[]>([])
   const [gifLoading, setGifLoading] = useState(false)
   const [gifError, setGifError] = useState<string | null>(null)
+  const [mediaFavorites, setMediaFavorites] = useState<MediaFavorite[]>(readMediaFavorites)
+  const [favoriteMenu, setFavoriteMenu] = useState<{ kind: MediaFavoriteKind; id: string; x: number; y: number } | null>(null)
+  const favoriteHoldTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const favoriteHoldTriggeredRef = useRef(false)
+
+  const favoritesByKind = (kind: MediaFavoriteKind) => mediaFavorites
+    .filter((item) => item.kind === kind)
+    .sort((a, b) => b.uses - a.uses || b.lastUsed - a.lastUsed)
+
+  function rememberFavorite(item: Omit<MediaFavorite, 'uses' | 'lastUsed'>) {
+    setMediaFavorites((current) => {
+      const next = recordMediaFavorite(current, item)
+      saveMediaFavorites(next)
+      return next
+    })
+  }
+
+  function openFavoriteMenu(kind: MediaFavoriteKind, id: string, x: number, y: number) {
+    setFavoriteMenu({ kind, id, x: Math.min(x, window.innerWidth - 210), y: Math.min(y, window.innerHeight - 80) })
+  }
+
+  function startFavoriteHold(event: React.PointerEvent, kind: MediaFavoriteKind, id: string) {
+    if (event.pointerType === 'mouse') return
+    favoriteHoldTriggeredRef.current = false
+    if (favoriteHoldTimerRef.current) clearTimeout(favoriteHoldTimerRef.current)
+    favoriteHoldTimerRef.current = setTimeout(() => {
+      favoriteHoldTriggeredRef.current = true
+      openFavoriteMenu(kind, id, event.clientX, event.clientY)
+    }, 550)
+  }
+
+  function stopFavoriteHold() {
+    if (favoriteHoldTimerRef.current) clearTimeout(favoriteHoldTimerRef.current)
+    favoriteHoldTimerRef.current = null
+  }
+
+  function consumeFavoriteHold(): boolean {
+    if (!favoriteHoldTriggeredRef.current) return false
+    favoriteHoldTriggeredRef.current = false
+    return true
+  }
+
+  function removeFromFavorites() {
+    if (!favoriteMenu) return
+    setMediaFavorites((current) => {
+      const next = current.filter((item) => item.kind !== favoriteMenu.kind || item.id !== favoriteMenu.id)
+      saveMediaFavorites(next)
+      return next
+    })
+    setFavoriteMenu(null)
+  }
 
   function reloadCustomStickers() {
     getCustomStickers().then(setCustomStickers).catch(() => setCustomStickers([]))
@@ -293,6 +352,7 @@ export function MainPanel({ me, conversation, onBack, onConversationUpdate, bloc
         .from('messages')
         .insert({ conversation_id: conversation.id, author_id: me.id, content: url, kind: 'sticker' })
       if (error) throw error
+      rememberFavorite({ kind: 'sticker', id: sticker.id, value: sticker.imageData, preview: sticker.imageData, label: sticker.label })
       const recipientIds = Object.keys(members).filter((id) => id !== me.id)
       sendPush(recipientIds, displayName(me), 'mandou uma figurinha', conversation.id)
     } catch (err) {
@@ -309,6 +369,7 @@ export function MainPanel({ me, conversation, onBack, onConversationUpdate, bloc
         .from('messages')
         .insert({ conversation_id: conversation.id, author_id: me.id, content: gif.url, kind: 'gif' })
       if (error) throw error
+      rememberFavorite({ kind: 'gif', id: gif.id || gif.url, value: gif.url, preview: gif.previewUrl })
       setShowWinks(false)
       const recipientIds = Object.keys(members).filter((id) => id !== me.id)
       sendPush(recipientIds, displayName(me), 'mandou um gif', conversation.id)
@@ -942,6 +1003,8 @@ export function MainPanel({ me, conversation, onBack, onConversationUpdate, bloc
     if (!me || !conversation) return
     setShowWinks(false)
     playWinkEffect(winkId)
+    const usedWink = WINKS.find((wink) => wink.id === winkId)
+    rememberFavorite({ kind: 'wink', id: winkId, value: winkId, label: usedWink?.label })
 
     Object.keys(members)
       .filter((id) => id !== me.id)
@@ -1063,6 +1126,7 @@ export function MainPanel({ me, conversation, onBack, onConversationUpdate, bloc
     if (!me || !conversation) return
     setShowWinks(false)
     playCustomWinkEffect(wink.imageData, wink.soundData)
+    rememberFavorite({ kind: 'wink', id: `custom:${wink.id}`, value: wink.imageData, preview: wink.imageData, sound: wink.soundData, label: wink.label })
 
     Object.keys(members)
       .filter((id) => id !== me.id)
@@ -1678,6 +1742,7 @@ export function MainPanel({ me, conversation, onBack, onConversationUpdate, bloc
     setDraft(next)
     recordReplayEvent(next)
     broadcastTyping(next)
+    rememberFavorite({ kind: 'emoji', id: emoji, value: emoji })
     setShowEmoji(false)
   }
 
@@ -2725,7 +2790,7 @@ export function MainPanel({ me, conversation, onBack, onConversationUpdate, bloc
                       </div>
                     )
                   })()}
-                  {m.content}
+                  {renderChatText(m.content)}
                   <button type="button" className="msg-reply-btn" title="Responder" onClick={() => setReplyTarget(m)}>
                     <IconChevronDown size={14} /> responder
                   </button>
@@ -2771,6 +2836,20 @@ export function MainPanel({ me, conversation, onBack, onConversationUpdate, bloc
           >
             <button type="button" onClick={saveReceivedSticker}>
               <IconDownload size={16} /> Salvar figurinha
+            </button>
+          </div>
+        </div>
+      )}
+
+      {favoriteMenu && (
+        <div className="context-menu-backdrop" onPointerDown={() => setFavoriteMenu(null)}>
+          <div
+            className="context-menu sticker-save-menu"
+            style={{ left: favoriteMenu.x, top: favoriteMenu.y }}
+            onPointerDown={(event) => event.stopPropagation()}
+          >
+            <button type="button" onClick={removeFromFavorites}>
+              <IconMinusCircle size={16} /> Excluir dos favoritos
             </button>
           </div>
         </div>
@@ -2866,6 +2945,26 @@ export function MainPanel({ me, conversation, onBack, onConversationUpdate, bloc
 
         {showEmoji && (
           <div className="emoji-picker" ref={emojiMenuRef}>
+            {favoritesByKind('emoji').length > 0 && (
+              <>
+                <span className="picker-favorites-title">Favoritos</span>
+                <div className="picker-favorites-row">
+                  {favoritesByKind('emoji').map((item) => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      title="Segure ou use o botão direito para excluir dos favoritos"
+                      onPointerDown={(event) => startFavoriteHold(event, 'emoji', item.id)}
+                      onPointerUp={stopFavoriteHold}
+                      onPointerCancel={stopFavoriteHold}
+                      onPointerLeave={stopFavoriteHold}
+                      onContextMenu={(event) => { event.preventDefault(); openFavoriteMenu('emoji', item.id, event.clientX, event.clientY) }}
+                      onClick={() => { if (!consumeFavoriteHold()) appendEmoji(item.value) }}
+                    >{item.value}</button>
+                  ))}
+                </div>
+              </>
+            )}
             {EMOJIS.map((e) => (
               <button
                 key={e}
@@ -2890,6 +2989,30 @@ export function MainPanel({ me, conversation, onBack, onConversationUpdate, bloc
 
             {winkPickerTab === 'winks' && (
               <div className="wink-picker-grid">
+                {favoritesByKind('wink').length > 0 && (
+                  <>
+                    <span className="picker-favorites-title">Favoritos</span>
+                    <div className="picker-favorites-row">
+                      {favoritesByKind('wink').map((item) => (
+                        <button
+                          key={item.id}
+                          type="button"
+                          title={item.label || 'Wink favorito'}
+                          onPointerDown={(event) => startFavoriteHold(event, 'wink', item.id)}
+                          onPointerUp={stopFavoriteHold}
+                          onPointerCancel={stopFavoriteHold}
+                          onPointerLeave={stopFavoriteHold}
+                          onContextMenu={(event) => { event.preventDefault(); openFavoriteMenu('wink', item.id, event.clientX, event.clientY) }}
+                          onClick={() => {
+                            if (consumeFavoriteHold()) return
+                            if (item.id.startsWith('custom:')) sendCustomWink({ id: item.id.slice(7), label: item.label || 'Wink', imageData: item.value, soundData: item.sound || null, fromUser: null })
+                            else sendWink(item.value)
+                          }}
+                        >{item.preview ? <img src={item.preview} alt="" /> : WINKS.find((wink) => wink.id === item.value)?.emoji}</button>
+                      ))}
+                    </div>
+                  </>
+                )}
                 {WINKS.map((w) => (
                   <button key={w.id} type="button" title={w.label} onClick={() => sendWink(w.id)}>
                     {w.emoji}
@@ -2915,6 +3038,26 @@ export function MainPanel({ me, conversation, onBack, onConversationUpdate, bloc
 
             {winkPickerTab === 'stickers' && (
               <div className="wink-picker-grid">
+                {favoritesByKind('sticker').length > 0 && (
+                  <>
+                    <span className="picker-favorites-title">Favoritos</span>
+                    <div className="picker-favorites-row">
+                      {favoritesByKind('sticker').map((item) => (
+                        <button
+                          key={item.id}
+                          type="button"
+                          title={item.label || 'Figurinha favorita'}
+                          onPointerDown={(event) => startFavoriteHold(event, 'sticker', item.id)}
+                          onPointerUp={stopFavoriteHold}
+                          onPointerCancel={stopFavoriteHold}
+                          onPointerLeave={stopFavoriteHold}
+                          onContextMenu={(event) => { event.preventDefault(); openFavoriteMenu('sticker', item.id, event.clientX, event.clientY) }}
+                          onClick={() => { if (!consumeFavoriteHold()) sendSticker({ id: item.id, label: item.label || 'Figurinha', imageData: item.value }) }}
+                        ><img src={item.preview || item.value} alt="" /></button>
+                      ))}
+                    </div>
+                  </>
+                )}
                 {customStickers.map((s) => (
                   <button
                     key={s.id}
@@ -2942,6 +3085,26 @@ export function MainPanel({ me, conversation, onBack, onConversationUpdate, bloc
                   value={gifQuery}
                   onChange={(e) => setGifQuery(e.target.value)}
                 />
+                {favoritesByKind('gif').length > 0 && (
+                  <>
+                    <span className="picker-favorites-title">Favoritos</span>
+                    <div className="picker-favorites-row">
+                      {favoritesByKind('gif').map((item) => (
+                        <button
+                          key={item.id}
+                          type="button"
+                          title="Segure ou use o botão direito para excluir dos favoritos"
+                          onPointerDown={(event) => startFavoriteHold(event, 'gif', item.id)}
+                          onPointerUp={stopFavoriteHold}
+                          onPointerCancel={stopFavoriteHold}
+                          onPointerLeave={stopFavoriteHold}
+                          onContextMenu={(event) => { event.preventDefault(); openFavoriteMenu('gif', item.id, event.clientX, event.clientY) }}
+                          onClick={() => { if (!consumeFavoriteHold()) sendGif({ id: item.id, url: item.value, previewUrl: item.preview || item.value }) }}
+                        ><img src={item.preview || item.value} alt="" loading="lazy" /></button>
+                      ))}
+                    </div>
+                  </>
+                )}
                 {gifLoading && <p className="gif-picker-status">carregando...</p>}
                 {gifError && <p className="gif-picker-status error">{gifError}</p>}
                 {!gifLoading && !gifError && gifResults.length === 0 && (

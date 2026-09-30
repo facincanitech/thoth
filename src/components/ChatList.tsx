@@ -776,6 +776,7 @@ export function ChatList({
   const bannerInputRef = useRef<HTMLInputElement>(null)
   const bannerPreviewRef = useRef<HTMLDivElement>(null)
   const bannerDragRef = useRef<{ startX: number; startY: number; startPosX: number; startPosY: number } | null>(null)
+  const bannerPosRef = useRef('50% 50%')
   const loadConversationsRetries = useRef(0)
   async function loadConversations() {
     if (!me) return
@@ -1812,8 +1813,9 @@ export function ChatList({
   }
 
   function handleBannerPointerDown(e: React.PointerEvent<HTMLDivElement>) {
-    if (!bannerImageDraft) return
+    if (!(bannerImageDraft ?? me?.banner_image_url)) return
     const [x, y] = parseBannerPos(bannerImagePosDraft)
+    bannerPosRef.current = bannerImagePosDraft
     bannerDragRef.current = { startX: e.clientX, startY: e.clientY, startPosX: x, startPosY: y }
     e.currentTarget.setPointerCapture(e.pointerId)
   }
@@ -1824,17 +1826,20 @@ export function ChatList({
     const rect = bannerPreviewRef.current.getBoundingClientRect()
     const dxPct = ((e.clientX - drag.startX) / rect.width) * 100
     const dyPct = ((e.clientY - drag.startY) / rect.height) * 100
-    const nextX = Math.min(100, Math.max(0, drag.startPosX + dxPct))
-    const nextY = Math.min(100, Math.max(0, drag.startPosY + dyPct))
-    setBannerImagePosDraft(`${nextX.toFixed(0)}% ${nextY.toFixed(0)}%`)
+    const nextX = Math.min(100, Math.max(0, drag.startPosX - dxPct))
+    const nextY = Math.min(100, Math.max(0, drag.startPosY - dyPct))
+    const nextPosition = `${nextX.toFixed(0)}% ${nextY.toFixed(0)}%`
+    bannerPosRef.current = nextPosition
+    setBannerImagePosDraft(nextPosition)
   }
 
   async function handleBannerPointerUp() {
     if (!bannerDragRef.current) return
     bannerDragRef.current = null
     if (!me) return
-    await supabase.from('profiles').update({ banner_image_position: bannerImagePosDraft }).eq('id', me.id)
-    onProfileChange({ banner_image_position: bannerImagePosDraft })
+    const position = bannerPosRef.current
+    await supabase.from('profiles').update({ banner_image_position: position }).eq('id', me.id)
+    onProfileChange({ banner_image_position: position })
   }
 
   async function openBlocked() {
@@ -3047,8 +3052,8 @@ export function ChatList({
                 display: 'block',
                 width: '100%',
                 minWidth: '100%',
-                height: 188,
-                minHeight: 188,
+                height: 230,
+                minHeight: 230,
                 boxSizing: 'border-box',
                 ...((bannerImageDraft ?? me.banner_image_url)
                   ? {
