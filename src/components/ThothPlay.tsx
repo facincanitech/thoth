@@ -6,6 +6,7 @@ import { useEffect, useMemo, useRef, useState, type ChangeEvent, type MouseEvent
 import { Room, RoomEvent, Track, createLocalScreenTracks, type RemoteParticipant, type LocalParticipant, type TrackPublication } from 'livekit-client'
 import { supabase } from '../lib/supabase'
 import { fetchLiveKitToken } from '../lib/livekit'
+import { setMediaAudioMode } from '../lib/audioRoute'
 import { displayName } from '../lib/displayName'
 import { AvatarBox } from './AvatarBox'
 import { getPresenceColor } from '../lib/presence'
@@ -3502,6 +3503,7 @@ function VoiceChannel({ allow, me, membersById, channel, onParticipantsChange, o
   pipIds: string[]; maximizedId: string | null; onFullscreen: (id: string) => void; onTogglePip: (id: string) => void; onToggleMaximize: (id: string) => void
   onMediaMenu: (id: string, x: number, y: number) => void
 }) {
+  const playMicOptions = { echoCancellation: false, noiseSuppression: false, autoGainControl: false }
   const roomRef = useRef<Room | null>(null)
   const [connected, setConnected] = useState(false)
   const [connecting, setConnecting] = useState(true)
@@ -3587,7 +3589,11 @@ function VoiceChannel({ allow, me, membersById, channel, onParticipantsChange, o
         // cancelamento de eco esta ligado, e o Windows abaixa o audio de todo o resto do PC
         // (Sonor, YouTube, etc) - desligar aqui evita isso. Ja testamos sem cancelamento de
         // eco antes (registro do "Modo fone") e nao percebemos diferenca perceptivel na chamada.
-        if (allow.speak) await room.localParticipant.setMicrophoneEnabled(true, isTauriDesktop ? { echoCancellation: false } : undefined)
+        if (allow.speak) {
+          await room.localParticipant.setMicrophoneEnabled(true, playMicOptions)
+          await setMediaAudioMode()
+          setTimeout(() => setMediaAudioMode(), 400)
+        }
         else setMicEnabled(false)
         if (cancelled) { room.disconnect(); return }
         setConnected(true)
@@ -3621,7 +3627,8 @@ function VoiceChannel({ allow, me, membersById, channel, onParticipantsChange, o
     const next = !micEnabled
     // ligar o microfone estando ensurdecido tambem volta a ouvir (como no Discord)
     if (next && deafenedRef.current) applyDeafen(false)
-    await room.localParticipant.setMicrophoneEnabled(next, next && isTauriDesktop ? { echoCancellation: false } : undefined)
+    await room.localParticipant.setMicrophoneEnabled(next, next ? playMicOptions : undefined)
+    if (next) await setMediaAudioMode()
     setMicEnabled(next)
     syncParticipants(room)
   }
@@ -3639,7 +3646,8 @@ function VoiceChannel({ allow, me, membersById, channel, onParticipantsChange, o
     } else {
       applyDeafen(false)
       if (micBeforeDeafen.current && allow.speak) {
-        await room.localParticipant.setMicrophoneEnabled(true, isTauriDesktop ? { echoCancellation: false } : undefined)
+        await room.localParticipant.setMicrophoneEnabled(true, playMicOptions)
+        await setMediaAudioMode()
         setMicEnabled(true)
       }
     }

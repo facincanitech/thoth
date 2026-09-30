@@ -198,6 +198,10 @@ export function MainPanel({ me, conversation, onBack, onConversationUpdate, bloc
   const [newStickerError, setNewStickerError] = useState<string | null>(null)
   const [stickerSending, setStickerSending] = useState(false)
   const stickerImageInputRef = useRef<HTMLInputElement>(null)
+  const [stickerSaveMenu, setStickerSaveMenu] = useState<{ url: string; x: number; y: number } | null>(null)
+  const stickerHoldTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const stickerHoldStartRef = useRef<{ x: number; y: number } | null>(null)
+  const stickerHoldTriggeredRef = useRef(false)
 
   const [gifQuery, setGifQuery] = useState('')
   const [gifResults, setGifResults] = useState<GifResult[]>([])
@@ -856,6 +860,50 @@ export function MainPanel({ me, conversation, onBack, onConversationUpdate, bloc
     }
     if (elapsed >= 80) send()
     else if (!typingTimerRef.current) typingTimerRef.current = setTimeout(send, 80 - elapsed)
+  }
+
+  function openStickerSaveMenu(url: string, x: number, y: number) {
+    setStickerSaveMenu({
+      url,
+      x: Math.max(8, Math.min(x, window.innerWidth - 210)),
+      y: Math.max(8, Math.min(y, window.innerHeight - 70)),
+    })
+  }
+
+  function startStickerHold(event: React.PointerEvent<HTMLImageElement>, url: string) {
+    if (event.pointerType !== 'touch') return
+    stickerHoldTriggeredRef.current = false
+    stickerHoldStartRef.current = { x: event.clientX, y: event.clientY }
+    if (stickerHoldTimerRef.current) clearTimeout(stickerHoldTimerRef.current)
+    stickerHoldTimerRef.current = setTimeout(() => {
+      stickerHoldTriggeredRef.current = true
+      openStickerSaveMenu(url, event.clientX, event.clientY)
+    }, 550)
+  }
+
+  function moveStickerHold(event: React.PointerEvent<HTMLImageElement>) {
+    const start = stickerHoldStartRef.current
+    if (!start || Math.hypot(event.clientX - start.x, event.clientY - start.y) < 10) return
+    if (stickerHoldTimerRef.current) clearTimeout(stickerHoldTimerRef.current)
+    stickerHoldTimerRef.current = null
+  }
+
+  function stopStickerHold() {
+    if (stickerHoldTimerRef.current) clearTimeout(stickerHoldTimerRef.current)
+    stickerHoldTimerRef.current = null
+    stickerHoldStartRef.current = null
+  }
+
+  async function saveReceivedSticker() {
+    if (!stickerSaveMenu) return
+    const saved = await getCustomStickers()
+    const existing = saved.find((sticker) => sticker.imageData === stickerSaveMenu.url)
+    if (!existing) {
+      const sticker: CustomSticker = { id: crypto.randomUUID(), label: 'Figurinha salva', imageData: stickerSaveMenu.url }
+      await saveCustomSticker(sticker)
+      setCustomStickers((current) => [...current.filter((item) => item.imageData !== sticker.imageData), sticker])
+    }
+    setStickerSaveMenu(null)
   }
 
   async function blockUser(userId: string) {
@@ -2526,7 +2574,31 @@ export function MainPanel({ me, conversation, onBack, onConversationUpdate, bloc
                       {authorLabel(m.author_id) || '...'}
                     </span>
                   )}
-                  <img src={m.content} alt="" className="sticker-img" onClick={() => setExpandedImage(m.content)} />
+                  <img
+                    src={m.content}
+                    alt=""
+                    className={`sticker-img${m.kind === 'gif' ? ' gif-img' : ''}`}
+                    onContextMenu={(event) => {
+                      if (m.kind !== 'sticker' || m.author_id === me.id) return
+                      event.preventDefault()
+                      openStickerSaveMenu(m.content, event.clientX, event.clientY)
+                    }}
+                    onPointerDown={(event) => {
+                      if (m.kind === 'sticker' && m.author_id !== me.id) startStickerHold(event, m.content)
+                    }}
+                    onPointerMove={moveStickerHold}
+                    onPointerUp={stopStickerHold}
+                    onPointerCancel={stopStickerHold}
+                    onPointerLeave={stopStickerHold}
+                    onClick={(event) => {
+                      if (stickerHoldTriggeredRef.current) {
+                        stickerHoldTriggeredRef.current = false
+                        event.preventDefault()
+                        return
+                      }
+                      setExpandedImage(m.content)
+                    }}
+                  />
                   <span className="meta sticker-meta">{formatMessageTime(m.created_at)}</span>
                 </div>
               </div>
@@ -2690,6 +2762,20 @@ export function MainPanel({ me, conversation, onBack, onConversationUpdate, bloc
         <div ref={bottomRef} />
       </section>
 
+      {stickerSaveMenu && (
+        <div className="context-menu-backdrop" onPointerDown={() => setStickerSaveMenu(null)}>
+          <div
+            className="context-menu sticker-save-menu"
+            style={{ left: stickerSaveMenu.x, top: stickerSaveMenu.y }}
+            onPointerDown={(event) => event.stopPropagation()}
+          >
+            <button type="button" onClick={saveReceivedSticker}>
+              <IconDownload size={16} /> Salvar figurinha
+            </button>
+          </div>
+        </div>
+      )}
+
       <footer className="composer">
         {replyTarget && (
           <div className="reply-preview-bar">
@@ -2731,7 +2817,7 @@ export function MainPanel({ me, conversation, onBack, onConversationUpdate, bloc
           <audio ref={sonorAudioRef} hidden onError={handleSonorAudioError} onPlaying={handleSonorAudioPlaying} />
         </div>
         <div className="composer-input-row">
-          <div className="input">
+          <div className="input" onClick={() => composerTextareaRef.current?.focus()}>
             <textarea
               ref={composerTextareaRef}
               value={draft}
@@ -2879,7 +2965,7 @@ export function MainPanel({ me, conversation, onBack, onConversationUpdate, bloc
               <h2>Meus winks</h2>
               <button type="button" className="primary" onClick={() => openWinkForm()}>+ Criar wink</button>
               <div className="wink-manager-list">
-                {customWinks.length === 0 && <p style={{ color: '#8696a0', fontSize: '.85rem' }}>nenhum wink criado ainda</p>}
+                {customWinks.length === 0 && <p className="wink-manager-empty">nenhum wink criado ainda</p>}
                 {customWinks.map((w) => (
                   <button key={w.id} type="button" className="wink-manager-item" onClick={() => openWinkForm(w)}>
                     <img src={w.imageData} alt="" />
@@ -2929,7 +3015,7 @@ export function MainPanel({ me, conversation, onBack, onConversationUpdate, bloc
               <h2>Minhas figurinhas</h2>
               <button type="button" className="primary" onClick={() => openStickerForm()}>+ Criar figurinha</button>
               <div className="wink-manager-list">
-                {customStickers.length === 0 && <p style={{ color: '#8696a0', fontSize: '.85rem' }}>nenhuma figurinha criada ainda</p>}
+                {customStickers.length === 0 && <p className="wink-manager-empty">nenhuma figurinha criada ainda</p>}
                 {customStickers.map((s) => (
                   <button key={s.id} type="button" className="wink-manager-item" onClick={() => openStickerForm(s)}>
                     <img src={s.imageData} alt="" />

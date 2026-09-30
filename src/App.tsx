@@ -24,7 +24,7 @@ import { isTauriDesktop } from './lib/platform'
 import { applyDesktopTheme, removeDesktopSkin } from './lib/desktopTheme'
 import { useDesktopLayout } from './lib/useDesktopLayout'
 import { useHeartbeat } from './lib/useHeartbeat'
-import { ensureCallWindow, openChatWindow, openPlayWindow, requestCall } from './lib/desktopWindows'
+import { ensureCallWindow, openChatWindow, openPlayWindow, requestCall, showWinkInChatWindow } from './lib/desktopWindows'
 import { DesktopTitleBar } from './components/DesktopChrome'
 import { showDesktopToast } from './lib/desktopToast'
 import { InviteChooser } from './components/InviteChooser'
@@ -487,7 +487,10 @@ function App() {
       .on('broadcast', { event: 'wink' }, ({ payload }) => {
         const { userId, conversationId, winkId } = payload as { userId: string; conversationId?: string; winkId?: string }
         if (conversationId && mutedIdsRef.current.has(conversationId)) return
-        if (winkId) playWinkEffect(winkId)
+        if (winkId) {
+          if (isTauriDesktop && conversationId) showWinkInChatWindow({ conversationId, winkId }).catch(() => {})
+          else playWinkEffect(winkId)
+        }
         showDesktopToast({ senderId: userId, conversationId, message: 'enviou um wink', kind: 'wink' }).catch(() => {})
       })
       .on('broadcast', { event: 'customWink' }, ({ payload }) => {
@@ -499,7 +502,8 @@ function App() {
           soundData: string | null
         }
         if (conversationId && mutedIdsRef.current.has(conversationId)) return
-        playCustomWinkEffect(imageData, soundData)
+        if (isTauriDesktop && conversationId) showWinkInChatWindow({ conversationId, imageData, soundData }).catch(() => {})
+        else playCustomWinkEffect(imageData, soundData)
         showDesktopToast({ senderId: userId, conversationId, message: `enviou o wink ${label}`, kind: 'wink' }).catch(() => {})
         const wink: CustomWink = { id: crypto.randomUUID(), label, imageData, soundData, fromUser: userId }
         saveCustomWink(wink).catch(() => {})

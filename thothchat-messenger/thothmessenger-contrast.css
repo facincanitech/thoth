@@ -81,7 +81,7 @@
    moldura: online/AFK fica 100% visivel e offline fica com 50% de opacidade. */
 .photo,.header-photo,.avatar-sm,.msn-avatar-frame,.msn-contact-avatar,.msn-avatar-me{overflow:hidden;padding:3px;border:3px solid #ff0000!important;border-radius:8px;background:linear-gradient(145deg,#ffffff,#ffffff 43%,#ff0000);box-shadow:inset 0 2px 2px #ffffffe6,inset 0 -2px 4px #00000047,0 2px 5px #0000003d}.photo{width:42px;height:42px}.header-photo{width:61px;height:61px}.photo img,.header-photo img,.avatar-sm img{width:100%;height:100%;object-fit:cover;border-radius:4px}
 .presence-online,.presence-afk{opacity:1}
-.presence-offline{opacity:.5}
+.presence-offline{opacity:1}
 .desktop-chat-shell .main{width:100%;display:flex}.chat-header{min-height:96px;padding:13px 17px;background:radial-gradient(circle at 82% -35%,#ffffff,transparent 48%),linear-gradient(#ffffff,#ffffff);border-bottom:1px solid #ffffff;color:#000000}.header-name{font-size:17px;display:flex;align-items:center;flex-wrap:wrap;gap:8px}.header-status-phrase{font-size:12px;font-weight:400;font-style:italic;color:#ff0000}.header-actions{align-self:stretch;align-items:center}.messages{padding:17px 20px;background:#ffffff}.desktop-chat-shell .message.in{justify-content:flex-start;margin:0 0 16px}.desktop-chat-shell .message.out{justify-content:flex-end;margin:0 0 16px}.desktop-chat-shell .bubble{max-width:100%;padding:0;background:transparent!important;border:0!important;box-shadow:none!important;color:#000000}.author-label{color:#ff0000!important;font-weight:bold}.out .author-label{color:#ff0000!important}.composer{min-height:136px;padding:0;background:#ffffff;border-top:1px solid #ffffff;color:#000000;flex-direction:column;align-items:stretch;flex-wrap:nowrap}.composer-icons{order:-1;width:100%;padding:4px 8px;border:0;border-bottom:1px solid #ffffff;border-radius:0;background:linear-gradient(#ffffff,#ffffff)}.composer-input-row{padding:9px}.input{min-height:78px;border:1px solid #ff0000;border-radius:0;background:#ffffff}.send,.send-text{border:1px solid #000000;border-radius:3px;background:linear-gradient(#ff0000,#ff0000 52%,#000000);color:#ffffff}.compose-btn{color:#ff0000}.compose-btn:hover{background:#ffffffb3;color:#000000}.compose-btn.active{background:linear-gradient(#ffffff,#ffffff)!important;color:#000000!important;box-shadow:inset 0 1px 3px #00000059}.compose-btn.recording{background:linear-gradient(#ffffff,#ff0000)!important;color:#ffffff!important}.compose-btn.active[title="Chamar atenção"]{background:linear-gradient(#ffffff,#ff0000)!important;color:#000000!important}.icon-btn{color:#000000}
 .emoji-picker,.wink-picker,.attach-menu,.request-menu,.filter-popup,.modal-card,.profile-popup{border:1px solid #ff0000;border-radius:5px;background:linear-gradient(#ffffff,#ffffff);box-shadow:0 6px 18px #00000047}.emoji-picker button,.wink-picker-grid button{border:1px solid transparent;background:#ffffff}.nudge-btn,.compose-btn[title="Chamar atenção"]{border-color:#ff0000!important;background:linear-gradient(#ffffff,#ffffff)!important;color:#000000!important}
 /* reservas para componentes MSN que serao ligados depois */
@@ -416,7 +416,7 @@
 
 /* Chat Frutiger Aero desktop: mensagens precisam manter bolhas visiveis como os demais temas. */
 .desktop-chat-shell .bubble{max-width:min(620px,82%)!important;padding:10px 13px 8px!important;border:1px solid #ffffff!important;border-radius:10px!important;box-shadow:0 2px 8px #00000016!important}
-.desktop-chat-shell .message-text-bubble{max-width:min(28ch,74%)!important}
+.desktop-chat-shell .message-text-bubble{max-width:min(40ch,calc(100% - 48px))!important}
 .desktop-chat-shell .in .bubble{background:linear-gradient(180deg,#ffffff,#ffffff)!important;color:#000000!important}
 .desktop-chat-shell .out .bubble{background:linear-gradient(180deg,#ffffff,#ffffff)!important;border-color:#ff0000!important;color:#000000!important}
 
@@ -435,7 +435,7 @@
 .desktop-chat-shell .chat-header{min-height:108px!important;padding:15px 20px!important}
 .desktop-chat-shell .messages{padding:22px 24px!important}
 .desktop-chat-shell .bubble{max-width:min(620px,82%)!important;padding:10px 13px 8px!important;border:1px solid var(--line-2)!important;border-radius:10px!important;box-shadow:0 2px 8px #00000016!important}
-.desktop-chat-shell .message-text-bubble{max-width:min(28ch,74%)!important}
+.desktop-chat-shell .message-text-bubble{max-width:min(40ch,calc(100% - 48px))!important}
 .desktop-chat-shell .in .bubble{background:var(--bg-surface)!important;color:var(--text-base)!important}
 .desktop-chat-shell .out .bubble{background:var(--bg-selected)!important;color:var(--text-base)!important}
 .desktop-chat-shell .composer{min-height:142px!important;background:var(--bg-panel)!important;border-top:1px solid var(--line)!important}

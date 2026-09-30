@@ -17,12 +17,31 @@ type ToastRequest = Omit<DesktopToastPayload, 'sender'> & {
 }
 
 const TOAST_LABEL = 'thoth-notification'
+export const DESKTOP_TOAST_SETTING_KEY = 'thoth-desktop-overlay-notifications'
 
-async function anotherThothWindowIsFocused() {
+export function desktopToastEnabled() {
+  try {
+    return localStorage.getItem(DESKTOP_TOAST_SETTING_KEY) !== 'off'
+  } catch {
+    return true
+  }
+}
+
+export function setDesktopToastEnabled(enabled: boolean) {
+  try {
+    localStorage.setItem(DESKTOP_TOAST_SETTING_KEY, enabled ? 'on' : 'off')
+  } catch {
+    // Ignore storage failures and keep the current session state in the UI.
+  }
+}
+
+async function notificationTargetIsFocused(conversationId?: string) {
   const windows = await WebviewWindow.getAll()
-  const appWindows = windows.filter((window) => window.label !== TOAST_LABEL)
-  const focused = await Promise.all(appWindows.map((window) => window.isFocused().catch(() => false)))
-  return focused.some(Boolean)
+  // So a propria conversa aberta pode dispensar o aviso. Uma conversa diferente,
+  // a lista de contatos, o Play, chamadas e PiP nunca bloqueiam a notificacao.
+  const targetLabel = conversationId ? `chat-${conversationId}` : 'main'
+  const target = windows.find((window) => window.label === targetLabel)
+  return target ? target.isFocused().catch(() => false) : false
 }
 
 async function resolveSender(request: ToastRequest) {
@@ -38,7 +57,8 @@ async function resolveSender(request: ToastRequest) {
 
 export async function showDesktopToast(request: ToastRequest) {
   if (!isTauriDesktop) return
-  if (await anotherThothWindowIsFocused().catch(() => document.hasFocus())) return
+  if (!desktopToastEnabled()) return
+  if (await notificationTargetIsFocused(request.conversationId).catch(() => false)) return
 
   const payload: DesktopToastPayload = {
     conversationId: request.conversationId,

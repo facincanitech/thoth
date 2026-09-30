@@ -3,7 +3,9 @@ import type { Session } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
 import { MainPanel } from './MainPanel'
 import { DesktopTitleBar } from './DesktopChrome'
-import { currentWindow, requestCall } from '../lib/desktopWindows'
+import { currentWindow, requestCall, type DesktopChatWink } from '../lib/desktopWindows'
+import { playCustomWinkEffect, playWinkEffect } from '../lib/winks'
+import { useHeartbeat } from '../lib/useHeartbeat'
 import type { Conversation, Profile } from '../types'
 
 type Props = {
@@ -15,6 +17,20 @@ export function DesktopChatWindow({ conversationId }: Props) {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [conversation, setConversation] = useState<Conversation | null>(null)
   const [blockedIds, setBlockedIds] = useState<Set<string>>(new Set())
+
+  useHeartbeat(session?.user.id)
+
+  useEffect(() => {
+    let unlisten: (() => void) | undefined
+    import('@tauri-apps/api/event').then(({ listen }) =>
+      listen<DesktopChatWink>('desktop-chat-wink', ({ payload }) => {
+        if (payload.conversationId !== conversationId) return
+        if (payload.winkId) playWinkEffect(payload.winkId)
+        else if (payload.imageData) playCustomWinkEffect(payload.imageData, payload.soundData ?? null)
+      }),
+    ).then((fn) => { unlisten = fn })
+    return () => unlisten?.()
+  }, [conversationId])
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session))

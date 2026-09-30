@@ -36,6 +36,21 @@ export async function openChatWindow(conversationId: string, title: string) {
   })
 }
 
+export type DesktopChatWink = {
+  conversationId: string
+  winkId?: string
+  imageData?: string
+  soundData?: string | null
+}
+
+export async function showWinkInChatWindow(payload: DesktopChatWink) {
+  const chatWindow = await WebviewWindow.getByLabel(chatWindowLabel(payload.conversationId))
+  if (!chatWindow) return false
+  const { emitTo } = await import('@tauri-apps/api/event')
+  await emitTo(chatWindow.label, 'desktop-chat-wink', payload)
+  return true
+}
+
 // Traz a janela principal (chats) pra frente sem mexer no Play - a chamada de voz continua.
 export async function openMainWindow() {
   const w = await WebviewWindow.getByLabel('main')

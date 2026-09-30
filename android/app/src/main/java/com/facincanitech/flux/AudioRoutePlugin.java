@@ -48,6 +48,23 @@ public class AudioRoutePlugin extends Plugin {
     }
 
     @PluginMethod
+    public void setMediaAudioMode(PluginCall call) {
+        AudioManager am = audioManager();
+        if (am != null) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                am.clearCommunicationDevice();
+            } else {
+                am.setSpeakerphoneOn(false);
+            }
+            // Canais do Play sao salas de voz persistentes, nao ligacoes telefonicas.
+            // MODE_NORMAL preserva a qualidade dos outros apps e do audio de midia.
+            am.setMode(AudioManager.MODE_NORMAL);
+            am.abandonAudioFocus(null);
+        }
+        call.resolve();
+    }
+
+    @PluginMethod
     public void setSpeakerphoneOn(PluginCall call) {
         boolean on = call.getBoolean("on", false);
         AudioManager am = audioManager();

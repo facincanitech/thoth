@@ -19,7 +19,7 @@ import { isTauriDesktop } from '../lib/platform'
 import { startDesktopGoogleLogin } from '../lib/desktopLogin'
 import { getPresenceColor } from '../lib/presence'
 import { playMessageSound } from '../lib/notificationSound'
-import { messagePreview, showDesktopToast } from '../lib/desktopToast'
+import { desktopToastEnabled, messagePreview, setDesktopToastEnabled, showDesktopToast } from '../lib/desktopToast'
 import {
   deviceContactsAvailable,
   getContactsPermission,
@@ -494,6 +494,7 @@ export function ChatList({
   const [phoneManualConfirm, setPhoneManualConfirm] = useState('')
   const [whatsappCode, setWhatsappCode] = useState<string | null>(null)
   const [whatsappPolling, setWhatsappPolling] = useState(false)
+  const [desktopOverlayEnabled, setDesktopOverlayEnabled] = useState(desktopToastEnabled)
 
   const [accountView, setAccountView] = useState<AccountView>('root')
   const [storeBackSignal, setStoreBackSignal] = useState(0)
@@ -3095,6 +3096,27 @@ export function ChatList({
             <label>Email</label>
             <input value={me.email} disabled />
             <span className="invite-code">notificações de segurança e mais dados da conta chegam em breve</span>
+
+            {isTauriDesktop && (
+              <div className="desktop-overlay-setting">
+                <div className="desktop-overlay-copy">
+                  <strong>Notificação sobreposta</strong>
+                  <span>Mostra um aviso sobre os outros programas quando o Thoth estiver minimizado.</span>
+                </div>
+                <button
+                  type="button"
+                  className={`desktop-overlay-toggle${desktopOverlayEnabled ? ' enabled' : ''}`}
+                  aria-pressed={desktopOverlayEnabled}
+                  onClick={() => {
+                    const enabled = !desktopOverlayEnabled
+                    setDesktopOverlayEnabled(enabled)
+                    setDesktopToastEnabled(enabled)
+                  }}
+                >
+                  {desktopOverlayEnabled ? 'ON' : 'OFF'}
+                </button>
+              </div>
+            )}
 
             <div className="new-conv-option" style={{ margin: '10px 0 0', padding: '14px 0' }} onClick={openBlocked}>
               <div className="option-icon"><IconLock size={20} /></div>

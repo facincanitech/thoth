@@ -4,6 +4,7 @@ interface AudioRoutePlugin {
   setSpeakerphoneOn(options: { on: boolean }): Promise<void>
   startCallAudio(): Promise<void>
   stopCallAudio(): Promise<void>
+  setMediaAudioMode(): Promise<void>
   startRingtone(): Promise<void>
   stopRingtone(): Promise<void>
 }
@@ -32,6 +33,15 @@ export async function stopCallAudio() {
   if (!Capacitor.isNativePlatform()) return
   try {
     await AudioRoute.stopCallAudio()
+  } catch {
+    // plugin indisponivel - nao critico
+  }
+}
+
+export async function setMediaAudioMode() {
+  if (!Capacitor.isNativePlatform()) return
+  try {
+    await AudioRoute.setMediaAudioMode()
   } catch {
     // plugin indisponivel - nao critico
   }
