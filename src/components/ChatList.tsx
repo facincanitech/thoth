@@ -3341,7 +3341,7 @@ export function ChatList({
                   </label>
                 )}
 
-                {whatsappVerifyAvailable() && (
+                {!phoneLinked && whatsappVerifyAvailable() && (
                   <div className="whatsapp-verify-block">
                     {!whatsappCode ? (
                       <button type="button" className="whatsapp-verify-btn" onClick={startWhatsAppVerification}>
@@ -3358,7 +3358,7 @@ export function ChatList({
                     )}
                   </div>
                 )}
-                {smsVerifyAvailable() && !whatsappCode && (
+                {!phoneLinked && smsVerifyAvailable() && !whatsappCode && (
                   <div className="whatsapp-verify-block">
                     {renderSmsVerifyButton()}
                   </div>
@@ -3374,7 +3374,7 @@ export function ChatList({
                   )}
                   {phoneLinked && <button type="button" className="secondary" disabled={contactsLoading} onClick={removeLinkedPhone}>Remover</button>}
                 </div>
-                {deviceContactsAvailable() && !phoneManualEntry && (
+                {!phoneLinked && deviceContactsAvailable() && !phoneManualEntry && (
                   <button type="button" className="chip-btn" onClick={() => setPhoneManualEntry(true)}>ou digitar o número na mão</button>
                 )}
                 {deviceContactsAvailable() && phoneManualEntry && (() => {
