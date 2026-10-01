@@ -228,13 +228,16 @@ const desktopFoundation = `
 .desktop-chat-shell .input textarea::placeholder{color:var(--muted)!important;opacity:1!important}
 `
 
-// A moldura de presenca precisa manter as mesmas cores em todos os temas e
-// vencer os acabamentos individuais gerados acima.
+// Presenca sem moldura: online/AFK ficam nitidos e offline usa opacidade. Este
+// bloco e anexado por ultimo para nenhum acabamento de tema recriar a borda.
 const presenceFoundation = `
-.photo[class*="presence-"],.header-photo[class*="presence-"],.avatar-sm[class*="presence-"],.msn-contact-avatar[class*="presence-"]{padding:2px!important;border:3px solid!important;border-radius:6px!important;background:#f4f7f9!important;box-shadow:0 1px 3px rgb(0 0 0 / 28%)!important;box-sizing:border-box!important}
-.presence-online{border-color:#69bf32!important;opacity:1!important}.presence-afk{border-color:#e3bd2e!important;opacity:1!important}.presence-offline{border-color:#9aa0a8!important;opacity:.5!important}
+.photo,.header-photo,.avatar-sm,.msn-avatar-frame,.msn-contact-avatar,.msn-avatar-me,.account-avatar,.profile-banner-preview-avatar,.play-group-avatar,.play-profile-card-avatar,.play-server-info-avatar,.play-voice-avatar,.contact-card-avatar,.call-peer-avatar{padding:0!important;border:0!important;box-shadow:none!important;box-sizing:border-box!important}
+.presence-online,.presence-afk{opacity:1!important}.presence-offline{opacity:.5!important}
 .play-member-row .presence-offline{opacity:1!important}
 .play-app-shell .avatar-sm,.play-window-shell .avatar-sm{padding:0!important;border:0!important;background:transparent!important;box-shadow:none!important}
+.window-controls button{color:#fff!important;opacity:1!important}
+.window-minimize span:before,.window-close span:before,.window-close span:after{background:currentColor!important}
+.window-maximize span:before{border-color:currentColor!important}
 `
 
 const HEX = /#([0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{3,4})\b/g

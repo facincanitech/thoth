@@ -424,3 +424,32 @@
 .desktop-chat-shell .message-text-bubble{max-width:min(40ch,calc(100% - 48px))!important}
 .desktop-chat-shell .in .bubble{background:linear-gradient(180deg,#fff,#eaf7fc)!important;color:#183952!important}
 .desktop-chat-shell .out .bubble{background:linear-gradient(180deg,#eafbd8,#d2efad)!important;border-color:#9ac56d!important;color:#29451d!important}
+
+/* Acabamento comum do chat desktop. Os temas antigos aplicavam molduras grossas no
+   painel inteiro e varias molduras sobrepostas nas fotos. Mantemos apenas a borda
+   delicada de cada bolha; estrutura do chat e avatares ficam limpos. */
+.desktop-chat-shell .main{border:0!important}
+.desktop-chat-shell .chat-header{border-left:0!important;border-right:0!important;box-shadow:none!important}
+.desktop-chat-shell .messages,
+.desktop-chat-shell .composer{border:0!important;box-shadow:none!important}
+.desktop-chat-shell .messages{margin:6px 6px 0!important}
+.desktop-chat-shell .composer{margin:6px!important}
+.desktop-window-shell .photo,
+.desktop-window-shell .header-photo,
+.desktop-window-shell .avatar-sm,
+.desktop-window-shell .msn-avatar-frame,
+.desktop-window-shell .msn-contact-avatar,
+.desktop-window-shell .msn-avatar-me,
+.desktop-window-shell .account-avatar,
+.desktop-window-shell .profile-banner-preview-avatar,
+.desktop-window-shell .play-group-avatar,
+.desktop-window-shell .play-profile-card-avatar,
+.desktop-window-shell .play-server-info-avatar,
+.desktop-window-shell .play-voice-avatar,
+.desktop-window-shell .contact-card-avatar,
+.desktop-window-shell .call-peer-avatar{
+  border:0!important;padding:0!important;box-shadow:none!important
+}
+.window-controls button{color:#fff!important;opacity:1!important}
+.window-minimize span:before,.window-close span:before,.window-close span:after{background:currentColor!important}
+.window-maximize span:before{border-color:currentColor!important}

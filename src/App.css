@@ -2839,3 +2839,40 @@ html .desktop-window-shell.desktop-web-shell{
   background: var(--green);
   color: #fff;
 }
+
+/* Acabamento uniforme entre temas: nenhuma foto de contato/perfil recebe moldura.
+   O estado continua indicado pela opacidade, sem os aneis duplicados antigos. */
+.photo,.header-photo,.avatar-sm,.msn-avatar-frame,.msn-contact-avatar,.msn-avatar-me,
+.account-avatar,.profile-banner-preview-avatar,.play-group-avatar,.play-profile-card-avatar,
+.play-server-info-avatar,.play-voice-avatar,.contact-card-avatar,.call-peer-avatar{
+  border:0!important;padding:0!important;box-shadow:none!important
+}
+
+/* Retira a barra/moldura grossa que cercava o chat com contato. A borda leve das
+   bolhas e dos campos continua existindo para separar o conteudo. */
+.desktop-chat-shell .main{border:0!important}
+.desktop-chat-shell .chat-header{border-left:0!important;border-right:0!important;box-shadow:none!important}
+.desktop-chat-shell .messages,.desktop-chat-shell .composer{border-left:0!important;border-right:0!important;box-shadow:none!important}
+
+/* Cards de contato precisam continuar legiveis mesmo quando um tema define texto
+   secundario muito proximo da cor do fundo. */
+.profile-popup{border:0!important;color:var(--text-base,var(--text))!important}
+.profile-popup h1,.profile-popup h2,.profile-popup h3,.profile-popup strong,
+.profile-popup .profile-popup-grid-item span{color:var(--text-base,var(--text))!important}
+.profile-popup p,.profile-popup small,.profile-popup span:not(.rail-label){
+  opacity:1;color:var(--text-secondary,var(--text))
+}
+[data-theme="cyberpunk"] .profile-popup{background:linear-gradient(180deg,#10152b,#090c19)!important;border:0!important;color:#f4f7ff!important}
+[data-theme="cyberpunk"] .profile-popup p,[data-theme="cyberpunk"] .profile-popup small{color:#c8d5ed!important}
+[data-theme="matrix"] .profile-popup{background:linear-gradient(180deg,#06150a,#010703)!important;border:0!important;color:#e2ffe8!important}
+[data-theme="matrix"] .profile-popup p,[data-theme="matrix"] .profile-popup small{color:#a4dfb0!important}
+[data-theme="wood"] .profile-popup{background:linear-gradient(180deg,#3b2417,#24130b)!important;border:0!important;color:#fff0dc!important}
+[data-theme="wood"] .profile-popup p,[data-theme="wood"] .profile-popup small{color:#e3c49d!important}
+
+/* No tema escuro a navegacao lateral nao pode ficar acinzentada/apagada. */
+[data-theme="dark"] .rail{--rail-icon:#e7edf7;color:#e7edf7!important;border-right-color:#34445a}
+[data-theme="dark"] .rail-link,[data-theme="dark"] .rail-label,[data-theme="dark"] .rail-symbol{
+  color:#e7edf7!important;opacity:1!important;text-shadow:none
+}
+[data-theme="dark"] .rail-symbol svg{opacity:1;stroke:currentColor}
+[data-theme="dark"] .rail-link[aria-current="page"]{background:#2a3a52!important;color:#fff!important}

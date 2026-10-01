@@ -426,6 +426,35 @@
 .desktop-chat-shell .in .bubble{background:linear-gradient(180deg,#ffffff,#ffffff)!important;color:#000000!important}
 .desktop-chat-shell .out .bubble{background:linear-gradient(180deg,#ffffff,#ffffff)!important;border-color:#ff0000!important;color:#000000!important}
 
+/* Acabamento comum do chat desktop. Os temas antigos aplicavam molduras grossas no
+   painel inteiro e varias molduras sobrepostas nas fotos. Mantemos apenas a borda
+   delicada de cada bolha; estrutura do chat e avatares ficam limpos. */
+.desktop-chat-shell .main{border:0!important}
+.desktop-chat-shell .chat-header{border-left:0!important;border-right:0!important;box-shadow:none!important}
+.desktop-chat-shell .messages,
+.desktop-chat-shell .composer{border:0!important;box-shadow:none!important}
+.desktop-chat-shell .messages{margin:6px 6px 0!important}
+.desktop-chat-shell .composer{margin:6px!important}
+.desktop-window-shell .photo,
+.desktop-window-shell .header-photo,
+.desktop-window-shell .avatar-sm,
+.desktop-window-shell .msn-avatar-frame,
+.desktop-window-shell .msn-contact-avatar,
+.desktop-window-shell .msn-avatar-me,
+.desktop-window-shell .account-avatar,
+.desktop-window-shell .profile-banner-preview-avatar,
+.desktop-window-shell .play-group-avatar,
+.desktop-window-shell .play-profile-card-avatar,
+.desktop-window-shell .play-server-info-avatar,
+.desktop-window-shell .play-voice-avatar,
+.desktop-window-shell .contact-card-avatar,
+.desktop-window-shell .call-peer-avatar{
+  border:0!important;padding:0!important;box-shadow:none!important
+}
+.window-controls button{color:#ffffff!important;opacity:1!important}
+.window-minimize span:before,.window-close span:before,.window-close span:after{background:currentColor!important}
+.window-maximize span:before{border-color:currentColor!important}
+
 .desktop-window-shell .msn-identity-card{min-height:118px!important;padding:16px 18px!important}
 .desktop-window-shell .msn-identity-copy strong{color:var(--text)!important;font-size:18px!important}
 .desktop-window-shell .msn-presence{color:var(--text-secondary)!important;line-height:1.45!important}
@@ -462,7 +491,10 @@ html,body,#root,.app,.desktop-window-shell{background:#000!important;color:#fff!
 .bubble{background:#000!important;color:#fff!important;border:2px solid #fff!important}.out .bubble{background:#fff!important;color:#000!important}
 .send,.send-text{background:#fff!important;color:#000!important;border:2px solid #fff!important}
 
-.photo[class*="presence-"],.header-photo[class*="presence-"],.avatar-sm[class*="presence-"],.msn-contact-avatar[class*="presence-"]{padding:2px!important;border:3px solid!important;border-radius:6px!important;background:#f4f7f9!important;box-shadow:0 1px 3px rgb(0 0 0 / 28%)!important;box-sizing:border-box!important}
-.presence-online{border-color:#69bf32!important;opacity:1!important}.presence-afk{border-color:#e3bd2e!important;opacity:1!important}.presence-offline{border-color:#9aa0a8!important;opacity:.5!important}
+.photo,.header-photo,.avatar-sm,.msn-avatar-frame,.msn-contact-avatar,.msn-avatar-me,.account-avatar,.profile-banner-preview-avatar,.play-group-avatar,.play-profile-card-avatar,.play-server-info-avatar,.play-voice-avatar,.contact-card-avatar,.call-peer-avatar{padding:0!important;border:0!important;box-shadow:none!important;box-sizing:border-box!important}
+.presence-online,.presence-afk{opacity:1!important}.presence-offline{opacity:.5!important}
 .play-member-row .presence-offline{opacity:1!important}
 .play-app-shell .avatar-sm,.play-window-shell .avatar-sm{padding:0!important;border:0!important;background:transparent!important;box-shadow:none!important}
+.window-controls button{color:#fff!important;opacity:1!important}
+.window-minimize span:before,.window-close span:before,.window-close span:after{background:currentColor!important}
+.window-maximize span:before{border-color:currentColor!important}
