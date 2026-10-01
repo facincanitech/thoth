@@ -348,6 +348,12 @@ function App() {
       if (!s) {
         setProfile(null)
         setSelected(null)
+        setSelectedCommunity(null)
+        setAccountOpen(false)
+        setPanelOpen(false)
+        setGroupsOpen(false)
+        setStatusOpen(false)
+        setPlayOpen(false)
         try {
           localStorage.removeItem('flux-last-user-id')
         } catch {

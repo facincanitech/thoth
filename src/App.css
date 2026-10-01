@@ -687,6 +687,27 @@ body{
 }
 .auth-error{color:var(--danger);font-size:.8rem;margin-top:10px}
 
+/* Tela 0 (APK/navegador) - mesma tela de login que ja existia so no EXE (thothmessenger.css),
+   agora tambem substitui a lista de conversas inteira aqui quando ninguem esta logado. Usa as
+   variaveis de tema normais (nao fixo em azul MSN) pra acompanhar o tema escolhido. */
+.msn-login-screen{
+  flex:1;min-width:0;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;
+  padding:24px;background:var(--bg-deep,var(--bg-panel));color:var(--text);text-align:center;
+}
+.msn-login-logo{width:84px;height:84px;object-fit:contain;filter:drop-shadow(0 6px 10px rgb(0 0 0 / 25%))}
+.msn-login-screen h1{margin:0;font-size:18px;color:var(--text)}
+.msn-login-screen p{color:var(--text-secondary,var(--muted));font-size:.85rem}
+.msn-login-google{
+  border:0;border-radius:8px;padding:11px 24px;font-size:13px;font-weight:600;color:var(--on-button,#fff);cursor:pointer;
+  background:var(--accent-text,#0877bd);min-width:240px;
+}
+.msn-login-google:hover{filter:brightness(1.07)}
+.msn-login-google:disabled{opacity:.6;cursor:default}
+.msn-login-paste{display:flex;gap:6px;margin-top:14px;width:min(320px,90%)}
+.msn-login-paste input{flex:1;min-width:0;height:34px;padding:0 10px;border:1px solid var(--line-2);border-radius:6px;background:var(--input,#fff);color:var(--text)}
+.msn-login-paste button{height:34px;padding:0 14px;border:0;border-radius:6px;background:var(--accent-text,#0877bd);color:var(--on-button,#fff);cursor:pointer}
+.msn-login-paste button:disabled{opacity:.5;cursor:default}
+
 .profile-popup{position:relative;overflow:hidden;display:flex;flex-direction:column;background:var(--bg-panel,var(--bg-surface))}
 .profile-popup-scroll{position:relative;overflow-y:auto;flex:1;min-height:0;padding-top:44px}
 .profile-popup-scroll::-webkit-scrollbar{width:5px}

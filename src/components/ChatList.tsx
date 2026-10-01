@@ -35,6 +35,7 @@ import {
 } from '../lib/deviceContacts'
 import { whatsappVerifyAvailable, createWhatsAppVerificationCode, whatsappVerifyUrl, getWhatsAppVerificationStatus } from '../lib/whatsappVerify'
 import { smsVerifyAvailable, createSmsVerificationCode, sendSmsVerification, getSmsVerificationStatus } from '../lib/smsVerify'
+import { phoneAuthAvailable, signInWithPhoneNumber, setPhoneAccountEmail } from '../lib/phoneAuth'
 import { PHONE_LINK_ENABLED } from '../lib/featureFlags'
 import {
   IconArchive,
@@ -1487,6 +1488,11 @@ export function ChatList({
   }
 
   const [pastedLoginCode, setPastedLoginCode] = useState('')
+  const [loginPhoneStatus, setLoginPhoneStatus] = useState<'idle' | 'detecting' | 'sending' | 'waiting' | 'needEmail'>('idle')
+  const [loginError, setLoginError] = useState<string | null>(null)
+  const [loginEmailDraft, setLoginEmailDraft] = useState('')
+  const [loginEmailError, setLoginEmailError] = useState<string | null>(null)
+  const [loginEmailBusy, setLoginEmailBusy] = useState(false)
   const selectedIdRef = useRef<string | null>(null)
   selectedIdRef.current = selected?.id ?? null
   const longPressFiredRef = useRef(false)
@@ -2087,7 +2093,11 @@ export function ChatList({
           ? 'Novo grupo'
           : (friendsView === 'add' ? 'Adicionar amigo' : 'Amigos')
 
-  if (isTauriDesktop && !me) {
+  // Tela 0: enquanto nao tiver logado, em QUALQUER plataforma (APK, EXE, navegador), isso
+  // substitui a tela toda - nao da pra ver a lista de conversas vazia por baixo. Sair da conta
+  // (supabase.auth.signOut) ou a sessao expirar sempre cai de volta aqui sozinho, sem precisar
+  // clicar em nada - o App.tsx so zera profile/session, essa funcao que decide o que mostrar.
+  if (!me) {
     async function handlePasteLogin() {
       const raw = pastedLoginCode.trim()
       const params = new URLSearchParams(raw.includes('#') ? raw.slice(raw.indexOf('#') + 1) : raw)
@@ -2095,24 +2105,93 @@ export function ChatList({
       const refresh_token = params.get('refresh_token')
       if (access_token && refresh_token) await supabase.auth.setSession({ access_token, refresh_token })
     }
-    async function handleDesktopGoogleLogin() {
-      await startDesktopGoogleLogin()
+    async function handleGoogleLogin() {
+      setLoginError(null)
+      if (isTauriDesktop) {
+        const err = await startDesktopGoogleLogin()
+        if (err) setLoginError(err)
+        return
+      }
+      const redirectTo = Capacitor.isNativePlatform()
+        ? 'thoth://callback'
+        : `${window.location.origin}${import.meta.env.BASE_URL}${window.location.search}`
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: { redirectTo, queryParams: { prompt: 'select_account' } },
+      })
+      if (error) setLoginError(error.message)
     }
+    async function handlePhoneLogin() {
+      setLoginError(null)
+      try {
+        const result = await signInWithPhoneNumber(setLoginPhoneStatus)
+        if (result.isNewAccount) setLoginPhoneStatus('needEmail')
+      } catch (cause) {
+        setLoginError(getErrorMessage(cause))
+        setLoginPhoneStatus('idle')
+      }
+    }
+    async function handleSetLoginEmail() {
+      setLoginEmailError(null)
+      setLoginEmailBusy(true)
+      try {
+        await setPhoneAccountEmail(loginEmailDraft.trim())
+      } catch (cause) {
+        const message = getErrorMessage(cause)
+        setLoginEmailError(message.includes('EMAIL_TAKEN') ? 'Esse e-mail já está em uso por outra conta.' : message.includes('EMAIL_INVALID') ? 'Digita um e-mail válido.' : 'Não consegui salvar o e-mail, tenta de novo.')
+      } finally {
+        setLoginEmailBusy(false)
+      }
+    }
+
+    if (loginPhoneStatus === 'needEmail') {
+      return (
+        <section className="msn-login-screen">
+          <img src={thothLogo} alt="" className="msn-login-logo" />
+          <h1>Quase lá</h1>
+          <p style={{ maxWidth: 320, textAlign: 'center' }}>Sua conta foi criada com o número confirmado. Falta só o e-mail — usado pra te acharem pelo @ ou e-mail, sem notificação nenhuma por ele.</p>
+          <input
+            type="email"
+            placeholder="seu@email.com"
+            value={loginEmailDraft}
+            onChange={(e) => setLoginEmailDraft(e.target.value)}
+            autoFocus
+            style={{ width: 260, marginTop: 10 }}
+          />
+          {loginEmailError && <p className="auth-error">{loginEmailError}</p>}
+          <button type="button" className="msn-login-google" style={{ marginTop: 10 }} disabled={loginEmailBusy || !loginEmailDraft.trim()} onClick={handleSetLoginEmail}>
+            {loginEmailBusy ? 'Salvando…' : 'Continuar'}
+          </button>
+        </section>
+      )
+    }
+
     return (
       <section className="msn-login-screen">
         <img src={thothLogo} alt="" className="msn-login-logo" />
         <h1>Thoth Messenger</h1>
-        <button type="button" className="msn-login-google" onClick={handleDesktopGoogleLogin}>
+        <button type="button" className="msn-login-google" onClick={handleGoogleLogin}>
           Entrar com Google
         </button>
-        <div className="msn-login-paste">
-          <input
-            placeholder="Colar código de login do navegador"
-            value={pastedLoginCode}
-            onChange={(e) => setPastedLoginCode(e.target.value)}
-          />
-          <button type="button" disabled={!pastedLoginCode.trim()} onClick={handlePasteLogin}>Entrar</button>
-        </div>
+        {phoneAuthAvailable() && (
+          <button type="button" className="msn-login-google" style={{ marginTop: 8 }} disabled={loginPhoneStatus !== 'idle'} onClick={handlePhoneLogin}>
+            {loginPhoneStatus === 'detecting' ? 'Detectando seu número…'
+              : loginPhoneStatus === 'sending' ? 'Mandando SMS…'
+              : loginPhoneStatus === 'waiting' ? 'Esperando confirmação…'
+              : 'Continuar com número de celular'}
+          </button>
+        )}
+        {loginError && <p className="auth-error">{loginError}</p>}
+        {isTauriDesktop && (
+          <div className="msn-login-paste">
+            <input
+              placeholder="Colar código de login do navegador"
+              value={pastedLoginCode}
+              onChange={(e) => setPastedLoginCode(e.target.value)}
+            />
+            <button type="button" disabled={!pastedLoginCode.trim()} onClick={handlePasteLogin}>Entrar</button>
+          </div>
+        )}
       </section>
     )
   }
