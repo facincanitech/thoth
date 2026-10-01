@@ -3775,6 +3775,8 @@ function VoiceChannel({ allow, me, membersById, channel, onParticipantsChange, o
   const voiceSettingsRef = useRef<PlayVoiceSettings>(voiceSettings)
   const micGainNodeRef = useRef<GainNode | null>(null)
   const micAudioCtxRef = useRef<AudioContext | null>(null)
+  const rawMicTrackRef = useRef<MediaStreamTrack | null>(null)
+  const micChainNodesRef = useRef<AudioNode[]>([])
   const localSpeakingRef = useRef(false)
   const speakingAnalyserRef = useRef<AnalyserNode | null>(null)
   const speakingLoopRef = useRef<number | null>(null)
@@ -3805,8 +3807,26 @@ function VoiceChannel({ allow, me, membersById, channel, onParticipantsChange, o
     try {
       const room = roomRef.current
       const pub = room?.localParticipant.getTrackPublication(Track.Source.Microphone)
-      const rawTrack = pub?.track?.mediaStreamTrack
-      if (!room || !pub?.track || !rawTrack) return
+      if (!room || !pub?.track) return
+      // So recaptura o microfone cru na primeira vez (ou se o anterior parou de verdade) - nas
+      // trocas seguintes (mutar/desmutar, apertar-pra-falar) o LiveKit so muta a MESMA
+      // publicacao, que ja e o NOSSO track processado (saida do Web Audio). Ler
+      // pub.track.mediaStreamTrack de novo pegaria esse audio ja processado e montaria outro
+      // GainNode/compressor em cima - empilhando processamento a cada toggle ate degradar o
+      // audio e silenciar de vez (bug real: ficou tudo mudo depois de varios aperta-solta do
+      // apertar-pra-falar).
+      let rawTrack = rawMicTrackRef.current
+      if (!rawTrack || rawTrack.readyState === 'ended') {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: await resolvePlayMicOptions() })
+        rawTrack = stream.getAudioTracks()[0]
+        rawMicTrackRef.current = rawTrack
+      }
+      // Desconecta a cadeia de nos da chamada anterior (toggle de mic/apertar-pra-falar
+      // anterior) antes de montar uma nova - sem isso cada toggle deixava um GainNode/
+      // compressor/destination orfao ainda rodando, vazando processamento.
+      micChainNodesRef.current.forEach((n) => { try { n.disconnect() } catch { /* ja desconectado */ } })
+      micChainNodesRef.current = []
+
       const ctx = micAudioCtxRef.current || new AudioContext()
       micAudioCtxRef.current = ctx
       if (ctx.state === 'suspended') await ctx.resume()
@@ -3816,6 +3836,7 @@ function VoiceChannel({ allow, me, membersById, channel, onParticipantsChange, o
       source.connect(gain)
       let node: AudioNode = gain
       const noiseLevel = voiceSettingsRef.current.noiseReduction
+      const chainNodes: AudioNode[] = [source, gain]
       if (noiseLevel !== 'off') {
         const preset = NOISE_REDUCTION_PRESETS[noiseLevel]
         const compressor = ctx.createDynamicsCompressor()
@@ -3826,9 +3847,12 @@ function VoiceChannel({ allow, me, membersById, channel, onParticipantsChange, o
         compressor.release.value = 0.25
         gain.connect(compressor)
         node = compressor
+        chainNodes.push(compressor)
       }
       const dest = ctx.createMediaStreamDestination()
       node.connect(dest)
+      chainNodes.push(dest)
+      micChainNodesRef.current = chainNodes
       const processedTrack = dest.stream.getAudioTracks()[0]
       micGainNodeRef.current = gain
       await pub.track.replaceTrack(processedTrack, true)
@@ -4047,6 +4071,10 @@ function VoiceChannel({ allow, me, membersById, channel, onParticipantsChange, o
       attachedAudio.current = []
       if (speakingLoopRef.current != null) cancelAnimationFrame(speakingLoopRef.current)
       if (speakingHangoverRef.current) clearTimeout(speakingHangoverRef.current)
+      micChainNodesRef.current.forEach((n) => { try { n.disconnect() } catch { /* ja desconectado */ } })
+      micChainNodesRef.current = []
+      rawMicTrackRef.current?.stop()
+      rawMicTrackRef.current = null
       micAudioCtxRef.current?.close().catch(() => {})
       micAudioCtxRef.current = null
       void setMediaAudioMode()
