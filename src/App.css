@@ -707,6 +707,9 @@ body{
 .msn-login-paste input{flex:1;min-width:0;height:34px;padding:0 10px;border:1px solid var(--line-2);border-radius:6px;background:var(--input,#fff);color:var(--text)}
 .msn-login-paste button{height:34px;padding:0 14px;border:0;border-radius:6px;background:var(--accent-text,#0877bd);color:var(--on-button,#fff);cursor:pointer}
 .msn-login-paste button:disabled{opacity:.5;cursor:default}
+.msn-login-qr{display:flex;flex-direction:column;align-items:center;gap:8px;margin-top:18px;padding-top:16px;border-top:1px solid var(--line-2);max-width:280px}
+.msn-login-qr p{margin:0;font-size:.8rem}
+.msn-login-qr img{border-radius:8px;background:#fff;padding:8px}
 
 .profile-popup{position:relative;overflow:hidden;display:flex;flex-direction:column;background:var(--bg-panel,var(--bg-surface))}
 .profile-popup-scroll{position:relative;overflow-y:auto;flex:1;min-height:0;padding-top:44px}

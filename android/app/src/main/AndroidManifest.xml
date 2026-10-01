@@ -51,6 +51,16 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="thoth" android:host="play" />
             </intent-filter>
+            <!-- Pareamento de dispositivo (estilo WhatsApp Web): apontar a camera NORMAL do
+                 celular pro QR code mostrado no navegador/EXE abre esse link
+                 (?pair=<token>, ver devicePairing.ts). Sem autoVerify (nao hospedamos
+                 assetlinks.json) - o Android mostra um "abrir com" na primeira vez, aceitavel. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="facincanitech.github.io" android:pathPrefix="/thoth/" />
+            </intent-filter>
         </activity>
 
         <meta-data
