@@ -35,7 +35,6 @@ import {
 } from '../lib/deviceContacts'
 import { whatsappVerifyAvailable, createWhatsAppVerificationCode, whatsappVerifyUrl, getWhatsAppVerificationStatus } from '../lib/whatsappVerify'
 import { smsVerifyAvailable, createSmsVerificationCode, sendSmsVerification, getSmsVerificationStatus } from '../lib/smsVerify'
-import { getSmsGatewayStatus, enableSmsGateway, disableSmsGateway } from '../lib/smsGateway'
 import { PHONE_LINK_ENABLED } from '../lib/featureFlags'
 import {
   IconArchive,
@@ -506,11 +505,6 @@ export function ChatList({
   const [rememberedSim, setRememberedSim] = useState<number | null>(() => {
     try { const v = localStorage.getItem('thoth-sms-sim-choice'); return v ? Number(v) : null } catch { return null }
   })
-  const [gatewayEnabled, setGatewayEnabled] = useState(false)
-  const [gatewayToken, setGatewayToken] = useState('')
-  const [gatewayWebhookUrl, setGatewayWebhookUrl] = useState('https://eeyypnkbiejvficybhxu.supabase.co/functions/v1/sms-webhook')
-  const [gatewayBusy, setGatewayBusy] = useState(false)
-  const [gatewayShow, setGatewayShow] = useState(false)
   const [desktopOverlayEnabled, setDesktopOverlayEnabled] = useState(desktopToastEnabled)
 
   const [accountView, setAccountView] = useState<AccountView>('root')
@@ -751,35 +745,6 @@ export function ChatList({
       clearInterval(interval)
     }
   }, [smsCode])
-
-  // Tela avancada, escondida - so pra transformar ESTE celular no "servidor" que recebe SMS de
-  // verdade e repassa pra Edge Function. Ninguem alem de quem sabe o token consegue ativar.
-  async function loadGatewayStatus() {
-    try {
-      const status = await getSmsGatewayStatus()
-      setGatewayEnabled(status.enabled)
-      if (status.webhookUrl) setGatewayWebhookUrl(status.webhookUrl)
-    } catch (cause) {
-      console.error('load sms gateway status failed', cause)
-    }
-  }
-
-  async function toggleGateway() {
-    setGatewayBusy(true)
-    try {
-      if (gatewayEnabled) {
-        await disableSmsGateway()
-        setGatewayEnabled(false)
-      } else {
-        const result = await enableSmsGateway(gatewayToken.trim(), gatewayWebhookUrl.trim())
-        setGatewayEnabled(result.enabled)
-      }
-    } catch (cause) {
-      console.error('toggle sms gateway failed', cause)
-    } finally {
-      setGatewayBusy(false)
-    }
-  }
 
   async function removeLinkedPhone() {
     setContactsLoading(true)
@@ -3446,28 +3411,6 @@ export function ChatList({
                 })()}
               </div>
             </div>
-            )}
-            {deviceContactsAvailable() && (window.location.hash.includes('smsgateway') || localStorage.getItem('thoth-reveal-smsgateway') === '1') && (
-              <div className="privacy-contacts-card">
-                <div className="option-icon"><IconLock size={20} /></div>
-                <div className="privacy-contacts-copy">
-                  <strong>Celular-servidor de SMS</strong>
-                  <span>{gatewayEnabled ? 'Ativo neste aparelho.' : 'Avançado — só pra quem sabe o token.'}</span>
-                  {!gatewayShow ? (
-                    <button type="button" className="chip-btn" onClick={() => { setGatewayShow(true); loadGatewayStatus() }}>Configurar</button>
-                  ) : (
-                    <>
-                      <small>URL da função</small>
-                      <input type="text" value={gatewayWebhookUrl} onChange={(e) => setGatewayWebhookUrl(e.target.value)} disabled={gatewayEnabled} />
-                      <small style={{ marginTop: 6 }}>Token compartilhado</small>
-                      <input type="password" placeholder="cole o SMS_GATEWAY_TOKEN aqui" value={gatewayToken} onChange={(e) => setGatewayToken(e.target.value)} disabled={gatewayEnabled} />
-                      <button type="button" className="google-btn" style={{ marginTop: 8 }} disabled={gatewayBusy || (!gatewayEnabled && !gatewayToken.trim())} onClick={toggleGateway}>
-                        {gatewayBusy ? 'Aguarde…' : gatewayEnabled ? 'Desativar' : 'Ativar neste celular'}
-                      </button>
-                    </>
-                  )}
-                </div>
-              </div>
             )}
             <div className="privacy-contacts-card">
               <div className="option-icon"><IconUser size={20} /></div>

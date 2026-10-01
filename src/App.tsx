@@ -81,10 +81,6 @@ function App() {
 
   useEffect(() => {
     const listenerPromise = CapacitorApp.addListener('appUrlOpen', ({ url }) => {
-      if (url.includes('thoth://admin/smsgateway')) {
-        try { localStorage.setItem('thoth-reveal-smsgateway', '1') } catch { /* ignore */ }
-        return
-      }
       const invite = parseInviteDeepLink(url)
       if (invite) {
         if (invite.kind === 'invite') setPendingInviteCode(invite.code)

@@ -51,15 +51,6 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="thoth" android:host="play" />
             </intent-filter>
-            <!-- thoth://admin/smsgateway: revela a tela interna do celular-gateway de SMS
-                 (Configuracoes -> Privacidade), escondida da navegacao normal do app. So
-                 acionavel via adb/link direto, nunca por um botao visivel. -->
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="thoth" android:host="admin" />
-            </intent-filter>
         </activity>
 
         <meta-data
@@ -74,18 +65,6 @@
                 <action android:name="com.google.firebase.MESSAGING_EVENT" />
             </intent-filter>
         </service>
-
-        <!-- So faz algo se esse aparelho foi ativado manualmente como celular-gateway de SMS
-             (SmsGatewayPlugin/Perfil -> Privacidade). Inerte pra qualquer outro usuario. -->
-        <receiver android:name=".SmsReceiver" android:exported="true" android:permission="android.permission.BROADCAST_SMS">
-            <intent-filter>
-                <action android:name="android.provider.Telephony.SMS_RECEIVED" />
-            </intent-filter>
-        </receiver>
-
-        <!-- Servico em primeiro plano que so roda enquanto o celular-gateway de SMS estiver
-             ativado manualmente - mantem o processo vivo mesmo com o app fechado. -->
-        <service android:name=".SmsGatewayService" android:exported="false" android:foregroundServiceType="dataSync" />
 
         <provider
             android:name="androidx.core.content.FileProvider"
@@ -110,11 +89,8 @@
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <uses-permission android:name="android.permission.READ_CONTACTS" />
-    <uses-permission android:name="android.permission.RECEIVE_SMS" />
     <uses-permission android:name="android.permission.SEND_SMS" />
     <uses-permission android:name="android.permission.READ_PHONE_STATE" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-feature android:name="android.hardware.microphone" android:required="false" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />

@@ -2,9 +2,10 @@ import { supabase } from './supabase'
 import { sendVerificationSms, deviceContactsAvailable } from './deviceContacts'
 
 // Verificacao de numero via SMS de verdade: o app manda um SMS com o codigo sozinho (SEND_SMS,
-// sem abrir o app de Mensagens) pro numero-gateway do Thoth; um celular nosso configurado como
-// "celular-gateway" (ver smsGateway.ts) recebe de verdade e confirma via Edge Function
-// sms-webhook. So funciona no APK (SEND_SMS nao existe em web/desktop). Ver CLAUDE.md.
+// sem abrir o app de Mensagens) pro numero-gateway do Thoth; um celular separado rodando o app
+// "Thoth SMS Gateway" (projeto proprio, fora deste repo - ver d:/Ares/ThothSmsGateway) recebe de
+// verdade e confirma via Edge Function sms-webhook. So funciona no APK (SEND_SMS nao existe em
+// web/desktop). Ver CLAUDE.md.
 const GATEWAY_NUMBER = import.meta.env.VITE_SMS_GATEWAY_NUMBER as string | undefined
 
 export function smsVerifyAvailable() {
