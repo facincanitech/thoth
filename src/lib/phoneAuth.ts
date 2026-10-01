@@ -41,13 +41,16 @@ export async function setPhoneAccountEmail(email: string) {
 export async function signInWithPhoneNumber(onStatus?: (status: 'detecting' | 'sending' | 'waiting') => void): Promise<PhoneAuthResult> {
   if (!GATEWAY_NUMBER) throw new Error('numero gateway nao configurado')
   onStatus?.('detecting')
-  // O seletor nativo (Play Services) pode ficar preso sem nunca resolver nem rejeitar em alguns
-  // aparelhos - mesma armadilha ja encontrada em changeLinkedPhone (ChatList.tsx).
-  const phone = await Promise.race([
+  // O seletor nativo (Play Services, Phone Number Hint) so serve pra MOSTRAR qual numero vai
+  // usar - o servidor identifica o numero de verdade pelo remetente do SMS (igual o fluxo de
+  // "Confirmar numero por SMS" ja faz), entao nao precisa travar o login se o seletor falhar.
+  // A maioria dos chips brasileiros (Vivo/Claro/Tim/Oi) nao grava o proprio numero no SIM, entao
+  // essa deteccao falha com frequencia - e so um "preview" opcional, nunca bloqueante. Mesma
+  // armadilha de trava sem resolver nem rejeitar ja encontrada em changeLinkedPhone (ChatList.tsx).
+  await Promise.race([
     selectOwnPhoneNumber(),
     new Promise<string>((_, reject) => setTimeout(() => reject(new Error('timeout')), 10000)),
   ]).catch(() => '')
-  if (!phone) throw new Error('não conseguimos pegar seu número - tenta de novo ou usa o Google')
 
   onStatus?.('sending')
   const { code, claimToken } = await createPhoneAuthRequest()
