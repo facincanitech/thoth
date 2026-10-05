@@ -847,12 +847,42 @@ function PlayIconRail({ myGroups, selectedGroupId, onSelectGroup, onGoHome, onEx
   )
 }
 
-function PlayProfileCard({ profile, roles, userRoleIds, canAssign, onToggleRole, onClose }: {
-  profile: Profile; roles: PlayRole[]; userRoleIds: string[]; canAssign: boolean
+function PlayProfileCard({ me, profile, roles, userRoleIds, canAssign, onToggleRole, onClose }: {
+  me: Profile; profile: Profile; roles: PlayRole[]; userRoleIds: string[]; canAssign: boolean
   onToggleRole: (roleId: string, has: boolean) => void; onClose: () => void
 }) {
   const [editingRoles, setEditingRoles] = useState(false)
+  const isSelf = profile.id === me.id
+  const [friendState, setFriendState] = useState<'idle' | 'sent' | 'friends' | 'loading'>('loading')
   const myRoles = roles.filter((r) => userRoleIds.includes(r.id))
+
+  useEffect(() => {
+    if (isSelf) return
+    setFriendState('loading')
+    supabase
+      .from('friend_requests')
+      .select('status, from_id')
+      .or(`and(from_id.eq.${me.id},to_id.eq.${profile.id}),and(from_id.eq.${profile.id},to_id.eq.${me.id})`)
+      .maybeSingle()
+      .then(({ data: req }) => {
+        if (req?.status === 'accepted') setFriendState('friends')
+        else if (req?.status === 'pending' && req.from_id === me.id) setFriendState('sent')
+        else setFriendState('idle')
+      })
+  }, [isSelf, me.id, profile.id])
+
+  // Mesma tabela friend_requests do Messenger - um pedido feito aqui pelo perfil do Play ja
+  // aparece/aceita do lado de la, sem sistema de amizade separado so pro Play.
+  async function sendFriendRequest() {
+    setFriendState('sent')
+    const { error } = await supabase.from('friend_requests').insert({ from_id: me.id, to_id: profile.id })
+    if (error) setFriendState('idle')
+  }
+
+  async function message() {
+    await openDirectMessage(me.id, profile.id, displayName(profile))
+  }
+
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal-card play-profile-card" onClick={(e) => e.stopPropagation()}>
@@ -883,6 +913,18 @@ function PlayProfileCard({ profile, roles, userRoleIds, canAssign, onToggleRole,
                 </label>
               )
             })}
+          </div>
+        )}
+        {!isSelf && (
+          <div className="play-profile-card-friend-actions" style={{ display: 'flex', gap: 8, justifyContent: 'center', padding: '0 16px 12px' }}>
+            {friendState === 'friends' ? (
+              <span className="play-group-tag">Amigos</span>
+            ) : friendState === 'sent' ? (
+              <span className="play-group-tag">Pedido enviado</span>
+            ) : (
+              <button type="button" className="google-btn" style={{ width: 'auto' }} disabled={friendState === 'loading'} onClick={sendFriendRequest}>Adicionar amigo</button>
+            )}
+            <button type="button" className="google-btn" style={{ width: 'auto' }} onClick={message}>Mensagem privada</button>
           </div>
         )}
         <button type="button" className="modal-close" onClick={onClose}>fechar</button>
@@ -2390,6 +2432,7 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
 
       {profileCardId && membersById[profileCardId] && (
         <PlayProfileCard
+          me={me}
           profile={membersById[profileCardId]}
           roles={groupRoles}
           userRoleIds={roleIdsByUser[profileCardId] || []}
@@ -3787,19 +3830,27 @@ function VoiceChannel({ allow, me, membersById, channel, onParticipantsChange, o
       const next = (e as CustomEvent<PlayVoiceSettings>).detail
       const noiseLevelChanged = next.noiseReduction !== voiceSettingsRef.current.noiseReduction
       voiceSettingsRef.current = next
+      if (micGainNodeRef.current) micGainNodeRef.current.gain.value = next.inputVolume
+      // O nivel muda a topologia/limiar do gate. Remonta a cadeia sobre o mesmo track cru para a
+      // alteracao ter efeito imediatamente, sem pedir permissao nem reabrir o microfone. Roda
+      // ANTES do loop de volume dos remotos abaixo, de proposito: um valor de volume remoto
+      // invalido ali nao pode mais impedir a propria voz de ser reprocessada.
+      if (noiseLevelChanged && roomRef.current) void applyMicGainProcessing()
+      // HTMLMediaElement.volume so aceita 0..1 - o slider de volume por participante vai ate 2
+      // (200%, efeito "turbo"), e setar >1 direto lanca DOMException e trava o resto da funcao
+      // (foi o que desconectava a propria voz: a troca de nivel de ruido roda depois no codigo
+      // original). Satura em 1 aqui; sem isso o slider "nao fazia nada" entre 100% e 200% porque
+      // a atribuicao sempre falhava silenciosamente antes.
       for (const [identity, els] of Object.entries(participantAudioEls.current)) {
         const pv = participantVolumesRef.current[identity] ?? 1
+        const safeVolume = Math.min(1, Math.max(0, next.outputVolume * pv))
         els.forEach((el) => {
-          el.volume = next.outputVolume * pv
+          try { el.volume = safeVolume } catch { /* ignora, elemento pode ja ter saido do DOM */ }
           if (next.outputDeviceId && 'setSinkId' in el) {
             void (el as HTMLAudioElement & { setSinkId: (id: string) => Promise<void> }).setSinkId(next.outputDeviceId).catch(() => {})
           }
         })
       }
-      if (micGainNodeRef.current) micGainNodeRef.current.gain.value = next.inputVolume
-      // O nivel muda a topologia/limiar do gate. Remonta a cadeia sobre o mesmo track cru para a
-      // alteracao ter efeito imediatamente, sem pedir permissao nem reabrir o microfone.
-      if (noiseLevelChanged && roomRef.current) void applyMicGainProcessing()
     }
     window.addEventListener(VOICE_SETTINGS_CHANGED_EVENT, onSettingsChanged)
     return () => window.removeEventListener(VOICE_SETTINGS_CHANGED_EVENT, onSettingsChanged)
@@ -3864,7 +3915,10 @@ function VoiceChannel({ allow, me, membersById, channel, onParticipantsChange, o
 
         const samples = new Float32Array(analyser.fftSize)
         const openThreshold = 10 ** (preset.thresholdDb / 20)
-        const closeThreshold = openThreshold * 0.68
+        // Gap maior entre abrir/fechar evita o gate "chacoalhando" (abre/fecha repetido) quando o
+        // nivel fica perto do limiar - esse chacoalhar e o que soava como ruido/estalo extra,
+        // mais perceptivel em "alto" por ter o maior salto de ganho (floor mais baixo).
+        const closeThreshold = openThreshold * 0.5
         let gateOpen = true
         let lastVoiceAt = performance.now()
         const updateGate = () => {
@@ -3878,7 +3932,9 @@ function VoiceChannel({ allow, me, membersById, channel, onParticipantsChange, o
             if (!gateOpen) {
               gateOpen = true
               gate.gain.cancelScheduledValues(ctx.currentTime)
-              gate.gain.setTargetAtTime(1, ctx.currentTime, 0.008)
+              // Abertura mais suave (20ms) - um salto rapido do floor pra 1 produzia um
+              // estalo/pop audivel no inicio de cada fala, pior em "alto" (floor mais baixo).
+              gate.gain.setTargetAtTime(1, ctx.currentTime, 0.02)
             }
           } else if (gateOpen && rms < closeThreshold && now - lastVoiceAt >= preset.releaseMs) {
             gateOpen = false
@@ -3998,7 +4054,8 @@ function VoiceChannel({ allow, me, membersById, channel, onParticipantsChange, o
       return next
     })
     const els = participantAudioEls.current[id] || []
-    els.forEach((el) => { el.volume = voiceSettingsRef.current.outputVolume * v })
+    const safeVolume = Math.min(1, Math.max(0, voiceSettingsRef.current.outputVolume * v))
+    els.forEach((el) => { try { el.volume = safeVolume } catch { /* ignora */ } })
   }
 
   function syncParticipants(room: Room) {
@@ -4044,7 +4101,7 @@ function VoiceChannel({ allow, me, membersById, channel, onParticipantsChange, o
           el.style.display = 'none'
           el.muted = deafenedRef.current
           const pv = participantVolumesRef.current[participant.identity] ?? 1
-          el.volume = voiceSettings.outputVolume * pv
+          el.volume = Math.min(1, Math.max(0, voiceSettings.outputVolume * pv))
           if (voiceSettings.outputDeviceId && 'setSinkId' in el) {
             void (el as HTMLAudioElement & { setSinkId: (id: string) => Promise<void> }).setSinkId(voiceSettings.outputDeviceId).catch(() => {})
           }

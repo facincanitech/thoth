@@ -87,10 +87,6 @@ function App() {
         else setPendingPlayInviteCode(invite.code)
         return
       }
-      try {
-        const pair = new URL(url).searchParams.get('pair')
-        if (pair) { setPendingPairToken(pair); return }
-      } catch { /* url invalida, ignora */ }
       const hashIndex = url.indexOf('#')
       if (hashIndex === -1) return
       const params = new URLSearchParams(url.slice(hashIndex + 1))
@@ -271,7 +267,6 @@ function App() {
   const restoredSelectedRef = useRef(false)
   const [pendingInviteCode, setPendingInviteCode] = useState(() => new URLSearchParams(window.location.search).get('invite'))
   const [pendingPlayInviteCode, setPendingPlayInviteCode] = useState(() => new URLSearchParams(window.location.search).get('play'))
-  const [pendingPairToken, setPendingPairToken] = useState(() => new URLSearchParams(window.location.search).get('pair'))
   const inviteConsumedRef = useRef(false)
   // So faz sentido no navegador puro (fora do .exe/APK instalado): deixa a pessoa escolher entre
   // abrir no app ja instalado, baixar, ou seguir direto na versao web. Ver InviteChooser.tsx.
@@ -761,8 +756,6 @@ function App() {
       <>
       <ChatList
         me={profile}
-        pendingPairToken={pendingPairToken}
-        onPairTokenHandled={() => setPendingPairToken(null)}
         selected={selected}
         onSelect={(c) => {
           if (isTauriDesktop) {

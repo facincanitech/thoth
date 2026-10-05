@@ -2597,6 +2597,7 @@ body{
 .play-profile-card{padding:0;overflow:hidden;max-width:340px;text-align:center}
 .play-profile-card-banner{height:96px;background-size:cover;background-position:center}
 .play-profile-card-avatar{width:84px!important;height:84px!important;border-radius:20px!important;margin:-42px auto 8px;border:4px solid var(--bg-surface);overflow:hidden}
+.play-profile-card-avatar img{width:100%;height:100%;object-fit:cover;display:block}
 .play-profile-card h2{margin:0 12px 4px}
 .play-profile-card-status{margin:0 16px 10px!important;color:var(--text-secondary)}
 .play-profile-card-roles{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;padding:0 16px 8px}

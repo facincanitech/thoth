@@ -35,8 +35,7 @@ import {
 } from '../lib/deviceContacts'
 import { whatsappVerifyAvailable, createWhatsAppVerificationCode, whatsappVerifyUrl, getWhatsAppVerificationStatus } from '../lib/whatsappVerify'
 import { smsVerifyAvailable, createSmsVerificationCode, sendSmsVerification, getSmsVerificationStatus } from '../lib/smsVerify'
-import { phoneAuthAvailable, signInWithPhoneNumber, setPhoneAccountEmail } from '../lib/phoneAuth'
-import { createDevicePairingRequest, renderPairingQrCode, waitForDevicePairing, approveDevicePairing } from '../lib/devicePairing'
+import { setPhoneAccountEmail } from '../lib/phoneAuth'
 import { PHONE_LINK_ENABLED } from '../lib/featureFlags'
 import {
   IconArchive,
@@ -108,8 +107,6 @@ const COMMUNITY_CATEGORIES = [
 
 type Props = {
   me: Profile | null
-  pendingPairToken?: string | null
-  onPairTokenHandled?: () => void
   selected: Conversation | null
   onSelect: (c: Conversation | null) => void
   panelOpen: boolean
@@ -175,8 +172,6 @@ type Friend = { id: string; username: string; display_name: string | null; avata
 
 export function ChatList({
   me,
-  pendingPairToken,
-  onPairTokenHandled,
   selected,
   onSelect,
   panelOpen,
@@ -496,8 +491,6 @@ export function ChatList({
   const [contactsLoading, setContactsLoading] = useState(false)
   const [contactsMessage, setContactsMessage] = useState<string | null>(null)
   const [phoneLinked, setPhoneLinked] = useState(false)
-  const [pairQrDataUrl, setPairQrDataUrl] = useState<string | null>(null)
-  const pairStartedRef = useRef(false)
   const [phoneCheckDone, setPhoneCheckDone] = useState(false)
   const [phoneLast4, setPhoneLast4] = useState<string | null>(null)
   const [phoneDiscoverable, setPhoneDiscoverable] = useState(true)
@@ -520,31 +513,6 @@ export function ChatList({
   const [storeBackSignal, setStoreBackSignal] = useState(0)
   const pendingAccountViewRef = useRef<AccountView | null>(null)
 
-  // Tela 0 sem conta, em web/EXE: gera o QR code de pareamento uma unica vez e fica esperando a
-  // pessoa escanear com o celular (ver device_pairing_requests/devicePairing.ts). So dispara
-  // quando realmente nao tem ninguem logado e o aparelho nao tem como detectar numero sozinho
-  // (Android ja tem o botao proprio de telefone, nao precisa de QR).
-  useEffect(() => {
-    if (me || deviceContactsAvailable() || pairStartedRef.current) return
-    pairStartedRef.current = true
-    ;(async () => {
-      try {
-        const { token, claimToken } = await createDevicePairingRequest()
-        setPairQrDataUrl(await renderPairingQrCode(token))
-        const result = await waitForDevicePairing(claimToken)
-        if (result) {
-          await supabase.auth.setSession({ access_token: result.accessToken, refresh_token: result.refreshToken })
-        } else {
-          setPairQrDataUrl(null)
-          pairStartedRef.current = false
-        }
-      } catch (cause) {
-        console.error('device pairing failed', cause)
-        pairStartedRef.current = false
-      }
-    })()
-  }, [me])
-
   useEffect(() => {
     if (!me) { setPhoneCheckDone(false); return }
     setPhoneCheckDone(false)
@@ -561,26 +529,6 @@ export function ChatList({
     })
   }, [me?.id, phoneCheckDone, phoneLinked])
 
-  // Celular escaneou o QR code do navegador/EXE (ver AndroidManifest.xml, ?pair=<token>) - so
-  // aprova de verdade quando ESTE aparelho ja estiver logado e com numero vinculado (sem numero,
-  // approveDevicePairing devolve 'needs_phone' e a gente so tenta de novo quando phoneLinked virar
-  // true, o que ja acontece sozinho apos confirmar o SMS na trava logo acima).
-  useEffect(() => {
-    if (!pendingPairToken || !me || !phoneCheckDone || !phoneLinked) return
-    const token = pendingPairToken
-    ;(async () => {
-      try {
-        const status = await approveDevicePairing(token)
-        if (status === 'approved') {
-          setContactsMessage('Login confirmado no outro aparelho! ✅')
-          onPairTokenHandled?.()
-        }
-      } catch (cause) {
-        console.error('approve device pairing failed', cause)
-        onPairTokenHandled?.()
-      }
-    })()
-  }, [pendingPairToken, me?.id, phoneCheckDone, phoneLinked])
 
   useEffect(() => {
     if (accountView !== 'appearance') return
@@ -1558,7 +1506,6 @@ export function ChatList({
   }
 
   const [pastedLoginCode, setPastedLoginCode] = useState('')
-  const [loginPhoneStatus, setLoginPhoneStatus] = useState<'idle' | 'detecting' | 'sending' | 'waiting' | 'needEmail'>('idle')
   const [loginError, setLoginError] = useState<string | null>(null)
   const [loginEmailDraft, setLoginEmailDraft] = useState('')
   const [loginEmailError, setLoginEmailError] = useState<string | null>(null)
@@ -2191,16 +2138,6 @@ export function ChatList({
       })
       if (error) setLoginError(error.message)
     }
-    async function handlePhoneLogin() {
-      setLoginError(null)
-      try {
-        const result = await signInWithPhoneNumber(setLoginPhoneStatus)
-        if (result.isNewAccount) setLoginPhoneStatus('needEmail')
-      } catch (cause) {
-        setLoginError(getErrorMessage(cause))
-        setLoginPhoneStatus('idle')
-      }
-    }
     return (
       <section className="msn-login-screen">
         <img src={thothLogo} alt="" className="msn-login-logo" />
@@ -2208,14 +2145,6 @@ export function ChatList({
         <button type="button" className="msn-login-google" onClick={handleGoogleLogin}>
           Entrar com Google
         </button>
-        {phoneAuthAvailable() && (
-          <button type="button" className="msn-login-google" style={{ marginTop: 8 }} disabled={loginPhoneStatus !== 'idle'} onClick={handlePhoneLogin}>
-            {loginPhoneStatus === 'detecting' ? 'Detectando seu número…'
-              : loginPhoneStatus === 'sending' ? 'Mandando SMS…'
-              : loginPhoneStatus === 'waiting' ? 'Esperando confirmação…'
-              : 'Continuar com número de celular'}
-          </button>
-        )}
         {loginError && <p className="auth-error">{loginError}</p>}
         {isTauriDesktop && (
           <div className="msn-login-paste">
@@ -2225,12 +2154,6 @@ export function ChatList({
               onChange={(e) => setPastedLoginCode(e.target.value)}
             />
             <button type="button" disabled={!pastedLoginCode.trim()} onClick={handlePasteLogin}>Entrar</button>
-          </div>
-        )}
-        {!deviceContactsAvailable() && (
-          <div className="msn-login-qr">
-            <p>Ou é novo por aqui? Abre o Thoth no seu celular e aponta a câmera pra esse código:</p>
-            {pairQrDataUrl ? <img src={pairQrDataUrl} alt="QR code pra parear com o celular" width={180} height={180} /> : <p className="invite-code">Gerando código…</p>}
           </div>
         )}
       </section>
@@ -2276,25 +2199,9 @@ export function ChatList({
     )
   }
 
-  // Trava obrigatoria: mesmo ja logado (Google ou numero), ninguem passa daqui sem numero
-  // vinculado - a busca automatica de contatos (+ Contato ja vir preenchido sozinho) depende
-  // disso. No Android a pessoa resolve na hora (mesmo botao de sempre); em web/EXE nao tem como
-  // mandar SMS dali, entao so aponta pro celular.
-  if (!phoneCheckDone) return null
-  if (!phoneLinked) {
-    return (
-      <section className="msn-login-screen">
-        <img src={thothLogo} alt="" className="msn-login-logo" />
-        <h1>Falta vincular seu número</h1>
-        <p style={{ maxWidth: 320 }}>Pra usar o Thoth, sua conta precisa ter um número de celular confirmado — é assim que seus contatos te encontram automaticamente.</p>
-        {smsVerifyAvailable() ? (
-          renderSmsVerifyButton()
-        ) : (
-          <p className="invite-code">Abre o Thoth no seu celular (Android) com essa mesma conta e vincula seu número em Configurações → Meu número. Depois volta aqui e atualiza a página.</p>
-        )}
-      </section>
-    )
-  }
+  // Numero de celular NAO e mais obrigatorio pra usar o app (decisao revertida - so email/Google
+  // bastam pra entrar). O numero continua existindo so como vinculo opcional em Configuracoes,
+  // pra liberar busca por numero e descoberta automatica de contatos.
 
   // Estrutura oficial do Thoth: lista Frutiger/MSN em todas as skins.
   // No APK a navegacao continua embaixo; no desktop continua na lateral.
@@ -2417,7 +2324,7 @@ export function ChatList({
     desktopContactsSurface = (
       <section className="msn-contacts-window">
         <div className="msn-identity-card">
-          <div className="msn-avatar-me">
+          <div className="msn-avatar-me" style={{ cursor: 'pointer' }} onClick={() => onAccountOpenChange(true)}>
             {me?.avatar_url ? <img src={me.avatar_url} alt="" /> : (me?.display_name || me?.username || 'V')[0]?.toUpperCase()}
           </div>
           <div className="msn-identity-copy">
