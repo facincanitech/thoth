@@ -178,13 +178,13 @@ type PlayVoiceSettings = {
 
 const PLAY_VOICE_SETTINGS_KEY = 'thoth-play-voice-settings-v1'
 const DEFAULT_VOICE_SETTINGS: PlayVoiceSettings = { inputDeviceId: '', outputDeviceId: '', inputVolume: 1, outputVolume: 1, inputProfile: 'studio', voiceActivation: true, pushToTalkKey: 'Space', noiseReduction: 'off' }
-// Compressor dinamico aplicado no microfone quando a reducao de ruido esta ligada - atenua
-// ruido de fundo baixo antes de virar fala alta o bastante pra passar do limiar (threshold).
-// Quanto mais agressivo o nivel, mais baixo o limiar e maior a taxa de compressao.
-const NOISE_REDUCTION_PRESETS: Record<'low' | 'medium' | 'high', { threshold: number; ratio: number; knee: number }> = {
-  low: { threshold: -50, ratio: 4, knee: 30 },
-  medium: { threshold: -40, ratio: 8, knee: 24 },
-  high: { threshold: -30, ratio: 16, knee: 18 },
+// Um compressor atua justamente nos sons ACIMA do limiar, portanto nao funciona como redutor
+// de ruido de fundo. Estes presets alimentam um noise gate de verdade: abaixo do limiar o ganho
+// cai ate `floor`, com histerese e tempos suaves para nao recortar o inicio/fim das palavras.
+const NOISE_REDUCTION_PRESETS: Record<'low' | 'medium' | 'high', { thresholdDb: number; floor: number; releaseMs: number; highpassHz: number }> = {
+  low: { thresholdDb: -58, floor: 0.16, releaseMs: 260, highpassHz: 70 },
+  medium: { thresholdDb: -50, floor: 0.055, releaseMs: 210, highpassHz: 90 },
+  high: { thresholdDb: -44, floor: 0.012, releaseMs: 160, highpassHz: 120 },
 }
 // Dispara sempre que alguem muda as configuracoes de voz (volume, ruido etc.) - a tela de
 // configuracoes e a chamada em si sao componentes separados sem estado compartilhado, o
@@ -3777,6 +3777,7 @@ function VoiceChannel({ allow, me, membersById, channel, onParticipantsChange, o
   const micAudioCtxRef = useRef<AudioContext | null>(null)
   const rawMicTrackRef = useRef<MediaStreamTrack | null>(null)
   const micChainNodesRef = useRef<AudioNode[]>([])
+  const noiseGateLoopRef = useRef<number | null>(null)
   const localSpeakingRef = useRef(false)
   const speakingAnalyserRef = useRef<AnalyserNode | null>(null)
   const speakingLoopRef = useRef<number | null>(null)
@@ -3784,6 +3785,7 @@ function VoiceChannel({ allow, me, membersById, channel, onParticipantsChange, o
   useEffect(() => {
     function onSettingsChanged(e: Event) {
       const next = (e as CustomEvent<PlayVoiceSettings>).detail
+      const noiseLevelChanged = next.noiseReduction !== voiceSettingsRef.current.noiseReduction
       voiceSettingsRef.current = next
       for (const [identity, els] of Object.entries(participantAudioEls.current)) {
         const pv = participantVolumesRef.current[identity] ?? 1
@@ -3795,6 +3797,9 @@ function VoiceChannel({ allow, me, membersById, channel, onParticipantsChange, o
         })
       }
       if (micGainNodeRef.current) micGainNodeRef.current.gain.value = next.inputVolume
+      // O nivel muda a topologia/limiar do gate. Remonta a cadeia sobre o mesmo track cru para a
+      // alteracao ter efeito imediatamente, sem pedir permissao nem reabrir o microfone.
+      if (noiseLevelChanged && roomRef.current) void applyMicGainProcessing()
     }
     window.addEventListener(VOICE_SETTINGS_CHANGED_EVENT, onSettingsChanged)
     return () => window.removeEventListener(VOICE_SETTINGS_CHANGED_EVENT, onSettingsChanged)
@@ -3826,6 +3831,8 @@ function VoiceChannel({ allow, me, membersById, channel, onParticipantsChange, o
       // compressor/destination orfao ainda rodando, vazando processamento.
       micChainNodesRef.current.forEach((n) => { try { n.disconnect() } catch { /* ja desconectado */ } })
       micChainNodesRef.current = []
+      if (noiseGateLoopRef.current != null) cancelAnimationFrame(noiseGateLoopRef.current)
+      noiseGateLoopRef.current = null
 
       const ctx = micAudioCtxRef.current || new AudioContext()
       micAudioCtxRef.current = ctx
@@ -3839,15 +3846,48 @@ function VoiceChannel({ allow, me, membersById, channel, onParticipantsChange, o
       const chainNodes: AudioNode[] = [source, gain]
       if (noiseLevel !== 'off') {
         const preset = NOISE_REDUCTION_PRESETS[noiseLevel]
-        const compressor = ctx.createDynamicsCompressor()
-        compressor.threshold.value = preset.threshold
-        compressor.ratio.value = preset.ratio
-        compressor.knee.value = preset.knee
-        compressor.attack.value = 0.003
-        compressor.release.value = 0.25
-        gain.connect(compressor)
-        node = compressor
-        chainNodes.push(compressor)
+        const highpass = ctx.createBiquadFilter()
+        highpass.type = 'highpass'
+        highpass.frequency.value = preset.highpassHz
+        highpass.Q.value = 0.7
+        const analyser = ctx.createAnalyser()
+        analyser.fftSize = 512
+        analyser.smoothingTimeConstant = 0.25
+        const gate = ctx.createGain()
+        gate.gain.value = 1
+        // O analisador fica antes do gate para ele continuar percebendo a voz mesmo fechado.
+        gain.connect(highpass)
+        highpass.connect(analyser)
+        analyser.connect(gate)
+        node = gate
+        chainNodes.push(highpass, analyser, gate)
+
+        const samples = new Float32Array(analyser.fftSize)
+        const openThreshold = 10 ** (preset.thresholdDb / 20)
+        const closeThreshold = openThreshold * 0.68
+        let gateOpen = true
+        let lastVoiceAt = performance.now()
+        const updateGate = () => {
+          analyser.getFloatTimeDomainData(samples)
+          let sumSquares = 0
+          for (const sample of samples) sumSquares += sample * sample
+          const rms = Math.sqrt(sumSquares / samples.length)
+          const now = performance.now()
+          if (rms >= openThreshold) {
+            lastVoiceAt = now
+            if (!gateOpen) {
+              gateOpen = true
+              gate.gain.cancelScheduledValues(ctx.currentTime)
+              gate.gain.setTargetAtTime(1, ctx.currentTime, 0.008)
+            }
+          } else if (gateOpen && rms < closeThreshold && now - lastVoiceAt >= preset.releaseMs) {
+            gateOpen = false
+            gate.gain.cancelScheduledValues(ctx.currentTime)
+            gate.gain.setTargetAtTime(preset.floor, ctx.currentTime, 0.045)
+          }
+          noiseGateLoopRef.current = requestAnimationFrame(updateGate)
+        }
+        updateGate()
       }
       const dest = ctx.createMediaStreamDestination()
       node.connect(dest)
@@ -4073,6 +4113,8 @@ function VoiceChannel({ allow, me, membersById, channel, onParticipantsChange, o
       if (speakingHangoverRef.current) clearTimeout(speakingHangoverRef.current)
       micChainNodesRef.current.forEach((n) => { try { n.disconnect() } catch { /* ja desconectado */ } })
       micChainNodesRef.current = []
+      if (noiseGateLoopRef.current != null) cancelAnimationFrame(noiseGateLoopRef.current)
+      noiseGateLoopRef.current = null
       rawMicTrackRef.current?.stop()
       rawMicTrackRef.current = null
       micAudioCtxRef.current?.close().catch(() => {})
