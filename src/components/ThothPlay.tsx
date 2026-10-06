@@ -181,10 +181,14 @@ const DEFAULT_VOICE_SETTINGS: PlayVoiceSettings = { inputDeviceId: '', outputDev
 // Um compressor atua justamente nos sons ACIMA do limiar, portanto nao funciona como redutor
 // de ruido de fundo. Estes presets alimentam um noise gate de verdade: abaixo do limiar o ganho
 // cai ate `floor`, com histerese e tempos suaves para nao recortar o inicio/fim das palavras.
+// Limiar mais alto (menos negativo) = exige um som mais claramente "voz" pra abrir o gate, sem
+// confundir ruido de fundo constante (ventilador, fiação, trafego) com fala - threshold anterior
+// deixava passar ruido de fundo como se fosse voz (o gate abria pro ruido, nao so pra fala de
+// verdade). Floor mais baixo = quando fechado, deixa passar bem menos residuo.
 const NOISE_REDUCTION_PRESETS: Record<'low' | 'medium' | 'high', { thresholdDb: number; floor: number; releaseMs: number; highpassHz: number }> = {
-  low: { thresholdDb: -58, floor: 0.16, releaseMs: 260, highpassHz: 70 },
-  medium: { thresholdDb: -50, floor: 0.055, releaseMs: 210, highpassHz: 90 },
-  high: { thresholdDb: -44, floor: 0.012, releaseMs: 160, highpassHz: 120 },
+  low: { thresholdDb: -52, floor: 0.1, releaseMs: 260, highpassHz: 80 },
+  medium: { thresholdDb: -46, floor: 0.03, releaseMs: 210, highpassHz: 100 },
+  high: { thresholdDb: -40, floor: 0.006, releaseMs: 160, highpassHz: 130 },
 }
 // Dispara sempre que alguem muda as configuracoes de voz (volume, ruido etc.) - a tela de
 // configuracoes e a chamada em si sao componentes separados sem estado compartilhado, o
@@ -3269,8 +3273,8 @@ function VoiceSettingsFields() {
       <div className="play-voice-device-grid">
         <label>Microfone<select value={settings.inputDeviceId} onChange={(event) => update('inputDeviceId', event.target.value)}><option value="">Padrão do sistema</option>{inputs.filter((device) => device.deviceId !== 'default').map((device, index) => <option key={device.deviceId} value={device.deviceId}>{device.label || `Microfone ${index + 1}`}</option>)}</select></label>
         <label>Alto-falante<select value={settings.outputDeviceId} onChange={(event) => update('outputDeviceId', event.target.value)}><option value="">Padrão do sistema</option>{outputs.filter((device) => device.deviceId !== 'default').map((device, index) => <option key={device.deviceId} value={device.deviceId}>{device.label || `Saída ${index + 1}`}</option>)}</select></label>
-        <label>Volume do microfone<input type="range" min="0" max="1" step="0.05" value={settings.inputVolume} onChange={(event) => update('inputVolume', Number(event.target.value))} /></label>
-        <label>Volume do alto-falante<input type="range" min="0" max="1" step="0.05" value={settings.outputVolume} onChange={(event) => update('outputVolume', Number(event.target.value))} /></label>
+        <label>Volume do microfone: {Math.round(settings.inputVolume * 100)}%<input type="range" min="0" max="1" step="0.05" value={settings.inputVolume} onChange={(event) => update('inputVolume', Number(event.target.value))} /></label>
+        <label>Volume do alto-falante: {Math.round(settings.outputVolume * 100)}%<input type="range" min="0" max="1" step="0.05" value={settings.outputVolume} onChange={(event) => update('outputVolume', Number(event.target.value))} /></label>
       </div>
       <div className="play-mic-test"><button type="button" className="google-btn" onClick={toggleTest}>{testing ? 'Parar teste' : 'Teste do microfone'}</button><div><i style={{ width: `${level}%` }} /></div></div>
       <button type="button" className="play-device-refresh" onClick={() => loadDevices(true)}>Atualizar dispositivos de áudio</button>
