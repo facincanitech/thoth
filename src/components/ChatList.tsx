@@ -1547,6 +1547,15 @@ export function ChatList({
       setError(null)
       return
     }
+    // "Amigos" so e alcancavel a partir de "Adicionar contato" hoje (o menu raiz com as duas
+    // opcoes separadas ficou orfao desde que "+ Contato" na rail passou a abrir direto em
+    // 'contact') - voltar devia levar pra onde a pessoa realmente veio, nao pra essa tela antiga
+    // que ninguem mais alcanca por navegacao normal.
+    if (panelView === 'friends') {
+      onPanelViewChange('contact')
+      setError(null)
+      return
+    }
     if (panelView === 'root') closePanel()
     else {
       onPanelViewChange('root')
@@ -3176,6 +3185,7 @@ export function ChatList({
                 <div className="contacts-permission-card compact">
                   <button
                     type="button"
+                    className="google-btn"
                     onClick={() => { pendingAccountViewRef.current = 'account'; onAccountOpenChange(true) }}
                   >
                     Configurar sincronização de contatos

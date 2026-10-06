@@ -274,7 +274,7 @@ body{
 .presence-offline{opacity:.5}
 .avatar-has-frame{position:relative!important;overflow:visible!important}
 .avatar-has-frame>img:not(.avatar-frame-decoration){border-radius:inherit}
-.avatar-frame-decoration{position:absolute!important;z-index:2!important;inset:-12%!important;width:124%!important;height:124%!important;max-width:none!important;object-fit:fill!important;pointer-events:none!important;border-radius:0!important}
+.avatar-frame-decoration{position:absolute!important;z-index:2!important;inset:-12%!important;width:124%!important;height:124%!important;max-width:none!important;object-fit:fill!important;pointer-events:none!important;border-radius:18%!important}
 .play-nameplate{display:inline-flex;align-items:center;max-width:100%;padding:2px 8px;border:1px solid var(--nameplate-accent,#8aa4c7);border-radius:7px;background-color:#f4f7fb;background-image:var(--nameplate-image);background-position:center;background-size:100% 100%;color:#17212b!important;box-shadow:0 1px 3px #0002}
 .play-nameplate .styled-name{color:#17212b!important;-webkit-text-fill-color:#17212b!important;text-shadow:none!important}
 .header-text{min-width:0;flex:1}
@@ -2624,8 +2624,8 @@ body{
 
 /* Card do perfil (Play) */
 .play-card-banner-preview{height:56px;border-radius:10px;background-size:cover;background-position:center;border:1px solid var(--line-2)}
-.play-profile-card{padding:0;overflow:hidden;max-width:340px;text-align:center}
-.play-profile-card-banner{height:96px;background-size:cover;background-position:center}
+.play-app-shell .play-profile-card{padding:0;overflow:hidden;width:min(400px,calc(100vw - 30px));max-width:400px;text-align:center;background:var(--bg-surface);border-color:var(--line-2);color:var(--text);box-shadow:0 24px 70px rgb(0 0 0 / 48%)}
+.play-app-shell .play-profile-card-banner{height:180px;min-height:180px;background-size:cover;background-position:center}
 .play-profile-card-avatar{width:84px!important;height:84px!important;border-radius:20px!important;margin:-42px auto 8px;border:4px solid var(--bg-surface);overflow:hidden}
 .play-profile-card-avatar img{width:100%;height:100%;object-fit:cover;display:block}
 .play-profile-card h2{margin:0 12px 4px}
@@ -2651,19 +2651,21 @@ body{
    sininho ficava alem da borda em tela cheia). No navegador largo a lista volta a ter largura de coluna. */
 html .desktop-window-shell:not(.desktop-chat-shell) .chats{width:auto;flex:1 1 0;min-width:0;max-width:100%}
 html .desktop-window-shell.desktop-web-shell .chats{width:clamp(330px,28vw,420px);flex:none;min-width:0;border-right:1px solid var(--line)}
-/* transform:scale(.8) no shell inteiro (ver regra abaixo) arredonda sub-pixel na borda entre
-   .chats e .main, deixando passar uma frincha branca (fundo de --bg-panel por baixo) em todas
-   as telas no navegador largo - margin-left negativo cobre a frincha sobrepondo .main por baixo
-   de .chats, sem mexer na largura visivel de nenhum dos dois. */
-html .desktop-window-shell.desktop-web-shell .main{width:auto;flex:1;min-width:0;margin-left:-1px}
+html .desktop-window-shell.desktop-web-shell .main{width:auto;flex:1;min-width:0}
+/* Era transform:scale(.8) + width:125vw/height:125dvh pra "caber" 100% depois de encolher - essa
+   conta so fecha certinho se o calculo de vw/dvh bater exatamente com o scale aplicado, o que
+   depende do DPI/escala do Windows e varia por maquina. Quando nao fecha, sobra uma faixa
+   branca enorme (fundo cru da pagina, fora do shell) de um lado - bug real relatado, a tentativa
+   anterior (so cobrir 1px de frincha interna) nao era a causa real, so um sintoma menor parecido.
+   zoom muda o layout de verdade (ao contrario de transform, que so afeta o desenho visual) -
+   100%/100dvh com zoom:.8 sempre fecha certinho, sem matematica de compensacao nenhuma. */
 html .desktop-window-shell.desktop-web-shell{
-  width:125vw;
-  height:125dvh;
+  width:100%;
+  height:100dvh;
   border:0;
   border-radius:0;
   box-shadow:none;
-  transform:scale(.8);
-  transform-origin:top left;
+  zoom:.8;
 }
 
 /* painel com muito conteudo: itens nao podem encolher (a foto do perfil do Play sumia depois de carregar) */
