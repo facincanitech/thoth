@@ -170,7 +170,12 @@ function App() {
     // disco em vez de buscar o novo, mesmo apos "recarregar". Navegar pra uma URL com query de
     // cache-busting forca uma requisicao de rede nova de verdade, sem depender do cache revalidar
     // sozinho (era a causa real de mudanca de JS/CSS nao aparecer no APK mesmo tendo "atualizado").
+    // NO DESKTOP ISSO QUEBRA: o Tauri serve o front local (asset://, nao http de verdade) e
+    // reatribuir location.href com query nova trava a janela ao voltar da bandeja (ficava preso
+    // sem reabrir - bug real reportado). No .exe o JS ja vem certo a cada instalacao, nao precisa
+    // de cache-busting nenhum - so no Android (carregado remoto) que isso faz sentido.
     function hardReload() {
+      if (isTauriDesktop) { window.location.reload(); return }
       const url = new URL(window.location.href)
       url.searchParams.set('r', Date.now().toString())
       window.location.href = url.toString()
