@@ -14,7 +14,7 @@ import { WINKS, playWinkEffect } from '../lib/winks'
 import { useDesktopLayout } from '../lib/useDesktopLayout'
 import { IconChat, IconGamepad, IconSend, IconUser } from './icons'
 
-type Category = StoreKind | 'bot'
+type Category = StoreKind | 'bot' | 'profile_name'
 type StoreSection = 'home' | 'themes' | 'name' | 'profile' | 'fun' | 'bots'
 type Bot = { id: string; slug: string; name: string; description: string; command_prefix: string }
 type Target = { id: string; name: string; type: 'messenger' | 'play' }
@@ -25,9 +25,9 @@ const categories: { id: Category; label: string; glyph: string }[] = [
   { id: 'wink', label: 'Winks', glyph: '✦' },
   { id: 'sticker', label: 'Stickers', glyph: '▣' },
   { id: 'emoji', label: 'Emojis', glyph: '☺' },
+  { id: 'profile_name', label: 'Nome de perfil', glyph: '✎' },
   { id: 'avatar_frame', label: 'Molduras', glyph: '▣' },
   { id: 'nameplate', label: 'Placas de nome', glyph: '▰' },
-  { id: 'profile_background', label: 'Fundos de perfil', glyph: '▧' },
   { id: 'bot', label: 'Bots', glyph: '⚙' },
 ]
 
@@ -42,7 +42,8 @@ const sections: { id: StoreSection | 'mine'; label: string; description: string;
 
 const themeCategories = categories.filter((entry) => entry.id === 'theme' || entry.id === 'sound')
 const funCategories = categories.filter((entry) => entry.id === 'wink' || entry.id === 'sticker' || entry.id === 'emoji')
-const profileCategories = categories.filter((entry) => entry.id === 'avatar_frame' || entry.id === 'nameplate' || entry.id === 'profile_background')
+const profileCategories = categories.filter((entry) => entry.id === 'profile_name' || entry.id === 'avatar_frame' || entry.id === 'nameplate')
+const playLibraryCategories = profileCategories.filter((entry) => entry.id !== 'profile_name')
 
 const kindNames: Record<StoreKind, string> = { theme: 'tema', sound: 'som', wink: 'wink', sticker: 'sticker', emoji: 'emoji', avatar_frame: 'moldura', nameplate: 'placa de nome', profile_background: 'fundo de perfil' }
 
@@ -83,7 +84,9 @@ export function ThothStore({ me, mode = 'store', scope = 'all', onProfileChange,
   const reload = useCallback(async () => {
     setLoading(true); setError('')
     try {
-      if (activeCategory === 'bot') {
+      if (activeCategory === 'profile_name') {
+        setItems([])
+      } else if (activeCategory === 'bot') {
         const [{ data, error: botError }, { data: groupBots }, { data: playBots }] = await Promise.all([
           supabase.from('bots').select('*').order('name'),
           supabase.from('group_bots').select('bot_id').eq('installed_by', me.id),
@@ -218,7 +221,7 @@ export function ThothStore({ me, mode = 'store', scope = 'all', onProfileChange,
   }
 
   const title = libraryOpen ? libraryCategory ? categories.find((entry) => entry.id === libraryCategory)?.label || 'Meus itens' : 'Meus itens' : category ? categories.find((entry) => entry.id === category)?.label || 'Loja' : sections.find((entry) => entry.id === section)?.label || 'Loja Thoth'
-  const canCreate = !libraryOpen && !!category
+  const canCreate = !libraryOpen && !!category && category !== 'profile_name'
   const visibleItems = libraryOpen ? items.filter((item) => installed.has(item.id)) : items
 
   function openLibrary() { setLibraryCategory(null); setLibraryOpen(true) }
@@ -250,9 +253,9 @@ export function ThothStore({ me, mode = 'store', scope = 'all', onProfileChange,
       </div>
       {error && <div className="store-error">{error}</div>}
       {!libraryOpen && section === 'home' ? <div className="store-category-grid">{sections.map((entry) => <button key={entry.id} className="store-category-tile" onClick={() => openSection(entry.id)}><b>{entry.glyph}</b><span>{entry.label}</span><small>{entry.description}</small></button>)}</div>
-      : !libraryOpen && (section === 'themes' || section === 'fun' || section === 'profile') && !category ? <div className="store-category-grid">{(section === 'themes' ? themeCategories : section === 'profile' ? profileCategories : funCategories).map((entry) => <button key={entry.id} className="store-category-tile" onClick={() => setCategory(entry.id)}><b>{entry.glyph}</b><span>{entry.label}</span><small>{entry.id === 'theme' ? 'Visuais do app' : entry.id === 'sound' ? 'Mensagem e chamar atenção' : entry.id === 'avatar_frame' ? 'Ao redor da sua foto no Play' : entry.id === 'nameplate' ? 'Atrás do seu nome no Play' : 'Explore o acervo'}</small></button>)}</div>
-      : !libraryOpen && section === 'name' ? <StoreNameStudio me={me} onProfileChange={onProfileChange} />
-      : libraryOpen && !libraryCategory ? <div className="store-category-grid">{(scope === 'play' ? profileCategories : categories).map((entry) => <button key={entry.id} className="store-category-tile" onClick={() => setLibraryCategory(entry.id)}><b>{entry.glyph}</b><span>{entry.label}</span><small>{entry.id === 'theme' ? `${builtInLibrary.length + items.filter((item) => item.kind === 'theme' && installed.has(item.id)).length} salvos` : entry.id === 'sound' ? `${builtInSounds.length + items.filter((item) => item.kind === 'sound' && installed.has(item.id)).length} disponíveis` : entry.id === 'wink' ? `${WINKS.length + items.filter((item) => item.kind === 'wink' && installed.has(item.id)).length} disponíveis` : entry.id === 'emoji' ? 'Coleção padrão + seus itens' : entry.id === 'bot' ? 'Ver instalados' : `${items.filter((item) => item.kind === entry.id && installed.has(item.id)).length} salvos`}</small></button>)}</div>
+      : !libraryOpen && (section === 'themes' || section === 'fun' || section === 'profile') && !category ? <div className="store-category-grid">{(section === 'themes' ? themeCategories : section === 'profile' ? profileCategories : funCategories).map((entry) => <button key={entry.id} className="store-category-tile" onClick={() => setCategory(entry.id)}><b>{entry.glyph}</b><span>{entry.label}</span><small>{entry.id === 'theme' ? 'Visuais do app' : entry.id === 'sound' ? 'Mensagem e chamar atenção' : entry.id === 'profile_name' ? 'Fonte, efeito e cor do seu nome' : entry.id === 'avatar_frame' ? 'Ao redor da sua foto no Play' : entry.id === 'nameplate' ? 'Atrás do seu nome no Play' : 'Explore o acervo'}</small></button>)}</div>
+      : !libraryOpen && (section === 'name' || activeCategory === 'profile_name') ? <StoreNameStudio me={me} scope={scope === 'play' ? 'play' : 'messenger'} onProfileChange={onProfileChange} />
+      : libraryOpen && !libraryCategory ? <div className="store-category-grid">{(scope === 'play' ? playLibraryCategories : categories).map((entry) => <button key={entry.id} className="store-category-tile" onClick={() => setLibraryCategory(entry.id)}><b>{entry.glyph}</b><span>{entry.label}</span><small>{entry.id === 'theme' ? `${builtInLibrary.length + items.filter((item) => item.kind === 'theme' && installed.has(item.id)).length} salvos` : entry.id === 'sound' ? `${builtInSounds.length + items.filter((item) => item.kind === 'sound' && installed.has(item.id)).length} disponíveis` : entry.id === 'wink' ? `${WINKS.length + items.filter((item) => item.kind === 'wink' && installed.has(item.id)).length} disponíveis` : entry.id === 'emoji' ? 'Coleção padrão + seus itens' : entry.id === 'bot' ? 'Ver instalados' : `${items.filter((item) => item.kind === entry.id && installed.has(item.id)).length} salvos`}</small></button>)}</div>
       : loading ? <div className="store-empty">Abrindo o acervo…</div> : activeCategory === 'bot' ? (
         <div className="store-grid">{bots.filter((bot) => !libraryOpen || installedBots.has(bot.id)).map((bot) => <article className="store-card bot" key={bot.id}>
           <div className="store-preview store-bot-preview"><span>⚙</span><small>{bot.command_prefix}</small></div>
@@ -276,7 +279,7 @@ export function ThothStore({ me, mode = 'store', scope = 'all', onProfileChange,
         {preview.kind === 'theme' ? <ThemePreviewScene id={preview.item ? 'community' : preview.id} manifest={preview.colors} desktop={desktopLayout} /> : <button className="store-demo-play" onClick={() => { if (preview.soundUrl) new Audio(preview.soundUrl).play().catch(() => setError('Não foi possível tocar este áudio.')) }}>▶ Ouvir som</button>}
         <div className="store-preview-actions"><button className="secondary" onClick={() => setPreview(null)}>Fechar</button><button disabled={busyId === preview.id || (preview.kind === 'theme' ? activeTheme === preview.id : activeSounds[preview.item?.manifest.soundType === 'nudge' || preview.id === 'nudge' ? 'nudge' : 'message'] === preview.id)} onClick={async () => { if (preview.item) await activateItem(preview.item); else if (preview.kind === 'theme') await activateBuiltInTheme(preview.id as BuiltInTheme); else await activateBuiltInSound(preview.id as 'message' | 'nudge'); setPreview(null) }}>{(preview.kind === 'theme' ? activeTheme === preview.id : activeSounds[preview.item?.manifest.soundType === 'nudge' || preview.id === 'nudge' ? 'nudge' : 'message'] === preview.id) ? 'Em uso' : 'Usar'}</button></div>
       </div></div>}
-      {creatorOpen && <CreatorModal me={me} initialKind={category === 'bot' || !category ? 'theme' : category} botSubmission={category === 'bot'} onClose={() => setCreatorOpen(false)} onDone={() => { setCreatorOpen(false); reload() }} />}
+      {creatorOpen && <CreatorModal me={me} initialKind={category === 'bot' || category === 'profile_name' || !category ? 'theme' : category} botSubmission={category === 'bot'} onClose={() => setCreatorOpen(false)} onDone={() => { setCreatorOpen(false); reload() }} />}
       {botTarget && <div className="store-modal-backdrop" onMouseDown={() => setBotTarget(null)}><div className="store-modal" onMouseDown={(event) => event.stopPropagation()}>
         <button className="store-modal-close" onClick={() => setBotTarget(null)}>×</button><span className="store-kicker">INSTALAR {botTarget.name.toUpperCase()}</span><h2>Onde ele vai morar?</h2>
         <p>Escolha um grupo do Messenger ou servidor do Play que você administra.</p>{error && <div className="store-error">{error}</div>}<div className="store-targets">

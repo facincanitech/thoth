@@ -12,7 +12,7 @@ import { displayName } from '../lib/displayName'
 import { AvatarBox } from './AvatarBox'
 import { getPresenceColor } from '../lib/presence'
 import { ReplayPlayer, type ReplayEvent } from './ReplayPlayer'
-import { StyledName, NAME_FONTS, NAME_EFFECTS, PRISM_PALETTES } from './StyledName'
+import { StyledName } from './StyledName'
 import { uploadImage } from '../lib/uploadImage'
 import {
   IconArrowLeft, IconChat, IconChevronDown, IconCopy, IconEdit, IconGamepad, IconGrip, IconHash, IconHeadphones,
@@ -3361,15 +3361,12 @@ function VoiceSettingsFields() {
 }
 
 function ProfilePanel({ me, open, onClose, onSaved }: { me: Profile; open: boolean; onClose: () => void; onSaved: () => void }) {
-  const [view, setView] = useState<'menu' | 'profile' | 'appearance' | 'store' | 'library' | 'settings'>('menu')
+  const [view, setView] = useState<'menu' | 'profile' | 'store' | 'library' | 'settings'>('menu')
   const [storeBackSignal, setStoreBackSignal] = useState(0)
   const [loaded, setLoaded] = useState(false)
   const [avatarUrl, setAvatarUrl] = useState<string | null>(me.avatar_url ?? null)
   const [displayNameDraft, setDisplayNameDraft] = useState(me.display_name || me.username)
   const [statusDraft, setStatusDraft] = useState(me.status || '')
-  const [font, setFont] = useState<string | null>(null)
-  const [effect, setEffect] = useState<'solid' | 'gradient' | 'neon' | 'prism' | null>(null)
-  const [color, setColor] = useState<string | null>(null)
   const [themePref, setThemePref] = useState<PlayThemeId>(DEFAULT_PLAY_THEME)
   const [bannerColor, setBannerColor] = useState<string | null>(null)
   const [bannerImage, setBannerImage] = useState<string | null>(null)
@@ -3389,9 +3386,6 @@ function ProfilePanel({ me, open, onClose, onSaved }: { me: Profile; open: boole
       setAvatarUrl(p?.avatar_url || me.avatar_url || null)
       setDisplayNameDraft(p?.display_name || me.display_name || me.username)
       setStatusDraft(p?.status || me.status || '')
-      setFont(p?.name_style_font || null)
-      setEffect(p?.name_style_effect || null)
-      setColor(p?.name_style_color || null)
       setThemePref(normalizePlayTheme(p?.theme_preference))
       setBannerColor(p?.banner_color || null)
       setBannerImage(p?.banner_image_url || null)
@@ -3475,15 +3469,14 @@ function ProfilePanel({ me, open, onClose, onSaved }: { me: Profile; open: boole
       <div className={`new-conv-panel play-profile-panel${open ? ' open' : ''}`}>
       <div className="new-conv-header">
         <button type="button" className="icon-btn" onClick={goBack}><IconArrowLeft size={20} /></button>
-        <strong>{view === 'menu' ? 'Perfil' : view === 'profile' ? 'Meu perfil' : view === 'appearance' ? 'Aparência' : view === 'store' ? 'Loja do Play' : view === 'library' ? 'Minha coleção' : 'Configurações'}</strong>
+        <strong>{view === 'menu' ? 'Perfil' : view === 'profile' ? 'Conta' : view === 'store' ? 'Loja do Play' : view === 'library' ? 'Minha coleção' : 'Configurações'}</strong>
       </div>
       {view === 'menu' ? (
         <div className="play-group-info-body play-account-menu">
           <span className="play-account-menu-category">Sua conta no Play</span>
-          <button type="button" onClick={() => setView('profile')}><IconUser size={20} /><span><strong>Perfil</strong><small>Nome, foto, status, banner e características</small></span><IconChevronDown size={16} /></button>
-          <button type="button" onClick={() => setView('appearance')}><IconEdit size={20} /><span><strong>Aparência</strong><small>Fonte, efeitos, cores e tema do Play</small></span><IconChevronDown size={16} /></button>
+          <button type="button" onClick={() => setView('profile')}><IconUser size={20} /><span><strong>Conta</strong><small>Nome, foto, status, banner e características</small></span><IconChevronDown size={16} /></button>
           <span className="play-account-menu-category">Personalização</span>
-          <button type="button" onClick={() => setView('store')}><IconGamepad size={20} /><span><strong>Loja do Play</strong><small>Molduras, placas de nome e fundos de perfil</small></span><IconChevronDown size={16} /></button>
+          <button type="button" onClick={() => setView('store')}><IconGamepad size={20} /><span><strong>Loja do Play</strong><small>Nome de perfil, molduras e placas de nome</small></span><IconChevronDown size={16} /></button>
           <button type="button" onClick={() => setView('library')}><IconFolder size={20} /><span><strong>Minha coleção</strong><small>Seus itens baixados e equipados</small></span><IconChevronDown size={16} /></button>
           <span className="play-account-menu-category">Aplicativo</span>
           <button type="button" onClick={() => setView('settings')}><IconSettingsGear size={20} /><span><strong>Configurações</strong><small>Voz, microfone e alto-falante</small></span><IconChevronDown size={16} /></button>
@@ -3492,6 +3485,9 @@ function ProfilePanel({ me, open, onClose, onSaved }: { me: Profile; open: boole
         <ThothStore me={me} mode={view === 'library' ? 'library' : 'store'} scope="play" onProfileChange={() => {}} backSignal={storeBackSignal} onExit={() => { onSaved(); setView('menu') }} />
       ) : view === 'settings' ? (
         <div className="play-group-info-body">
+          <h2>Tema do Play</h2>
+          <div className="play-theme-picker">{PLAY_THEMES.map((theme) => <button key={theme.id} type="button" className={`play-theme-option${themePref === theme.id ? ' active' : ''}`} aria-pressed={themePref === theme.id} onClick={() => applyTheme(theme.id)}><span className="play-theme-preview" aria-hidden="true">{theme.colors.map((themeColor) => <i key={themeColor} style={{ background: themeColor }} />)}</span><span className="play-theme-option-copy"><strong>{theme.label}</strong><small>{theme.description}</small></span><span className="play-theme-check" aria-hidden="true">✓</span></button>)}</div>
+          <div className="appearance-separator" />
           <VoiceSettingsFields />
         </div>
       ) : view === 'profile' ? (
@@ -3557,18 +3553,7 @@ function ProfilePanel({ me, open, onClose, onSaved }: { me: Profile; open: boole
           </>
         )}
       </div>
-      ) : (
-        <div className="play-group-info-body">
-          <div className="name-style-preview"><StyledName name={displayNameDraft || 'Você'} font={font} effect={effect} color={color} /></div>
-          <label style={{ marginTop: 10 }}>Fonte</label>
-          <div className="name-style-picker">{NAME_FONTS.map((f) => <button key={f.id} type="button" className={`name-font-option${(font || 'default') === f.id ? ' active' : ''}`} style={f.id !== 'default' ? { fontFamily: f.family } : undefined} onClick={() => { const value = f.id === 'default' ? null : f.id; setFont(value); autosave({ name_style_font: value }) }}>{f.label}</button>)}</div>
-          <label style={{ marginTop: 10 }}>Efeito</label>
-          <div className="name-style-picker">{NAME_EFFECTS.map((item) => <button key={item.id} type="button" className={`name-effect-option${(effect || 'solid') === item.id ? ' active' : ''}`} onClick={() => { setEffect(item.id); autosave({ name_style_effect: item.id }) }}>{item.label}</button>)}</div>
-          {effect === 'prism' ? <><label style={{ marginTop: 10 }}>Cores do prisma</label><div className="prism-palette-picker">{PRISM_PALETTES.map((palette) => <button key={palette.id} type="button" title={palette.label} className={'prism-palette' + ((color || 'rainbow') === palette.id ? ' active' : '')} style={{ backgroundImage: 'linear-gradient(90deg,' + palette.colors.join(',') + ')' }} onClick={() => { setColor(palette.id); autosave({ name_style_color: palette.id }) }} />)}</div></> : <><label style={{ marginTop: 10 }}>Cor</label><input type="color" value={color && color.startsWith('#') ? color : '#3b6ef6'} onChange={(event) => setColor(event.target.value)} onBlur={(event) => autosave({ name_style_color: event.target.value })} style={{ width: 60, height: 34, padding: 2, marginTop: 2 }} /></>}
-          <label style={{ marginTop: 14 }}>Tema do Play</label>
-          <div className="play-theme-picker">{PLAY_THEMES.map((theme) => <button key={theme.id} type="button" className={`play-theme-option${themePref === theme.id ? ' active' : ''}`} aria-pressed={themePref === theme.id} onClick={() => applyTheme(theme.id)}><span className="play-theme-preview" aria-hidden="true">{theme.colors.map((themeColor) => <i key={themeColor} style={{ background: themeColor }} />)}</span><span className="play-theme-option-copy"><strong>{theme.label}</strong><small>{theme.description}</small></span><span className="play-theme-check" aria-hidden="true">✓</span></button>)}</div>
-        </div>
-      )}
+      ) : null}
       </div>
       {cropFile && <AvatarCropModal file={cropFile} onCancel={() => setCropFile(null)} onConfirm={handleCropConfirm} />}
     </>
