@@ -4051,7 +4051,12 @@ function VoiceChannel({ allow, me, membersById, channel, onParticipantsChange, o
         source.connect(gain)
         gain.connect(ctx.destination)
         participantGainRef.current.set(el, gain)
-        el.volume = 1
+        // O elemento continua tocando pelo caminho nativo dele em paralelo ao GainNode em alguns
+        // navegadores/WebView (apesar da spec dizer que createMediaElementSource "rouba" a saida) -
+        // sem isso, o audio real ficava preso no volume nativo (sempre o mesmo, 100%) e o slider
+        // so mexia num canal que ninguem ouvia: 0% continuava alto, 200% nao turbinava de verdade.
+        // Zera o nativo pra sempre e deixa o GainNode ser o UNICO caminho audivel.
+        el.volume = 0
       }
       gain.gain.value = Math.max(0, volume)
     } catch {
