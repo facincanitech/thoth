@@ -1821,7 +1821,7 @@ body{
 /* Borda verde tipo Discord em quem esta falando agora - box-shadow (nao border) pra funcionar
    tanto no card com borda normal quanto na variante desktop larga que zera a borda (mais abaixo). */
 .play-voice-tile.speaking .play-voice-tile-stage{box-shadow:0 0 0 2px #3ba55c}
-.play-voice-avatar{width:56px;height:56px;border-radius:50%;overflow:hidden;background:var(--avatar-bg);display:grid;place-items:center;font-weight:700}
+.play-voice-avatar{width:56px;height:56px;border-radius:15px;overflow:hidden;background:var(--avatar-bg);display:grid;place-items:center;font-weight:700}
 .play-voice-name{position:absolute;left:8px;bottom:8px;display:flex;align-items:center;gap:5px;font-size:12px;font-weight:600;color:#fff;background:rgb(0 0 0 / 45%);padding:3px 8px;border-radius:8px}
 .play-voice-controls{display:flex;justify-content:center;gap:12px;padding:16px;border-top:1px solid var(--line);flex-shrink:0}
 .play-voice-controls .icon-btn{width:46px;height:46px;border-radius:50%;background:var(--bg-panel);border:1px solid var(--line-2)}

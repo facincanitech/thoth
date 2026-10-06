@@ -1204,14 +1204,21 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
     }
   }, [voiceChannelIds])
 
+  // joined_at so e gravado na entrada - se o app fecha de forma suja (crash, perde conexao,
+  // forca-parar) o delete de saida (efeito abaixo) nunca roda e a linha fica presa pra sempre,
+  // mostrando gente que nem esta mais online. Um heartbeat periodico atualiza joined_at enquanto
+  // conectado de verdade, e aqui filtra linhas mais velhas que isso - stale some sozinho.
+  const VOICE_PRESENCE_STALE_MS = 90_000
   useEffect(() => {
     if (!voiceChannelIds.length) { setVoicePresence({}); return }
     let cancelled = false
     async function loadPresence() {
-      const { data } = await supabase.from('play_voice_presence').select('channel_id, user_id').in('channel_id', voiceChannelIds)
+      const { data } = await supabase.from('play_voice_presence').select('channel_id, user_id, joined_at').in('channel_id', voiceChannelIds)
       if (cancelled) return
+      const cutoff = Date.now() - VOICE_PRESENCE_STALE_MS
       const grouped: Record<string, string[]> = {}
       for (const row of data || []) {
+        if (new Date(row.joined_at).getTime() < cutoff) continue
         grouped[row.channel_id] = grouped[row.channel_id] || []
         grouped[row.channel_id].push(row.user_id)
       }
@@ -1222,13 +1229,18 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
       .channel(`play-voice-presence:${voiceChannelIdsKey}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'play_voice_presence' }, () => loadPresence())
       .subscribe()
-    return () => { cancelled = true; supabase.removeChannel(sub) }
+    // Reavalia a cada 30s mesmo sem evento novo - e assim que uma linha stale "expira" e some.
+    const staleTimer = setInterval(loadPresence, 30_000)
+    return () => { cancelled = true; supabase.removeChannel(sub); clearInterval(staleTimer) }
   }, [voiceChannelIds])
 
   useEffect(() => {
     if (!joinedVoiceChannel) return
-    supabase.from('play_voice_presence').upsert({ channel_id: joinedVoiceChannel.id, user_id: me.id }).then()
+    const heartbeat = () => supabase.from('play_voice_presence').upsert({ channel_id: joinedVoiceChannel.id, user_id: me.id, joined_at: new Date().toISOString() }).then()
+    heartbeat()
+    const interval = setInterval(heartbeat, 45_000)
     return () => {
+      clearInterval(interval)
       supabase.from('play_voice_presence').delete().eq('channel_id', joinedVoiceChannel.id).eq('user_id', me.id).then()
     }
   }, [joinedVoiceChannel?.id, me.id])
@@ -1296,24 +1308,39 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
   const offlineMembers = members.filter((m) => !memberOnline(m))
   const inVoiceIds = new Set([...voiceParticipants.map((p) => p.id), ...Object.values(voicePresence).flat()])
 
-  type ChannelVoiceEntry = { id: string; name: string; avatar_url: string | null; videoTrack?: Track; cameraTrack?: Track; isScreen?: boolean; micOn?: boolean }
+  type ChannelVoiceEntry = {
+    id: string; name: string; avatar_url: string | null; videoTrack?: Track; cameraTrack?: Track; isScreen?: boolean; micOn?: boolean
+    nameStyleFont: string | null; nameStyleEffect: Profile['name_style_effect']; nameStyleColor: string | null
+  }
   function channelVoiceList(channelId: string): ChannelVoiceEntry[] {
     if (joinedVoiceChannel?.id === channelId) {
-      return voiceParticipants.map((p) => ({
-        id: p.id,
-        name: p.name,
-        avatar_url: (p.id === me.id ? myPlayProfile.avatar_url : membersById[p.id]?.avatar_url) || null,
-        videoTrack: p.videoTrack,
-        cameraTrack: p.cameraTrack,
-        isScreen: p.isScreen,
-        micOn: p.micOn,
-      }))
+      return voiceParticipants.map((p) => {
+        const profile = p.id === me.id ? myPlayProfile : membersById[p.id]
+        return {
+          id: p.id,
+          name: p.name,
+          avatar_url: (p.id === me.id ? myPlayProfile.avatar_url : membersById[p.id]?.avatar_url) || null,
+          videoTrack: p.videoTrack,
+          cameraTrack: p.cameraTrack,
+          isScreen: p.isScreen,
+          micOn: p.micOn,
+          nameStyleFont: profile?.name_style_font || null,
+          nameStyleEffect: profile?.name_style_effect || null,
+          nameStyleColor: profile?.name_style_color || null,
+        }
+      })
     }
-    return (voicePresence[channelId] || []).map((userId) => ({
-      id: userId,
-      name: userId === me.id ? (myPlayProfile.display_name || myPlayProfile.username) : (membersById[userId]?.display_name || membersById[userId]?.username || '...'),
-      avatar_url: (userId === me.id ? myPlayProfile.avatar_url : membersById[userId]?.avatar_url) || null,
-    }))
+    return (voicePresence[channelId] || []).map((userId) => {
+      const profile = userId === me.id ? myPlayProfile : membersById[userId]
+      return {
+        id: userId,
+        name: userId === me.id ? (myPlayProfile.display_name || myPlayProfile.username) : (membersById[userId]?.display_name || membersById[userId]?.username || '...'),
+        avatar_url: (userId === me.id ? myPlayProfile.avatar_url : membersById[userId]?.avatar_url) || null,
+        nameStyleFont: profile?.name_style_font || null,
+        nameStyleEffect: profile?.name_style_effect || null,
+        nameStyleColor: profile?.name_style_color || null,
+      }
+    })
   }
   // Cargos com "mostrar separado": quem tem mais de um cai no de cima (ordem = prioridade)
   const hoistedRoles = groupRoles.filter((r) => r.hoisted).sort((a, b) => a.position - b.position)
@@ -2072,7 +2099,7 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
                               fallbackLetter={p.name[0]?.toUpperCase()}
                               className="avatar-sm"
                             />
-                            {p.name}
+                            <StyledName name={p.name} font={p.nameStyleFont} effect={p.nameStyleEffect} color={p.nameStyleColor} />
                           </div>
                         ))}
                       </div>
@@ -2109,7 +2136,7 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
                               fallbackLetter={p.name[0]?.toUpperCase()}
                               className="avatar-sm"
                             />
-                            {p.name}
+                            <StyledName name={p.name} font={p.nameStyleFont} effect={p.nameStyleEffect} color={p.nameStyleColor} />
                           </div>
                         ))}
                       </div>
@@ -2340,7 +2367,7 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
                             onContextMenu={(e) => { e.preventDefault(); openRoleQuickMenu(p.id, p.name, e.clientX, e.clientY) }}
                             onClick={() => setProfileCardId(p.id)}
                           >
-                            {p.name}
+                            <StyledName name={p.name} font={p.nameStyleFont} effect={p.nameStyleEffect} color={p.nameStyleColor} />
                           </span>
                           <IconHeadphones size={14} />
                           {hasPreview && (
