@@ -3,12 +3,20 @@ import { listen } from '@tauri-apps/api/event'
 import { getCurrentWindow } from '@tauri-apps/api/window'
 import thothLogo from '../../logo/toth_chat.png'
 import { openChatWindow, openMainWindow } from '../lib/desktopWindows'
+import { applyDesktopTheme, followDesktopTheme, readStoredDesktopTheme } from '../lib/desktopTheme'
 import type { DesktopToastPayload } from '../lib/desktopToast'
 import './DesktopToastWindow.css'
 
 const DISPLAY_MS = 6200
 
 export function DesktopToastWindow() {
+  // Janela separada do Tauri, nao herda o tema aplicado na janela principal sozinha - sem isso
+  // o toast ficava sempre na mesma cor (Frutiger azul fixo), nao acompanhava o tema escolhido
+  // (mesmo mecanismo de localStorage+evento storage que as outras janelas secundarias usam).
+  useEffect(() => {
+    void applyDesktopTheme(readStoredDesktopTheme())
+    followDesktopTheme()
+  }, [])
   const [toast, setToast] = useState<DesktopToastPayload | null>(() => {
     try {
       const raw = new URLSearchParams(window.location.search).get('toast')

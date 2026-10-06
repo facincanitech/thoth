@@ -183,13 +183,17 @@ const DEFAULT_VOICE_SETTINGS: PlayVoiceSettings = { inputDeviceId: '', outputDev
 // de ruido de fundo. Estes presets alimentam um noise gate de verdade: abaixo do limiar o ganho
 // cai ate `floor`, com histerese e tempos suaves para nao recortar o inicio/fim das palavras.
 // Limiar mais alto (menos negativo) = exige um som mais claramente "voz" pra abrir o gate, sem
-// confundir ruido de fundo constante (ventilador, fiação, trafego) com fala - threshold anterior
-// deixava passar ruido de fundo como se fosse voz (o gate abria pro ruido, nao so pra fala de
-// verdade). Floor mais baixo = quando fechado, deixa passar bem menos residuo.
+// confundir ruido de fundo constante (ventilador, fiação, trafego) com fala. MAS exagerar nisso
+// e perigoso: alguem com voz mais baixa/microfone com ganho menor podia nunca mais passar do
+// limiar - ficando mudo de vez, pior ainda em "alto" (bug real relatado: "alto" silenciando
+// completamente quem fala baixo). Recuado pra um meio-termo entre o original e a tentativa
+// anterior - ainda mais exigente que o original, mas sem arriscar silenciar voz de verdade. O
+// filtro de sustentação (MIN_SUSTAIN_MS, mais abaixo) continua cuidando dos cliques, que era o
+// motivo de ter subido o limiar numa tentativa anterior.
 const NOISE_REDUCTION_PRESETS: Record<'low' | 'medium' | 'high', { thresholdDb: number; floor: number; releaseMs: number; highpassHz: number }> = {
-  low: { thresholdDb: -52, floor: 0.1, releaseMs: 260, highpassHz: 80 },
-  medium: { thresholdDb: -46, floor: 0.03, releaseMs: 210, highpassHz: 100 },
-  high: { thresholdDb: -40, floor: 0.006, releaseMs: 160, highpassHz: 130 },
+  low: { thresholdDb: -56, floor: 0.13, releaseMs: 260, highpassHz: 75 },
+  medium: { thresholdDb: -49, floor: 0.045, releaseMs: 210, highpassHz: 95 },
+  high: { thresholdDb: -43, floor: 0.01, releaseMs: 160, highpassHz: 125 },
 }
 // Dispara sempre que alguem muda as configuracoes de voz (volume, ruido etc.) - a tela de
 // configuracoes e a chamada em si sao componentes separados sem estado compartilhado, o
