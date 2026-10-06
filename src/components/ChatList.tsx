@@ -2238,9 +2238,14 @@ export function ChatList({
         return 0
       })
     }
+    // Grupo organico nasce de uma DM (so vira "group" no banco pra caber o 3o+ membro) e tem que
+    // se comportar como DM em tudo na lista - so a tag "Grupo Organico" no nome diferencia (ver
+    // isOrganicGroup). Sem essas duas exclusoes, ele aparecia duplicado: uma vez em Favoritos (se
+    // favoritado) e de novo em Grupos (que e so pra grupo dedicado de verdade) - e se NAO
+    // favoritado, nao aparecia em lugar nenhum, porque "Conversas" so aceitava type==='dm'.
     const favoriteConvs = sortByChatOrder(conversations.filter((c) => c.isFavorite && !c.isArchived))
-    const regularConvs = sortByChatOrder(conversations.filter((c) => !c.isFavorite && !c.isArchived && c.type === 'dm'))
-    const groupConvs = sortByChatOrder(conversations.filter((c) => c.type === 'group' && !c.isArchived))
+    const regularConvs = sortByChatOrder(conversations.filter((c) => !c.isFavorite && !c.isArchived && (c.type === 'dm' || c.isOrganicGroup)))
+    const groupConvs = sortByChatOrder(conversations.filter((c) => c.type === 'group' && !c.isOrganicGroup && !c.isArchived))
     const sortedCommunities = sortByChatOrder(myCommunities)
     const q = query.toLowerCase()
     const matches = (label: string) => label.toLowerCase().includes(q)
@@ -2294,7 +2299,10 @@ export function ChatList({
           className={`msn-contact-avatar${presence ? ` presence-${getPresenceColor(presence.lastSeenAt, presence.isIdle)}` : ''}`}
         />
         <div className="msn-contact-info">
-          <strong>{label}</strong>
+          <strong>
+            {conv?.isOrganicGroup && <span className="grupal-badge msn-contact-tag">Grupo Orgânico</span>}
+            {label}
+          </strong>
         </div>
         {unreadCount > 0 && <b className="msn-unread">{unreadCount}</b>}
       </button>
