@@ -1,4 +1,5 @@
 import { createPortal } from 'react-dom'
+import { Capacitor } from '@capacitor/core'
 import { openPip, closePip, updatePipTrack } from '../lib/pipBridge'
 import { openMainWindow } from '../lib/desktopWindows'
 import { isTauriDesktop } from '../lib/platform'
@@ -6,7 +7,7 @@ import { useEffect, useMemo, useRef, useState, type ChangeEvent, type MouseEvent
 import { Room, RoomEvent, Track, createLocalScreenTracks, type AudioCaptureOptions, type RemoteParticipant, type LocalParticipant, type TrackPublication } from 'livekit-client'
 import { supabase } from '../lib/supabase'
 import { fetchLiveKitToken } from '../lib/livekit'
-import { setMediaAudioMode } from '../lib/audioRoute'
+import { setMediaAudioMode, setSpeakerphoneOn } from '../lib/audioRoute'
 import { displayName } from '../lib/displayName'
 import { AvatarBox } from './AvatarBox'
 import { getPresenceColor } from '../lib/presence'
@@ -4029,6 +4030,21 @@ function VoiceChannel({ allow, me, membersById, channel, onParticipantsChange, o
   const shareStart = useRef<Record<string, number>>({})
   // Fone (ensurdecer): silencia o audio de todo mundo pra voce e tambem o seu microfone (igual Discord).
   const [deafened, setDeafened] = useState(false)
+  // Viva-voz no Android: canal do Play fica em MODE_NORMAL fora da chamada (nao duckeia outros
+  // apps - decisao de antes, ver setMediaAudioMode), mas isso deixa o Chrome escolher a rota de
+  // audio sozinho enquanto a chamada esta ativa, que as vezes cai no fone de ouvido/alto-falante
+  // baixo em vez do viva-voz de verdade. Ao contrario do setMediaAudioMode (que sempre desliga o
+  // viva-voz), isso reaplica a preferencia atual - chamado nos mesmos pontos que antes só
+  // resetavam pra normal (conectar, mutar/desmutar, apertar-pra-falar).
+  const [speakerOn, setSpeakerOnState] = useState(true)
+  const speakerOnRef = useRef(true)
+  function applySpeakerRoute() { return setSpeakerphoneOn(speakerOnRef.current) }
+  function toggleSpeaker() {
+    const next = !speakerOnRef.current
+    speakerOnRef.current = next
+    setSpeakerOnState(next)
+    void setSpeakerphoneOn(next)
+  }
   const deafenedRef = useRef(false)
   const micBeforeDeafen = useRef(true)
   const [shareMenuOpen, setShareMenuOpen] = useState(false)
@@ -4194,7 +4210,7 @@ function VoiceChannel({ allow, me, membersById, channel, onParticipantsChange, o
         } else {
           setMicEnabled(false)
         }
-        await setMediaAudioMode()
+        await applySpeakerRoute()
         if (cancelled) { room.disconnect(); return }
         setConnected(true)
         syncParticipants(room)
@@ -4247,7 +4263,7 @@ function VoiceChannel({ allow, me, membersById, channel, onParticipantsChange, o
       const micTrack = room.localParticipant.getTrackPublication(Track.Source.Microphone)?.track?.mediaStreamTrack
       if (micTrack) micTrack.contentHint = 'music'
     }
-    await setMediaAudioMode()
+    await applySpeakerRoute()
     setMicEnabled(next)
     syncParticipants(room)
   }
@@ -4267,7 +4283,7 @@ function VoiceChannel({ allow, me, membersById, channel, onParticipantsChange, o
       const micTrack = room.localParticipant.getTrackPublication(Track.Source.Microphone)?.track?.mediaStreamTrack
       if (micTrack) micTrack.contentHint = 'music'
     }
-    await setMediaAudioMode()
+    await applySpeakerRoute()
     setMicEnabled(next)
     syncParticipants(room)
   }
@@ -4312,7 +4328,7 @@ function VoiceChannel({ allow, me, membersById, channel, onParticipantsChange, o
         await applyMicGainProcessing()
         const micTrack = room.localParticipant.getTrackPublication(Track.Source.Microphone)?.track?.mediaStreamTrack
         if (micTrack) micTrack.contentHint = 'music'
-        await setMediaAudioMode()
+        await applySpeakerRoute()
         setMicEnabled(true)
       }
     }
@@ -4468,6 +4484,11 @@ function VoiceChannel({ allow, me, membersById, channel, onParticipantsChange, o
             <button type="button" className={'icon-btn' + (deafened ? ' off' : '')} onClick={toggleDeafen} title={deafened ? 'Voltar a ouvir a chamada' : 'Parar de ouvir a chamada (fone)'}>
               {deafened ? <IconHeadphonesOff size={20} /> : <IconHeadphones size={20} />}
             </button>
+            {Capacitor.isNativePlatform() && (
+              <button type="button" className={'icon-btn' + (speakerOn ? ' active' : '')} onClick={toggleSpeaker} title={speakerOn ? 'Desligar viva-voz' : 'Ligar viva-voz'}>
+                {speakerOn ? <IconVolume size={20} /> : <IconVolumeOff size={20} />}
+              </button>
+            )}
             <button type="button" className={'icon-btn' + (cameraEnabled ? ' active' : '')} onClick={toggleCamera} disabled={!allow.camera} title={!allow.camera ? 'Seu cargo não pode ligar a câmera' : cameraEnabled ? 'Desligar câmera' : 'Ligar câmera'}>
               {cameraEnabled ? <IconVideo size={20} /> : <IconVideoOff size={20} />}
             </button>
