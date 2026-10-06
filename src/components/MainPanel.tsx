@@ -28,7 +28,7 @@ import {
   type EphemeralMediaView,
   type EphemeralOpenResult,
 } from '../lib/ephemeralMedia'
-import { IconArrowLeft, IconAttach, IconBell, IconChat, IconCheck, IconCheckDouble, IconChevronDown, IconCrown, IconDownload, IconEdit, IconHeart, IconLock, IconLockOpen, IconMic, IconMinusCircle, IconNudge, IconPanelLeft, IconPhone, IconPlus, IconSend, IconSmile, IconUser, IconVideo, IconVolume, IconVolumeOff } from './icons'
+import { IconArrowLeft, IconAttach, IconBell, IconChat, IconCheck, IconCheckDouble, IconChevronDown, IconCrown, IconDownload, IconEdit, IconHeart, IconLock, IconLockOpen, IconMic, IconMinusCircle, IconNudge, IconPanelLeft, IconPause, IconPhone, IconPlay, IconPlus, IconSend, IconSmile, IconUser, IconVideo, IconVolume, IconVolumeOff } from './icons'
 import type { CallKind, CallPeer } from '../lib/call'
 import { ReplayPlayer, type ReplayEvent } from './ReplayPlayer'
 import { StyledName } from './StyledName'
@@ -145,6 +145,70 @@ type Props = {
   inviteDemoSignal?: number
   sidebarCollapsed?: boolean
   onToggleSidebar?: () => void
+}
+
+// Player minimalista pra mensagem de audio: so play/pausa, tempo e velocidade (1x/2x/3x) - o
+// <audio controls> nativo do navegador vem cheio de coisa (menu de 3 pontos, barra de volume
+// separada) que o usuario achou poluido/confuso numa mensagem de audio curta.
+function VoiceMessagePlayer({ src }: { src: string }) {
+  const audioRef = useRef<HTMLAudioElement>(null)
+  const [playing, setPlaying] = useState(false)
+  const [current, setCurrent] = useState(0)
+  const [duration, setDuration] = useState(0)
+  const [rate, setRate] = useState(1)
+
+  function formatTime(seconds: number) {
+    if (!Number.isFinite(seconds) || seconds < 0) return '0:00'
+    const m = Math.floor(seconds / 60)
+    const s = Math.floor(seconds % 60)
+    return `${m}:${String(s).padStart(2, '0')}`
+  }
+
+  function togglePlay() {
+    const el = audioRef.current
+    if (!el) return
+    if (playing) el.pause()
+    else void el.play()
+  }
+
+  function cycleRate() {
+    const next = rate >= 3 ? 1 : rate + 1
+    setRate(next)
+    if (audioRef.current) audioRef.current.playbackRate = next
+  }
+
+  function seek(event: React.MouseEvent<HTMLDivElement>) {
+    const el = audioRef.current
+    if (!el || !duration) return
+    const rect = event.currentTarget.getBoundingClientRect()
+    const ratio = Math.min(1, Math.max(0, (event.clientX - rect.left) / rect.width))
+    el.currentTime = ratio * duration
+  }
+
+  const progress = duration ? current / duration : 0
+
+  return (
+    <div className="voice-player">
+      {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+      <audio
+        ref={audioRef}
+        src={src}
+        onPlay={() => setPlaying(true)}
+        onPause={() => setPlaying(false)}
+        onEnded={() => setPlaying(false)}
+        onLoadedMetadata={(e) => setDuration(e.currentTarget.duration)}
+        onTimeUpdate={(e) => setCurrent(e.currentTarget.currentTime)}
+      />
+      <button type="button" className="voice-player-play" onClick={togglePlay} title={playing ? 'Pausar' : 'Tocar'}>
+        {playing ? <IconPause size={16} /> : <IconPlay size={16} />}
+      </button>
+      <div className="voice-player-track" onClick={seek}>
+        <div className="voice-player-track-fill" style={{ width: `${progress * 100}%` }} />
+      </div>
+      <span className="voice-player-time">{formatTime(playing || current ? current : duration)}</span>
+      <button type="button" className="voice-player-rate" onClick={cycleRate} title="Velocidade de reprodução">{rate}x</button>
+    </div>
+  )
 }
 
 export function MainPanel({ me, conversation, onBack, onConversationUpdate, blockedIds, onOpenCommunity, onStartCall, inviteDemoSignal, sidebarCollapsed, onToggleSidebar }: Props) {
@@ -2681,6 +2745,16 @@ export function MainPanel({ me, conversation, onBack, onConversationUpdate, bloc
                       {authorLabel(m.author_id) || '...'}
                     </span>
                   )}
+                  {m.reply_to_id && (() => {
+                    const original = messages.find((mm) => mm.id === m.reply_to_id)
+                    if (!original) return null
+                    return (
+                      <div className="reply-quote">
+                        <strong>{original.author_id === me.id ? 'Você' : (members[original.author_id] ? displayName(members[original.author_id]) : '...')}</strong>
+                        <span>{replySnippet(original)}</span>
+                      </div>
+                    )
+                  })()}
                   {(() => {
                     const eph = ephemeralByMessage[m.id]
                     if (!eph) return <span className="ephemeral-btn">carregando…</span>
@@ -2725,8 +2799,7 @@ export function MainPanel({ me, conversation, onBack, onConversationUpdate, bloc
                         {media.mediaType === 'audio' && (
                           <div className="audio-bubble">
                             <div className="audio-bubble-row">
-                              {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
-                              <audio src={media.url} controls />
+                              <VoiceMessagePlayer src={media.url} />
                               <a className="ephemeral-download-inline" href={media.url} download={media.fileName || undefined} title="Baixar">
                                 <IconDownload size={14} />
                               </a>
@@ -2749,6 +2822,9 @@ export function MainPanel({ me, conversation, onBack, onConversationUpdate, bloc
                       </div>
                     )
                   })()}
+                  <button type="button" className="msg-reply-btn" title="Responder" onClick={() => setReplyTarget(m)}>
+                    <IconChevronDown size={14} /> responder
+                  </button>
                   <div className="message-footer">
                     <span className="meta">
                       {formatMessageTime(m.created_at)}
