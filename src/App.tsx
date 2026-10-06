@@ -166,15 +166,31 @@ function App() {
 
   useEffect(() => {
     let hiddenAt: number | null = null
-    function onVisibility() {
-      if (document.hidden) {
-        hiddenAt = Date.now()
-        return
-      }
+    function onHidden() { hiddenAt = Date.now() }
+    function onResume() {
       if (hiddenAt && Date.now() - hiddenAt > 60000) {
-        window.location.reload()
+        // So recarrega com rede de volta - recarregar logo ao acordar o celular (antes do
+        // wifi/dados reconectarem) buscava o bundle e falhava a meio caminho, deixando a tela
+        // pela metade (barra no topo, resto sumido) em vez de so terminar de carregar normal.
+        if (navigator.onLine) window.location.reload()
+        else window.addEventListener('online', () => window.location.reload(), { once: true })
       }
       hiddenAt = null
+    }
+    // No Android, document.visibilitychange dentro da WebView pode nao bater exatamente com a
+    // tela do celular ligando/desligando (o app pode continuar "visivel" pro Capacitor mesmo com
+    // a tela apagada, ou vice-versa) - appStateChange e o evento de ciclo de vida nativo de
+    // verdade, mais confiavel pra saber quando o app realmente foi pra 2o plano/voltou.
+    if (Capacitor.isNativePlatform()) {
+      const listenerPromise = CapacitorApp.addListener('appStateChange', ({ isActive }) => {
+        if (isActive) onResume()
+        else onHidden()
+      })
+      return () => { listenerPromise.then((l) => l.remove()) }
+    }
+    function onVisibility() {
+      if (document.hidden) onHidden()
+      else onResume()
     }
     document.addEventListener('visibilitychange', onVisibility)
     return () => document.removeEventListener('visibilitychange', onVisibility)
@@ -531,7 +547,10 @@ function App() {
   }, [selected?.id])
 
   useEffect(() => {
-    if (!profile || restoredSelectedRef.current || selected || pendingInviteCode) return
+    // So faz sentido reabrir direto na ultima conversa no desktop (reabrir a janela do .exe
+    // de onde parou). No APK isso fazia a pessoa voltar sempre pro ultimo chat em vez da lista
+    // de conversas ao reabrir o app depois de um tempo - mensageiro nenhum faz isso.
+    if (!isTauriDesktop || !profile || restoredSelectedRef.current || selected || pendingInviteCode) return
     restoredSelectedRef.current = true
     const lastId = localStorage.getItem('flux-last-conversation')
     if (!lastId) return
