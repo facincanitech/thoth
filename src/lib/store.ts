@@ -2,7 +2,7 @@ import { supabase } from './supabase'
 import { deleteCustomSticker, getCustomStickers, saveCustomSticker } from './stickers'
 import { deleteCustomWink, getCustomWinks, saveCustomWink } from './customWinks'
 
-export type StoreKind = 'theme' | 'sound' | 'wink' | 'sticker' | 'emoji'
+export type StoreKind = 'theme' | 'sound' | 'wink' | 'sticker' | 'emoji' | 'avatar_frame' | 'nameplate' | 'profile_background'
 export type StoreManifest = Record<string, string | number | boolean | null>
 
 export type StoreItem = {
@@ -108,12 +108,43 @@ export async function publishStoreItem(input: Pick<StoreItem, 'kind' | 'name' | 
 export async function activateStoreItem(userId: string, item: StoreItem) {
   const update = item.kind === 'theme' ? { active_theme_id: item.id }
     : item.kind === 'sound' && item.manifest.soundType === 'nudge' ? { nudge_sound_id: item.id }
-      : item.kind === 'sound' ? { message_sound_id: item.id } : {}
+      : item.kind === 'sound' ? { message_sound_id: item.id }
+        : item.kind === 'avatar_frame' ? { active_avatar_frame_id: item.id }
+          : item.kind === 'nameplate' ? { active_nameplate_id: item.id } : {}
+  if (item.kind === 'profile_background') Object.assign(update, { active_profile_background_id: item.id })
   if (!Object.keys(update).length) return
   const { error } = await supabase.from('store_preferences').upsert({ user_id: userId, ...update, updated_at: new Date().toISOString() })
   if (error) throw error
   if (item.kind === 'theme') applyCommunityTheme(item)
   if (item.kind === 'sound' && item.asset_url) localStorage.setItem(item.manifest.soundType === 'nudge' ? 'thoth-nudge-sound' : 'thoth-message-sound', item.asset_url)
+  if (item.kind === 'avatar_frame' || item.kind === 'nameplate') {
+    const cosmetic = { item_id: item.id, asset_url: item.asset_url, accent: typeof item.manifest.accent === 'string' ? item.manifest.accent : null }
+    const { error: profileError } = await supabase.from('play_profiles').upsert({ user_id: userId, [item.kind === 'avatar_frame' ? 'avatar_frame' : 'nameplate']: cosmetic }, { onConflict: 'user_id' })
+    if (profileError) throw profileError
+  }
+  if (item.kind === 'profile_background') {
+    const { error: profileError } = await supabase.from('play_profiles').upsert({ user_id: userId, banner_image_url: item.asset_url }, { onConflict: 'user_id' })
+    if (profileError) throw profileError
+  }
+}
+
+export async function deactivateStoreCosmetic(userId: string, kind: Extract<StoreKind, 'avatar_frame' | 'nameplate' | 'profile_background'>) {
+  const preferenceColumn = kind === 'avatar_frame' ? 'active_avatar_frame_id'
+    : kind === 'nameplate' ? 'active_nameplate_id' : 'active_profile_background_id'
+  const { error } = await supabase.from('store_preferences').upsert({
+    user_id: userId,
+    [preferenceColumn]: null,
+    updated_at: new Date().toISOString(),
+  })
+  if (error) throw error
+
+  const profilePatch = kind === 'avatar_frame' ? { avatar_frame: null }
+    : kind === 'nameplate' ? { nameplate: null } : { banner_image_url: null }
+  const { error: profileError } = await supabase.from('play_profiles').upsert(
+    { user_id: userId, ...profilePatch },
+    { onConflict: 'user_id' },
+  )
+  if (profileError) throw profileError
 }
 
 export function applyCommunityTheme(item: StoreItem | null) {

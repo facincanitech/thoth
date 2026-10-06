@@ -272,6 +272,11 @@ body{
    plataformas e temas. AFK continua visivel como online; offline fica a 50%. */
 .presence-online,.presence-afk{opacity:1}
 .presence-offline{opacity:.5}
+.avatar-has-frame{position:relative!important;overflow:visible!important}
+.avatar-has-frame>img:not(.avatar-frame-decoration){border-radius:inherit}
+.avatar-frame-decoration{position:absolute!important;z-index:2!important;inset:-12%!important;width:124%!important;height:124%!important;max-width:none!important;object-fit:fill!important;pointer-events:none!important;border-radius:0!important}
+.play-nameplate{display:inline-flex;align-items:center;max-width:100%;padding:2px 8px;border:1px solid var(--nameplate-accent,#8aa4c7);border-radius:7px;background-color:#f4f7fb;background-image:var(--nameplate-image);background-position:center;background-size:100% 100%;color:#17212b!important;box-shadow:0 1px 3px #0002}
+.play-nameplate .styled-name{color:#17212b!important;-webkit-text-fill-color:#17212b!important;text-shadow:none!important}
 .header-text{min-width:0;flex:1}
 .header-name{font-weight:650;font-size:16px;display:flex;align-items:center;gap:6px;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;line-height:1.5}
 .header-last-seen{display:block;margin-top:-1px;color:var(--muted);font-size:11px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -360,6 +365,16 @@ body{
 .meta{color:inherit;opacity:.65;font-size:10px;white-space:nowrap}
 .author-label{font-size:11px;color:var(--muted);margin-bottom:2px;display:block}
 .bubble .author-label{color:inherit;opacity:.72;font-weight:600}
+.message.participant-colored.in .bubble{
+  background:var(--participant-bubble)!important;
+  color:#17212b!important;
+  border:1px solid var(--participant-border)!important;
+  box-shadow:0 1px 2px rgb(0 0 0 / 12%)!important;
+}
+.message.participant-colored.in .bubble .author-label{color:#17212b!important;opacity:.78}
+.message.participant-colored.in .bubble .reply-quote{background:rgb(255 255 255 / 38%);border-left-color:var(--participant-border)}
+.message.participant-colored.in .bubble .reply-quote strong{color:#17212b}
+.message.participant-colored.in .bubble .replay-btn{color:#17212b;border-color:rgb(23 33 43 / 42%)}
 .message.live .bubble{opacity:.65;font-style:italic}
 .live-typing-label{display:block;font-size:10px;font-style:normal;opacity:.7;margin-bottom:2px}
 .read-receipt{
@@ -2233,6 +2248,8 @@ body{
 .play-account-menu-category{margin-top:6px;color:var(--muted);font-size:10px;font-weight:750;letter-spacing:.09em;text-transform:uppercase}
 .play-account-menu>button:not(.modal-close){display:grid;grid-template-columns:28px 1fr 18px;align-items:center;gap:10px;width:100%;padding:12px;border:1px solid var(--line-2);border-radius:11px;background:var(--bg-panel);color:var(--text);text-align:left;cursor:pointer}
 .play-account-menu>button span{display:flex;flex-direction:column;gap:2px}.play-account-menu>button small{color:var(--muted);font-size:11px}
+.play-profile-panel .play-account-menu{width:auto;padding-top:12px}.play-profile-panel .play-account-menu>button svg:last-child{transform:rotate(-90deg);color:var(--muted)}
+.play-profile-panel>.thoth-store{padding:12px}.play-profile-panel>.thoth-store .store-hero{border-radius:13px}.play-profile-panel>.thoth-store .store-grid{grid-template-columns:1fr}
 .play-voice-settings .play-group-info-body{padding-bottom:40px}
 .play-voice-settings h2,.play-voice-settings h3{margin:4px 0 14px}
 .play-voice-device-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
@@ -2633,7 +2650,11 @@ body{
    sininho ficava alem da borda em tela cheia). No navegador largo a lista volta a ter largura de coluna. */
 html .desktop-window-shell:not(.desktop-chat-shell) .chats{width:auto;flex:1 1 0;min-width:0;max-width:100%}
 html .desktop-window-shell.desktop-web-shell .chats{width:clamp(330px,28vw,420px);flex:none;min-width:0;border-right:1px solid var(--line)}
-html .desktop-window-shell.desktop-web-shell .main{width:auto;flex:1;min-width:0}
+/* transform:scale(.8) no shell inteiro (ver regra abaixo) arredonda sub-pixel na borda entre
+   .chats e .main, deixando passar uma frincha branca (fundo de --bg-panel por baixo) em todas
+   as telas no navegador largo - margin-left negativo cobre a frincha sobrepondo .main por baixo
+   de .chats, sem mexer na largura visivel de nenhum dos dois. */
+html .desktop-window-shell.desktop-web-shell .main{width:auto;flex:1;min-width:0;margin-left:-1px}
 html .desktop-window-shell.desktop-web-shell{
   width:125vw;
   height:125dvh;
@@ -2757,6 +2778,13 @@ html .desktop-window-shell.desktop-web-shell{
 /* Novo contato: busca por e-mail + agenda opcional do Android. */
 .new-contact-screen{height:100%;min-height:0;overflow-y:auto;padding-bottom:18px}
 .contact-email-search{border-bottom:1px solid var(--line-2);padding-bottom:18px}
+.handle-suggestions{display:flex;flex-direction:column;border:1px solid var(--line-2);border-radius:8px;overflow:hidden;margin-top:-4px}
+.handle-suggestion-row{display:flex;align-items:center;gap:10px;padding:8px 10px;cursor:pointer;background:var(--bg-surface)}
+.handle-suggestion-row:hover{background:var(--bg-surface-2)}
+.handle-suggestion-row+.handle-suggestion-row{border-top:1px solid var(--line)}
+.handle-suggestion-copy{display:flex;flex-direction:column;min-width:0}
+.handle-suggestion-copy strong{font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.handle-suggestion-copy span{font-size:11.5px;color:var(--muted)}
 .device-contacts-section{display:flex;flex-direction:column;gap:10px;padding:16px}
 .device-contacts-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
 .device-contacts-heading>div{display:flex;flex-direction:column;min-width:0}

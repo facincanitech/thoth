@@ -1,5 +1,11 @@
 import type { PlayThemeId } from './lib/playThemes'
 
+export type ProfileCosmetic = {
+  item_id: string
+  asset_url: string | null
+  accent: string | null
+}
+
 export type Profile = {
   id: string
   username: string
@@ -25,6 +31,8 @@ export type Profile = {
   name_style_font?: string | null
   name_style_effect?: 'solid' | 'gradient' | 'neon' | 'prism' | null
   name_style_color?: string | null
+  avatar_frame?: ProfileCosmetic | null
+  nameplate?: ProfileCosmetic | null
 }
 
 export type Conversation = {
@@ -89,6 +97,8 @@ export type PlayProfile = {
   name_style_font: string | null
   name_style_effect: 'solid' | 'gradient' | 'neon' | 'prism' | null
   name_style_color: string | null
+  avatar_frame: ProfileCosmetic | null
+  nameplate: ProfileCosmetic | null
   theme_preference: PlayThemeId | null
   banner_color: string | null
   banner_image_url: string | null

@@ -19,10 +19,48 @@ html, body, #root { width: 100%; height: 100%; margin: 0; overflow: hidden; back
 .desktop-toast-icon.wink { background: linear-gradient(#fff8ca,#ffd45e); border-color: #e7a829; }
 .desktop-toast-icon img { width: 36px; height: 36px; object-fit: contain; }
 .desktop-toast-copy { display: flex; min-width: 0; flex: 1; flex-direction: column; gap: 2px; }
-.desktop-toast-brand { color: var(--accent-text, #3977a8); font-size: 9px; font-weight: 800; letter-spacing: .12em; }
+.desktop-toast-brand { color: var(--accent-text, #3977a8); font-size: 9px; font-weight: 800; letter-spacing: .12em; cursor: move; user-select: none; }
 .desktop-toast-copy strong { overflow: hidden; font-size: 14px; line-height: 18px; text-overflow: ellipsis; white-space: nowrap; color: var(--text); }
 .desktop-toast-message { overflow: hidden; color: var(--text-secondary, #3c5267); font-size: 12px; line-height: 17px; text-overflow: ellipsis; white-space: nowrap; }
 .desktop-toast-close { position: absolute; top: 7px; right: 10px; color: var(--muted, #5b7184); font-size: 18px; line-height: 20px; }
+
+/* A notificacao e uma WebView separada. O atributo e definido pelo tema que viaja
+   junto com cada aviso, evitando que uma janela escondida fique com a skin antiga. */
+[data-desktop-theme="messenger"] .desktop-toast {
+  background: linear-gradient(145deg,#f8fdff,#d9eef8); border-color:#72b5d2; color:#123d57;
+}
+[data-desktop-theme="dark"] .desktop-toast {
+  background:linear-gradient(145deg,#17212e,#0d141e);border-color:#40526a;color:#eef4ff;
+  box-shadow:0 8px 25px #000a,inset 0 1px #ffffff14;
+}
+[data-desktop-theme="light"] .desktop-toast {
+  background:linear-gradient(145deg,#fff,#e7eff8);border-color:#9fb8d4;color:#30405a;border-radius:3px;
+  box-shadow:0 8px 22px #30405a42;
+}
+[data-desktop-theme="cyberpunk"] .desktop-toast {
+  background:linear-gradient(135deg,#101329,#1d1032);border-color:#20e7ff;color:#f4f7ff;border-radius:3px;
+  box-shadow:0 8px 28px #000c,0 0 18px #20e7ff33,inset 0 -1px #ff3cac55;
+}
+[data-desktop-theme="cyberpunk"] .desktop-toast::after{background:linear-gradient(90deg,#20e7ff,#ff3cac)}
+[data-desktop-theme="matrix"] .desktop-toast {
+  background:repeating-linear-gradient(0deg,#010502 0,#010502 17px,#06180b 18px);border-color:#18c947;color:#caffd4;border-radius:0;
+  box-shadow:0 8px 25px #000b,0 0 15px #00ff5529;font-family:"Courier New",monospace;
+}
+[data-desktop-theme="matrix"] .desktop-toast::after{background:#27df55}
+[data-desktop-theme="wood"] .desktop-toast {
+  background:linear-gradient(#3b2417e8,#241209f2),url('../assets/themes/walnut-grain.png') center/280px auto;border-color:#b9874f;color:#f5e4c9;border-radius:6px;
+  box-shadow:0 8px 26px #120703cc,inset 0 1px #f2d2a733;
+}
+[data-desktop-theme="wood"] .desktop-toast::after{background:linear-gradient(90deg,#8f5c2f,#efc47f,#8f5c2f)}
+[data-desktop-theme="contrast"] .desktop-toast {
+  background:#000;border:2px solid #fff;color:#fff;border-radius:0;box-shadow:none;
+}
+[data-desktop-theme="contrast"] .desktop-toast::after{background:#fff}
+[data-desktop-theme] .desktop-toast-copy strong{color:inherit}
+[data-desktop-theme="cyberpunk"] .desktop-toast-message,[data-desktop-theme="cyberpunk"] .desktop-toast-close{color:#bec8e8}
+[data-desktop-theme="matrix"] .desktop-toast-message,[data-desktop-theme="matrix"] .desktop-toast-close{color:#8cdb9b}
+[data-desktop-theme="wood"] .desktop-toast-message,[data-desktop-theme="wood"] .desktop-toast-close{color:#d9c09f}
+[data-desktop-theme="contrast"] .desktop-toast-brand,[data-desktop-theme="contrast"] .desktop-toast-message,[data-desktop-theme="contrast"] .desktop-toast-close{color:#fff}
 @keyframes msn-toast-in { from { opacity: 0; transform: translateY(105%); } to { opacity: 1; transform: translateY(0); } }
 @keyframes msn-toast-out { to { opacity: 0; transform: translateY(110%); } }
 @keyframes toast-nudge { 25% { transform: translateX(-3px) rotate(-2deg); } 75% { transform: translateX(3px) rotate(2deg); } }

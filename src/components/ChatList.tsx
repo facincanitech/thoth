@@ -19,7 +19,7 @@ import { isTauriDesktop } from '../lib/platform'
 import { startDesktopGoogleLogin } from '../lib/desktopLogin'
 import { getPresenceColor } from '../lib/presence'
 import { playMessageSound } from '../lib/notificationSound'
-import { desktopToastEnabled, messagePreview, setDesktopToastEnabled, showDesktopToast } from '../lib/desktopToast'
+import { desktopToastEnabled, messagePreview, readDesktopToastPlacement, saveDesktopToastPlacement, setDesktopToastEnabled, showDesktopToast, type DesktopToastPosition } from '../lib/desktopToast'
 import {
   deviceContactsAvailable,
   getContactsPermission,
@@ -62,7 +62,7 @@ import {
 } from './icons'
 import type { Community, ContactCategory, Conversation, PanelView, Profile } from '../types'
 
-type AccountView = 'root' | 'profile' | 'appearance' | 'library' | 'store' | 'account' | 'about' | 'privacy' | 'blocked' | 'terms' | 'privacy-policy'
+type AccountView = 'root' | 'profile' | 'appearance' | 'library' | 'store' | 'account' | 'notifications' | 'about' | 'privacy' | 'blocked' | 'terms' | 'privacy-policy'
 
 export type GroupsView =
   | 'group-root' | 'group-create' | 'group-search' | 'group-trending' | 'group-mine'
@@ -471,6 +471,21 @@ export function ChatList({
   }
 
   const [dmEmail, setDmEmail] = useState('')
+  type HandleSuggestion = { id: string; username: string; display_name: string | null; avatar_url: string | null }
+  const [handleSuggestions, setHandleSuggestions] = useState<HandleSuggestion[]>([])
+  // Busca por @ sugere enquanto digita (@g -> gabriel, guilherme...) em vez de exigir o
+  // @usuario exato e completo. So dispara pra @ (nunca email/telefone, por privacidade - listar
+  // gente por prefixo de email/telefone seria um jeito de varrer a base toda).
+  useEffect(() => {
+    const query = dmEmail.trim()
+    if (!query.startsWith('@') || query.length < 2) { setHandleSuggestions([]); return }
+    let cancelled = false
+    const timer = setTimeout(async () => {
+      const { data } = await supabase.rpc('search_profiles_by_handle', { p_prefix: query.slice(1) })
+      if (!cancelled) setHandleSuggestions((data || []) as HandleSuggestion[])
+    }, 200)
+    return () => { cancelled = true; clearTimeout(timer) }
+  }, [dmEmail])
   const [inviteSent, setInviteSent] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -508,6 +523,7 @@ export function ChatList({
     try { const v = localStorage.getItem('thoth-sms-sim-choice'); return v ? Number(v) : null } catch { return null }
   })
   const [desktopOverlayEnabled, setDesktopOverlayEnabled] = useState(desktopToastEnabled)
+  const [desktopToastPosition, setDesktopToastPosition] = useState<DesktopToastPosition>(() => readDesktopToastPlacement().mode)
 
   const [accountView, setAccountView] = useState<AccountView>('root')
   const [storeBackSignal, setStoreBackSignal] = useState(0)
@@ -2035,6 +2051,7 @@ export function ChatList({
   function accountGoBack() {
     if (accountView === 'terms' || accountView === 'privacy-policy') setAccountView('privacy')
     else if (accountView === 'blocked') setAccountView('account')
+    else if (accountView === 'notifications') setAccountView('account')
     else if (accountView === 'store' || accountView === 'library') setStoreBackSignal((value) => value + 1)
     else if (accountView === 'root') onAccountOpenChange(false)
     else setAccountView('root')
@@ -2053,6 +2070,8 @@ export function ChatList({
           ? 'Minha coleção'
         : accountView === 'account'
           ? 'Configurações'
+        : accountView === 'notifications'
+          ? 'Notificações'
         : accountView === 'about'
           ? 'Sobre'
           : accountView === 'privacy'
@@ -3012,9 +3031,33 @@ export function ChatList({
                 autoFocus
               />
               <button type="button" disabled={busy || !dmEmail.trim()} onClick={() => startDm()}>Conversar</button>
+              {handleSuggestions.length > 0 && (
+                <div className="handle-suggestions">
+                  {handleSuggestions.map((s) => (
+                    <div key={s.id} className="handle-suggestion-row" onClick={() => { setHandleSuggestions([]); startDm(`@${s.username}`) }}>
+                      <AvatarBox src={s.avatar_url} id={s.id} fallbackLetter={(s.display_name || s.username)[0]?.toUpperCase()} className="avatar-sm" />
+                      <div className="handle-suggestion-copy">
+                        <strong>{s.display_name || s.username}</strong>
+                        <span>@{s.username}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
               <span className="invite-code">Use o @ da pessoa, o e-mail da conta ou o telefone completo com DDD.</span>
               {inviteSent && <span className="invite-code">Essa pessoa ainda não tem conta — enviamos um convite por e-mail.</span>}
               {error && <span className="auth-error">{error}</span>}
+            </div>
+
+            {/* "+ Contato" na rail pula direto pra essa tela (desde 23/09) em vez do menu raiz
+                que tinha Adicionar contato/Amigos - sem este link, "Amigos" ficava inalcancavel
+                (so sobrava o aviso de pedido pendente, "Ver agora", como unico caminho). */}
+            <div className="privacy-contacts-card" onClick={() => { setFriendsView('list'); onPanelViewChange('friends') }} style={{ cursor: 'pointer' }}>
+              <div className="option-icon"><IconHeart size={20} /></div>
+              <div className="privacy-contacts-copy">
+                <strong>Amigos{incoming.length > 0 ? ` (${incoming.length})` : ''}</strong>
+                <span>Veja sua lista, aceite pedidos ou adicione alguém novo.</span>
+              </div>
             </div>
 
             {PHONE_LINK_ENABLED && !phoneLinked && (
@@ -3096,7 +3139,7 @@ export function ChatList({
               <div className="device-contacts-heading">
                 <div>
                   <strong>Contatos do celular</strong>
-                  <span>Veja quem já está no Thoth ou convide pelo WhatsApp.</span>
+                  <span>Autorize pelo APK uma vez — sincroniza sozinho e fica visível no Web, desktop e Android.</span>
                 </div>
                 {contactsPermission === 'granted' && (
                   <button type="button" className="contacts-refresh contact-action-button" disabled={contactsLoading} onClick={syncDeviceContacts}>
@@ -3123,8 +3166,12 @@ export function ChatList({
 
               {contactsPermission === 'unavailable' && syncedContacts.length === 0 && (
                 <div className="contacts-permission-card compact">
-                  <strong>Sincronize pelo celular</strong>
-                  <p>Autorize a agenda no APK uma vez. Os usuários encontrados aparecerão aqui no Web e no desktop.</p>
+                  <button
+                    type="button"
+                    onClick={() => { pendingAccountViewRef.current = 'account'; onAccountOpenChange(true) }}
+                  >
+                    Configurar sincronização de contatos
+                  </button>
                 </div>
               )}
 
@@ -3388,23 +3435,9 @@ export function ChatList({
             <span className="invite-code">notificações de segurança e mais dados da conta chegam em breve</span>
 
             {isTauriDesktop && (
-              <div className="desktop-overlay-setting">
-                <div className="desktop-overlay-copy">
-                  <strong>Notificação sobreposta</strong>
-                  <span>Mostra um aviso sobre os outros programas quando o Thoth estiver minimizado.</span>
-                </div>
-                <button
-                  type="button"
-                  className={`desktop-overlay-toggle${desktopOverlayEnabled ? ' enabled' : ''}`}
-                  aria-pressed={desktopOverlayEnabled}
-                  onClick={() => {
-                    const enabled = !desktopOverlayEnabled
-                    setDesktopOverlayEnabled(enabled)
-                    setDesktopToastEnabled(enabled)
-                  }}
-                >
-                  {desktopOverlayEnabled ? 'ON' : 'OFF'}
-                </button>
+              <div className="new-conv-option" style={{ margin: '10px 0 0', padding: '14px 0' }} onClick={() => setAccountView('notifications')}>
+                <div className="option-icon"><IconBellOff size={20} /></div>
+                <div><div>Notificações</div><div className="option-subtitle">Aviso sobreposto e posição na tela</div></div>
               </div>
             )}
 
@@ -3578,6 +3611,36 @@ export function ChatList({
                 </button>
               )}
             </div>
+          </div>
+        )}
+
+        {accountView === 'notifications' && me && (
+          <div className="new-conv-form">
+            <div className="desktop-overlay-setting">
+              <div className="desktop-overlay-copy">
+                <strong>Notificação sobreposta</strong>
+                <span>Mostra avisos sobre outros programas quando o Thoth estiver minimizado.</span>
+              </div>
+              <button type="button" className={`desktop-overlay-toggle${desktopOverlayEnabled ? ' enabled' : ''}`} aria-pressed={desktopOverlayEnabled} onClick={() => {
+                const enabled = !desktopOverlayEnabled
+                setDesktopOverlayEnabled(enabled)
+                setDesktopToastEnabled(enabled)
+              }}>{desktopOverlayEnabled ? 'ON' : 'OFF'}</button>
+            </div>
+            <label style={{ marginTop: 18 }}>Posição na tela</label>
+            <select value={desktopToastPosition} onChange={(event) => {
+              const mode = event.target.value as DesktopToastPosition
+              setDesktopToastPosition(mode)
+              saveDesktopToastPlacement({ mode })
+            }}>
+              <option value="bottom-right">Inferior direita</option>
+              <option value="bottom-left">Inferior esquerda</option>
+              <option value="top-right">Superior direita</option>
+              <option value="top-left">Superior esquerda</option>
+              <option value="custom">Personalizada</option>
+            </select>
+            <span className="invite-code">Para salvar uma posição personalizada, arraste a notificação pelo texto “THOTH MESSENGER”.</span>
+            <button type="button" style={{ marginTop: 12 }} onClick={() => showDesktopToast({ sender: displayName(me), message: 'Assim sua notificação vai aparecer.', kind: 'message' })}>Testar notificação</button>
           </div>
         )}
 

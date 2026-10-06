@@ -1,14 +1,17 @@
 import { emitTo } from '@tauri-apps/api/event'
 import { WebviewWindow } from '@tauri-apps/api/webviewWindow'
+import { LogicalPosition } from '@tauri-apps/api/dpi'
 import { supabase } from './supabase'
 import { displayName } from './displayName'
 import { isTauriDesktop } from './platform'
+import { readStoredDesktopTheme } from './desktopTheme'
 
 export type DesktopToastPayload = {
   conversationId?: string
   sender: string
   message: string
   kind: 'message' | 'nudge' | 'wink'
+  theme?: string
 }
 
 type ToastRequest = Omit<DesktopToastPayload, 'sender'> & {
@@ -18,6 +21,38 @@ type ToastRequest = Omit<DesktopToastPayload, 'sender'> & {
 
 const TOAST_LABEL = 'thoth-notification'
 export const DESKTOP_TOAST_SETTING_KEY = 'thoth-desktop-overlay-notifications'
+export const DESKTOP_TOAST_POSITION_KEY = 'thoth-desktop-toast-position'
+export type DesktopToastPosition = 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left' | 'custom'
+type DesktopToastPlacement = { mode: DesktopToastPosition; x?: number; y?: number }
+
+export function readDesktopToastPlacement(): DesktopToastPlacement {
+  try {
+    const saved = JSON.parse(localStorage.getItem(DESKTOP_TOAST_POSITION_KEY) || '{}') as DesktopToastPlacement
+    if (['bottom-right', 'bottom-left', 'top-right', 'top-left', 'custom'].includes(saved.mode)) return saved
+  } catch { /* use default */ }
+  return { mode: 'bottom-right' }
+}
+
+export function saveDesktopToastPlacement(placement: DesktopToastPlacement) {
+  try { localStorage.setItem(DESKTOP_TOAST_POSITION_KEY, JSON.stringify(placement)) } catch { /* ignore */ }
+}
+
+function resolveToastPosition(width: number, height: number) {
+  const placement = readDesktopToastPlacement()
+  const gap = 14
+  const left = (window.screen as Screen & { availLeft?: number }).availLeft || 0
+  const top = (window.screen as Screen & { availTop?: number }).availTop || 0
+  const right = left + window.screen.availWidth
+  const bottom = top + window.screen.availHeight
+  const customIsUsable = placement.mode === 'custom'
+    && Number.isFinite(placement.x) && Number.isFinite(placement.y)
+    && placement.x! >= left && placement.y! >= top
+    && placement.x! <= right - width && placement.y! <= bottom - height
+  return {
+    x: customIsUsable ? placement.x! : placement.mode.endsWith('left') ? left + gap : right - width - gap,
+    y: customIsUsable ? placement.y! : placement.mode.startsWith('top') ? top + gap : bottom - height - gap,
+  }
+}
 
 export function desktopToastEnabled() {
   try {
@@ -65,23 +100,26 @@ export async function showDesktopToast(request: ToastRequest) {
     sender: await resolveSender(request),
     message: request.message,
     kind: request.kind,
+    theme: readStoredDesktopTheme(),
   }
+  const width = 350
+  const height = 112
+  const { x, y } = resolveToastPosition(width, height)
   const existing = await WebviewWindow.getByLabel(TOAST_LABEL)
   if (existing) {
     await emitTo(TOAST_LABEL, 'desktop-toast', payload)
+    await existing.setPosition(new LogicalPosition(x, y)).catch(() => {})
     await existing.show().catch(() => {})
     return
   }
 
-  const width = 350
-  const height = 112
   new WebviewWindow(TOAST_LABEL, {
     url: `index.html?tauriToast=1&toast=${encodeURIComponent(JSON.stringify(payload))}`,
     title: 'Thoth Messenger',
     width,
     height,
-    x: Math.max(8, window.screen.availWidth - width - 14),
-    y: Math.max(8, window.screen.availHeight - height - 14),
+    x,
+    y,
     decorations: false,
     resizable: false,
     alwaysOnTop: true,

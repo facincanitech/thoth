@@ -3,7 +3,7 @@ import { Capacitor } from '@capacitor/core'
 import { openPip, closePip, updatePipTrack } from '../lib/pipBridge'
 import { openMainWindow } from '../lib/desktopWindows'
 import { isTauriDesktop } from '../lib/platform'
-import { useEffect, useMemo, useRef, useState, type ChangeEvent, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type ChangeEvent, type CSSProperties, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent } from 'react'
 import { Room, RoomEvent, Track, createLocalScreenTracks, type AudioCaptureOptions, type RemoteParticipant, type LocalParticipant, type TrackPublication } from 'livekit-client'
 import { supabase } from '../lib/supabase'
 import { fetchLiveKitToken } from '../lib/livekit'
@@ -24,6 +24,7 @@ import { fetchRandomStation, searchPublicStations, isHlsStream, toPlayableUrl, t
 import { DEFAULT_PLAY_THEME, PLAY_THEMES, normalizePlayTheme, type PlayThemeId } from '../lib/playThemes'
 import { openDirectMessage } from '../lib/directMessage'
 import { ensurePlayBotPanel } from '../lib/playBotPanels'
+import { ThothStore } from './ThothStore'
 import { playInviteUrl } from '../lib/inviteLink'
 import type { Bot, PlaySonorSession, PlayCategory, PlayChannel, PlayGroup, PlayMessage, PlayProfile, PlayRole, Profile } from '../types'
 
@@ -144,10 +145,21 @@ function mergePlayProfile(base: Profile, override: PlayProfile | null | undefine
     name_style_font: override.name_style_font || base.name_style_font,
     name_style_effect: override.name_style_effect || base.name_style_effect,
     name_style_color: override.name_style_effect ? override.name_style_color : base.name_style_color,
+    avatar_frame: override.avatar_frame || base.avatar_frame,
+    nameplate: override.nameplate || base.nameplate,
     banner_color: override.banner_color || base.banner_color,
     banner_image_url: override.banner_image_url || base.banner_image_url,
     play_tags: override.tags || [],
   }
+}
+
+function PlayProfileName({ profile }: { profile: Profile }) {
+  const plate = profile.nameplate
+  const style = plate ? {
+    '--nameplate-image': plate.asset_url ? `url("${plate.asset_url.replace(/["\\]/g, '')}")` : 'none',
+    '--nameplate-accent': plate.accent || '#8aa4c7',
+  } as CSSProperties : undefined
+  return <span className={plate ? 'play-nameplate' : undefined} style={style}><StyledName name={displayName(profile)} font={profile.name_style_font} effect={profile.name_style_effect} color={profile.name_style_color} /></span>
 }
 
 async function fetchPlayProfiles(ids: string[]): Promise<Record<string, PlayProfile>> {
@@ -794,7 +806,7 @@ function PlayIconRail({ myGroups, selectedGroupId, onSelectGroup, onGoHome, onEx
       </div>
       <div className="play-icon-rail-spacer" />
       <button type="button" className="play-icon-rail-group play-icon-rail-profile" title="Perfil" onClick={onOpenProfile}>
-        <AvatarBox src={myPlayProfile.avatar_url} id={me.id} fallbackLetter={displayName(myPlayProfile)[0]?.toUpperCase()} className="play-group-avatar" />
+        <AvatarBox src={myPlayProfile.avatar_url} id={me.id} fallbackLetter={displayName(myPlayProfile)[0]?.toUpperCase()} className="play-group-avatar" frame={myPlayProfile.avatar_frame} />
       </button>
 
       {menu && (
@@ -896,8 +908,8 @@ function PlayProfileCard({ me, profile, roles, userRoleIds, canAssign, onToggleR
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal-card play-profile-card" onClick={(e) => e.stopPropagation()}>
         <div className="play-profile-card-banner" style={profile.banner_image_url ? { backgroundImage: 'url(' + profile.banner_image_url + ')', backgroundSize: 'cover', backgroundPosition: '50% 50%' } : { background: profile.banner_color || 'var(--green)' }} />
-        <AvatarBox src={profile.avatar_url} id={profile.id} fallbackLetter={displayName(profile)[0]?.toUpperCase()} className="play-profile-card-avatar" />
-        <h2><StyledName name={displayName(profile)} font={profile.name_style_font} effect={profile.name_style_effect} color={profile.name_style_color} /></h2>
+        <AvatarBox src={profile.avatar_url} id={profile.id} fallbackLetter={displayName(profile)[0]?.toUpperCase()} className="play-profile-card-avatar" frame={profile.avatar_frame} />
+        <h2><PlayProfileName profile={profile} /></h2>
         {profile.status && <p className="play-profile-card-status">{profile.status}</p>}
         {!!profile.play_tags?.length && (
           <div className="play-group-tags" style={{ justifyContent: 'center', padding: '0 16px 8px' }}>
@@ -1315,6 +1327,7 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
   type ChannelVoiceEntry = {
     id: string; name: string; avatar_url: string | null; videoTrack?: Track; cameraTrack?: Track; isScreen?: boolean; micOn?: boolean
     nameStyleFont: string | null; nameStyleEffect: Profile['name_style_effect']; nameStyleColor: string | null
+    avatarFrame: Profile['avatar_frame']; nameplate: Profile['nameplate']
   }
   function channelVoiceList(channelId: string): ChannelVoiceEntry[] {
     if (joinedVoiceChannel?.id === channelId) {
@@ -1331,6 +1344,8 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
           nameStyleFont: profile?.name_style_font || null,
           nameStyleEffect: profile?.name_style_effect || null,
           nameStyleColor: profile?.name_style_color || null,
+          avatarFrame: profile?.avatar_frame || null,
+          nameplate: profile?.nameplate || null,
         }
       })
     }
@@ -1343,6 +1358,8 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
         nameStyleFont: profile?.name_style_font || null,
         nameStyleEffect: profile?.name_style_effect || null,
         nameStyleColor: profile?.name_style_color || null,
+        avatarFrame: profile?.avatar_frame || null,
+        nameplate: profile?.nameplate || null,
       }
     })
   }
@@ -1351,13 +1368,13 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
   const isOnline = memberOnline
   const renderMemberRow = (m: GroupMember, offline: boolean) => (
     <div key={m.profile.id} className={'play-member-row' + (offline ? ' offline' : '')}>
-      <AvatarBox src={m.profile.avatar_url} id={m.profile.id} fallbackLetter={displayName(m.profile)[0]?.toUpperCase()} className={'avatar-sm presence-' + (m.profile.id === me.id ? 'online' : getPresenceColor(m.profile.last_seen_at, m.profile.is_idle))} />
+      <AvatarBox src={m.profile.avatar_url} id={m.profile.id} fallbackLetter={displayName(m.profile)[0]?.toUpperCase()} className={'avatar-sm presence-' + (m.profile.id === me.id ? 'online' : getPresenceColor(m.profile.last_seen_at, m.profile.is_idle))} frame={m.profile.avatar_frame} />
       <span
         className="play-name-clickable"
         onContextMenu={(e) => { e.preventDefault(); openRoleQuickMenu(m.profile.id, displayName(m.profile), e.clientX, e.clientY) }}
         onClick={() => setProfileCardId(m.profile.id)}
       >
-        {offline ? displayName(m.profile) : <StyledName name={displayName(m.profile)} font={m.profile.name_style_font} effect={m.profile.name_style_effect} color={m.profile.name_style_color} />}
+        {offline ? displayName(m.profile) : <PlayProfileName profile={m.profile} />}
       </span>
       {!offline && inVoiceIds.has(m.profile.id) && <IconHeadphones size={14} />}
     </div>
@@ -2102,8 +2119,9 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
                               id={p.id}
                               fallbackLetter={p.name[0]?.toUpperCase()}
                               className="avatar-sm"
+                              frame={p.avatarFrame}
                             />
-                            <StyledName name={p.name} font={p.nameStyleFont} effect={p.nameStyleEffect} color={p.nameStyleColor} />
+                            <span className={p.nameplate ? 'play-nameplate' : undefined} style={p.nameplate ? { '--nameplate-image': p.nameplate.asset_url ? `url("${p.nameplate.asset_url.replace(/["\\]/g, '')}")` : 'none', '--nameplate-accent': p.nameplate.accent || '#8aa4c7' } as CSSProperties : undefined}><StyledName name={p.name} font={p.nameStyleFont} effect={p.nameStyleEffect} color={p.nameStyleColor} /></span>
                           </div>
                         ))}
                       </div>
@@ -2139,8 +2157,9 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
                               id={p.id}
                               fallbackLetter={p.name[0]?.toUpperCase()}
                               className="avatar-sm"
+                              frame={p.avatarFrame}
                             />
-                            <StyledName name={p.name} font={p.nameStyleFont} effect={p.nameStyleEffect} color={p.nameStyleColor} />
+                            <span className={p.nameplate ? 'play-nameplate' : undefined} style={p.nameplate ? { '--nameplate-image': p.nameplate.asset_url ? `url("${p.nameplate.asset_url.replace(/["\\]/g, '')}")` : 'none', '--nameplate-accent': p.nameplate.accent || '#8aa4c7' } as CSSProperties : undefined}><StyledName name={p.name} font={p.nameStyleFont} effect={p.nameStyleEffect} color={p.nameStyleColor} /></span>
                           </div>
                         ))}
                       </div>
@@ -2258,7 +2277,7 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
                   </div>
                 ) : (
                   <div key={m.id} className="play-message">
-                    <AvatarBox src={m.author?.avatar_url} id={m.author_id} fallbackLetter={(m.author ? displayName(m.author) : '?')[0]?.toUpperCase()} className="avatar-sm" />
+                    <AvatarBox src={m.author?.avatar_url} id={m.author_id} fallbackLetter={(m.author ? displayName(m.author) : '?')[0]?.toUpperCase()} className="avatar-sm" frame={m.author?.avatar_frame} />
                     <div className="play-message-body">
                       <div className="play-message-row">
                         <strong
@@ -2267,7 +2286,7 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
                           onClick={() => { if (m.author) setProfileCardId(m.author_id) }}
                         >
                           {m.author ? (
-                            <StyledName name={displayName(m.author)} font={m.author.name_style_font} effect={m.author.name_style_effect} color={m.author.name_style_color} />
+                            <PlayProfileName profile={m.author} />
                           ) : '...'}
                         </strong>
                         <span className="play-message-time">{new Date(m.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
@@ -2365,13 +2384,13 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
                       const hasPreview = !!(p.videoTrack || p.cameraTrack)
                       return (
                         <div key={key} className="play-member-row">
-                          <AvatarBox src={p.avatar_url} id={p.id} fallbackLetter={p.name[0]?.toUpperCase()} className="avatar-sm" />
+                          <AvatarBox src={p.avatar_url} id={p.id} fallbackLetter={p.name[0]?.toUpperCase()} className="avatar-sm" frame={p.avatarFrame} />
                           <span
                             className="play-name-clickable"
                             onContextMenu={(e) => { e.preventDefault(); openRoleQuickMenu(p.id, p.name, e.clientX, e.clientY) }}
                             onClick={() => setProfileCardId(p.id)}
                           >
-                            <StyledName name={p.name} font={p.nameStyleFont} effect={p.nameStyleEffect} color={p.nameStyleColor} />
+                            <span className={p.nameplate ? 'play-nameplate' : undefined} style={p.nameplate ? { '--nameplate-image': p.nameplate.asset_url ? `url("${p.nameplate.asset_url.replace(/["\\]/g, '')}")` : 'none', '--nameplate-accent': p.nameplate.accent || '#8aa4c7' } as CSSProperties : undefined}><StyledName name={p.name} font={p.nameStyleFont} effect={p.nameStyleEffect} color={p.nameStyleColor} /></span>
                           </span>
                           <IconHeadphones size={14} />
                           {hasPreview && (
@@ -3012,7 +3031,7 @@ function GroupInfoPanel({ group, myRole, members, me, can, open, onClose, onUpda
           </div>
           {filteredMembers.map((m) => (
             <div key={m.profile.id} className="play-manage-member-row">
-              <AvatarBox src={m.profile.avatar_url} id={m.profile.id} fallbackLetter={displayName(m.profile)[0]?.toUpperCase()} className="avatar-sm" />
+              <AvatarBox src={m.profile.avatar_url} id={m.profile.id} fallbackLetter={displayName(m.profile)[0]?.toUpperCase()} className="avatar-sm" frame={m.profile.avatar_frame} />
               <span>{displayName(m.profile)}{m.profile.id === me.id ? ' (você)' : ''}</span>
               <span className="play-manage-member-role">{m.role}</span>
               {m.role === 'member' && m.profile.id !== me.id && (
@@ -3157,7 +3176,7 @@ function GroupInfoPanel({ group, myRole, members, me, can, open, onClose, onUpda
                       {withoutRole.length === 0 && <p className="play-empty">todo mundo já tem esse cargo</p>}
                       {withoutRole.map((m) => (
                         <div key={m.profile.id} className="play-manage-member-row">
-                          <AvatarBox src={m.profile.avatar_url} id={m.profile.id} fallbackLetter={displayName(m.profile)[0]?.toUpperCase()} className="avatar-sm" />
+                          <AvatarBox src={m.profile.avatar_url} id={m.profile.id} fallbackLetter={displayName(m.profile)[0]?.toUpperCase()} className="avatar-sm" frame={m.profile.avatar_frame} />
                           <span>{displayName(m.profile)}</span>
                           <button type="button" className="play-manage-member-unban" onClick={() => toggleRoleMember(role.id, m.profile.id, false)}>Adicionar</button>
                         </div>
@@ -3169,7 +3188,7 @@ function GroupInfoPanel({ group, myRole, members, me, can, open, onClose, onUpda
                       {withRole.length === 0 && <p className="play-empty">ninguém tem esse cargo ainda</p>}
                       {withRole.map((m) => (
                         <div key={m.profile.id} className="play-manage-member-row">
-                          <AvatarBox src={m.profile.avatar_url} id={m.profile.id} fallbackLetter={displayName(m.profile)[0]?.toUpperCase()} className="avatar-sm" />
+                          <AvatarBox src={m.profile.avatar_url} id={m.profile.id} fallbackLetter={displayName(m.profile)[0]?.toUpperCase()} className="avatar-sm" frame={m.profile.avatar_frame} />
                           <span>{displayName(m.profile)}</span>
                           <div className="play-manage-member-actions">
                             <button type="button" onClick={() => toggleRoleMember(role.id, m.profile.id, true)} title="Remover"><IconLogout size={14} /></button>
@@ -3342,7 +3361,8 @@ function VoiceSettingsFields() {
 }
 
 function ProfilePanel({ me, open, onClose, onSaved }: { me: Profile; open: boolean; onClose: () => void; onSaved: () => void }) {
-  const [tab, setTab] = useState<'perfil' | 'config'>('perfil')
+  const [view, setView] = useState<'menu' | 'profile' | 'appearance' | 'store' | 'library' | 'settings'>('menu')
+  const [storeBackSignal, setStoreBackSignal] = useState(0)
   const [loaded, setLoaded] = useState(false)
   const [avatarUrl, setAvatarUrl] = useState<string | null>(me.avatar_url ?? null)
   const [displayNameDraft, setDisplayNameDraft] = useState(me.display_name || me.username)
@@ -3362,6 +3382,7 @@ function ProfilePanel({ me, open, onClose, onSaved }: { me: Profile; open: boole
 
   useEffect(() => {
     if (!open) return
+    setView('menu')
     setLoaded(false)
     supabase.from('play_profiles').select('*').eq('user_id', me.id).maybeSingle().then(({ data }) => {
       const p = data as PlayProfile | null
@@ -3378,6 +3399,12 @@ function ProfilePanel({ me, open, onClose, onSaved }: { me: Profile; open: boole
       setLoaded(true)
     })
   }, [me.id, open])
+
+  function goBack() {
+    if (view === 'menu') { onClose(); return }
+    if (view === 'store' || view === 'library') { setStoreBackSignal((value) => value + 1); return }
+    setView('menu')
+  }
 
   async function upsert(patch: Partial<PlayProfile>) {
     await supabase.from('play_profiles').upsert({ user_id: me.id, ...patch }, { onConflict: 'user_id' })
@@ -3447,18 +3474,27 @@ function ProfilePanel({ me, open, onClose, onSaved }: { me: Profile; open: boole
       {open && <div className="play-profile-panel-backdrop" onClick={onClose} />}
       <div className={`new-conv-panel play-profile-panel${open ? ' open' : ''}`}>
       <div className="new-conv-header">
-        <button type="button" className="icon-btn" onClick={onClose}><IconArrowLeft size={20} /></button>
-        <strong>{tab === 'perfil' ? 'Perfil' : 'Configurações'}</strong>
+        <button type="button" className="icon-btn" onClick={goBack}><IconArrowLeft size={20} /></button>
+        <strong>{view === 'menu' ? 'Perfil' : view === 'profile' ? 'Meu perfil' : view === 'appearance' ? 'Aparência' : view === 'store' ? 'Loja do Play' : view === 'library' ? 'Minha coleção' : 'Configurações'}</strong>
       </div>
-      <div className="play-member-tabs">
-        <button type="button" className={tab === 'perfil' ? 'active' : ''} onClick={() => setTab('perfil')}>Perfil</button>
-        <button type="button" className={tab === 'config' ? 'active' : ''} onClick={() => setTab('config')}>Configurações</button>
-      </div>
-      {tab === 'config' ? (
+      {view === 'menu' ? (
+        <div className="play-group-info-body play-account-menu">
+          <span className="play-account-menu-category">Sua conta no Play</span>
+          <button type="button" onClick={() => setView('profile')}><IconUser size={20} /><span><strong>Perfil</strong><small>Nome, foto, status, banner e características</small></span><IconChevronDown size={16} /></button>
+          <button type="button" onClick={() => setView('appearance')}><IconEdit size={20} /><span><strong>Aparência</strong><small>Fonte, efeitos, cores e tema do Play</small></span><IconChevronDown size={16} /></button>
+          <span className="play-account-menu-category">Personalização</span>
+          <button type="button" onClick={() => setView('store')}><IconGamepad size={20} /><span><strong>Loja do Play</strong><small>Molduras, placas de nome e fundos de perfil</small></span><IconChevronDown size={16} /></button>
+          <button type="button" onClick={() => setView('library')}><IconFolder size={20} /><span><strong>Minha coleção</strong><small>Seus itens baixados e equipados</small></span><IconChevronDown size={16} /></button>
+          <span className="play-account-menu-category">Aplicativo</span>
+          <button type="button" onClick={() => setView('settings')}><IconSettingsGear size={20} /><span><strong>Configurações</strong><small>Voz, microfone e alto-falante</small></span><IconChevronDown size={16} /></button>
+        </div>
+      ) : view === 'store' || view === 'library' ? (
+        <ThothStore me={me} mode={view === 'library' ? 'library' : 'store'} scope="play" onProfileChange={() => {}} backSignal={storeBackSignal} onExit={() => { onSaved(); setView('menu') }} />
+      ) : view === 'settings' ? (
         <div className="play-group-info-body">
           <VoiceSettingsFields />
         </div>
-      ) : (
+      ) : view === 'profile' ? (
       <div className="play-group-info-body">
         <div
           className="profile-banner-preview"
@@ -3516,94 +3552,22 @@ function ProfilePanel({ me, open, onClose, onSaved }: { me: Profile; open: boole
 
         {loaded && (
           <>
-            <div className="name-style-preview">
-              <StyledName name={displayNameDraft || 'Você'} font={font} effect={effect} color={color} />
-            </div>
-            <label style={{ marginTop: 10 }}>Fonte</label>
-            <div className="name-style-picker">
-              {NAME_FONTS.map((f) => (
-                <button
-                  key={f.id}
-                  type="button"
-                  className={`name-font-option${(font || 'default') === f.id ? ' active' : ''}`}
-                  style={f.id !== 'default' ? { fontFamily: f.family } : undefined}
-                  onClick={() => { const v = f.id === 'default' ? null : f.id; setFont(v); autosave({ name_style_font: v }) }}
-                >
-                  {f.label}
-                </button>
-              ))}
-            </div>
-            <label style={{ marginTop: 10 }}>Efeito</label>
-            <div className="name-style-picker">
-              {NAME_EFFECTS.map((e) => (
-                <button
-                  key={e.id}
-                  type="button"
-                  className={`name-effect-option${(effect || 'solid') === e.id ? ' active' : ''}`}
-                  onClick={() => { setEffect(e.id); autosave({ name_style_effect: e.id }) }}
-                >
-                  {e.label}
-                </button>
-              ))}
-            </div>
-            {effect === 'prism' ? (
-              <>
-                <label style={{ marginTop: 10 }}>Cores do prisma</label>
-                <div className="prism-palette-picker">
-                  {PRISM_PALETTES.map((pal) => (
-                    <button
-                      key={pal.id}
-                      type="button"
-                      title={pal.label}
-                      className={'prism-palette' + ((color || 'rainbow') === pal.id ? ' active' : '')}
-                      style={{ backgroundImage: 'linear-gradient(90deg,' + pal.colors.join(',') + ')' }}
-                      onClick={() => { setColor(pal.id); autosave({ name_style_color: pal.id }) }}
-                    />
-                  ))}
-                </div>
-              </>
-            ) : (
-              <>
-                <label style={{ marginTop: 10 }}>Cor</label>
-                <input
-                  type="color"
-                  value={color && color.startsWith('#') ? color : '#3b6ef6'}
-                  onChange={(ev) => setColor(ev.target.value)}
-                  onBlur={(ev) => autosave({ name_style_color: ev.target.value })}
-                  style={{ width: 60, height: 34, padding: 2, marginTop: 2 }}
-                />
-              </>
-            )}
-
             <label style={{ marginTop: 14 }}>Características (até 4)</label>
             <TagEditor tags={profileTags} onChange={(next) => { setProfileTags(next); autosave({ tags: next }) }} />
-
-            <label style={{ marginTop: 14 }}>Tema do Play</label>
-            <div className="play-theme-picker">
-              {PLAY_THEMES.map((theme) => (
-                <button
-                  key={theme.id}
-                  type="button"
-                  className={`play-theme-option${themePref === theme.id ? ' active' : ''}`}
-                  aria-pressed={themePref === theme.id}
-                  onClick={() => applyTheme(theme.id)}
-                >
-                  <span className="play-theme-preview" aria-hidden="true">
-                    {theme.colors.map((color) => <i key={color} style={{ background: color }} />)}
-                  </span>
-                  <span className="play-theme-option-copy">
-                    <strong>{theme.label}</strong>
-                    <small>{theme.description}</small>
-                  </span>
-                  <span className="play-theme-check" aria-hidden="true">✓</span>
-                </button>
-              ))}
-            </div>
-
           </>
         )}
-
       </div>
+      ) : (
+        <div className="play-group-info-body">
+          <div className="name-style-preview"><StyledName name={displayNameDraft || 'Você'} font={font} effect={effect} color={color} /></div>
+          <label style={{ marginTop: 10 }}>Fonte</label>
+          <div className="name-style-picker">{NAME_FONTS.map((f) => <button key={f.id} type="button" className={`name-font-option${(font || 'default') === f.id ? ' active' : ''}`} style={f.id !== 'default' ? { fontFamily: f.family } : undefined} onClick={() => { const value = f.id === 'default' ? null : f.id; setFont(value); autosave({ name_style_font: value }) }}>{f.label}</button>)}</div>
+          <label style={{ marginTop: 10 }}>Efeito</label>
+          <div className="name-style-picker">{NAME_EFFECTS.map((item) => <button key={item.id} type="button" className={`name-effect-option${(effect || 'solid') === item.id ? ' active' : ''}`} onClick={() => { setEffect(item.id); autosave({ name_style_effect: item.id }) }}>{item.label}</button>)}</div>
+          {effect === 'prism' ? <><label style={{ marginTop: 10 }}>Cores do prisma</label><div className="prism-palette-picker">{PRISM_PALETTES.map((palette) => <button key={palette.id} type="button" title={palette.label} className={'prism-palette' + ((color || 'rainbow') === palette.id ? ' active' : '')} style={{ backgroundImage: 'linear-gradient(90deg,' + palette.colors.join(',') + ')' }} onClick={() => { setColor(palette.id); autosave({ name_style_color: palette.id }) }} />)}</div></> : <><label style={{ marginTop: 10 }}>Cor</label><input type="color" value={color && color.startsWith('#') ? color : '#3b6ef6'} onChange={(event) => setColor(event.target.value)} onBlur={(event) => autosave({ name_style_color: event.target.value })} style={{ width: 60, height: 34, padding: 2, marginTop: 2 }} /></>}
+          <label style={{ marginTop: 14 }}>Tema do Play</label>
+          <div className="play-theme-picker">{PLAY_THEMES.map((theme) => <button key={theme.id} type="button" className={`play-theme-option${themePref === theme.id ? ' active' : ''}`} aria-pressed={themePref === theme.id} onClick={() => applyTheme(theme.id)}><span className="play-theme-preview" aria-hidden="true">{theme.colors.map((themeColor) => <i key={themeColor} style={{ background: themeColor }} />)}</span><span className="play-theme-option-copy"><strong>{theme.label}</strong><small>{theme.description}</small></span><span className="play-theme-check" aria-hidden="true">✓</span></button>)}</div>
+        </div>
       )}
       </div>
       {cropFile && <AvatarCropModal file={cropFile} onCancel={() => setCropFile(null)} onConfirm={handleCropConfirm} />}
@@ -3927,7 +3891,13 @@ function VoiceChannel({ allow, me, membersById, channel, onParticipantsChange, o
       let node: AudioNode = gain
       const noiseLevel = voiceSettingsRef.current.noiseReduction
       const chainNodes: AudioNode[] = [source, gain]
-      if (noiseLevel !== 'off') {
+      // O supressor nativo do navegador (ligado via constraint noiseSuppression em
+      // resolvePlayMicOptions) ja processa o audio ANTES dele chegar aqui, se o navegador/SO
+      // confirmou que aceitou a constraint (getSettings().noiseSuppression true). Nesse caso o
+      // gate caseiro abaixo (analyser+RMS) so atrapalharia, rodando em cima de um audio que ja
+      // foi tratado - prefere o supressor nativo (testado, mantido pelo Chromium) e pula o gate.
+      const nativeSuppressionActive = rawTrack.getSettings().noiseSuppression === true
+      if (noiseLevel !== 'off' && !nativeSuppressionActive) {
         const preset = NOISE_REDUCTION_PRESETS[noiseLevel]
         const highpass = ctx.createBiquadFilter()
         highpass.type = 'highpass'
@@ -4058,8 +4028,14 @@ function VoiceChannel({ allow, me, membersById, channel, onParticipantsChange, o
     }
     return {
       ...(deviceId ? { deviceId } : {}),
+      // echoCancellation/autoGainControl ficam desligados no desktop fora do perfil "isolamento"
+      // de proposito (sao os dois que, juntos, disparavam o "modo de comunicacoes" do Windows e
+      // abafavam audio de outros programas - bug historico ja documentado). noiseSuppression
+      // sozinho nao tinha essa causa confirmada - ligar so ele usa o supressor nativo do
+      // Chromium (testado, mantido pelo Google) em vez do gate caseiro, que foi fonte de varios
+      // bugs reais nesta sessao (voz sumindo, 0% ficando alto, etc).
       echoCancellation: !isTauriDesktop && voiceSettings.inputProfile === 'isolation',
-      noiseSuppression: !isTauriDesktop && (voiceSettings.inputProfile === 'isolation' || voiceSettings.noiseReduction !== 'off'),
+      noiseSuppression: voiceSettings.inputProfile === 'isolation' || voiceSettings.noiseReduction !== 'off',
       autoGainControl: !isTauriDesktop && voiceSettings.inputProfile === 'isolation',
     }
   }

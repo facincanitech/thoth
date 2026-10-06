@@ -14,6 +14,7 @@ import { getErrorMessage } from '../lib/errors'
 import { displayName } from '../lib/displayName'
 import { SettingsRow } from './SettingsRow'
 import { colorFromId } from '../lib/avatarColor'
+import { messageAuthorStyle } from '../lib/messageAuthorColor'
 import thothLogo from '../../logo/toth_chat.png'
 import { sanitizeImageUrl } from '../lib/imageUrl'
 import { uploadImage } from '../lib/uploadImage'
@@ -2629,13 +2630,16 @@ export function MainPanel({ me, conversation, onBack, onConversationUpdate, bloc
         {messages.filter((m) => !blockedIds.has(m.author_id)).map((m, idx, arr) => {
           const prev = arr[idx - 1]
           const showDate = !prev || !isSameDay(prev.created_at, m.created_at)
+          const useParticipantColor = conversation.type === 'group' && m.author_id !== me.id && !botsById[m.author_id]
+          const participantClass = `message ${m.author_id === me.id ? 'out' : 'in'}${useParticipantColor ? ' participant-colored' : ''}`
+          const participantStyle = useParticipantColor ? messageAuthorStyle(m.author_id) : undefined
           return (
           <Fragment key={m.id}>
             {showDate && <div className="date">{formatDateLabel(m.created_at)}</div>}
             {m.kind === 'system' ? (
               <div className="system-message">{m.content}</div>
             ) : m.kind === 'contact' ? (
-              <div className={`message ${m.author_id === me.id ? 'out' : 'in'}`}>
+              <div className={participantClass} style={participantStyle}>
                 <div className="bubble">
                   {(() => {
                     let card: { name: string; email: string; avatarUrl: string | null } | null = null
@@ -2663,7 +2667,7 @@ export function MainPanel({ me, conversation, onBack, onConversationUpdate, bloc
                 </div>
               </div>
             ) : m.kind === 'sonor_picker' ? (
-              <div className={`message ${m.author_id === me.id ? 'out' : 'in'}`}>
+              <div className={participantClass} style={participantStyle}>
                 <div className="bubble">
                   {m.author_id !== me.id && (conversation.type === 'group' || botsById[m.author_id]) && (
                     <span className="author-label">{authorLabel(m.author_id) || '...'}</span>
@@ -2693,7 +2697,7 @@ export function MainPanel({ me, conversation, onBack, onConversationUpdate, bloc
                 </div>
               </div>
             ) : m.kind === 'sticker' || m.kind === 'gif' ? (
-              <div className={`message ${m.author_id === me.id ? 'out' : 'in'}`}>
+              <div className={participantClass} style={participantStyle}>
                 <div className="sticker-message">
                   {m.author_id !== me.id && (conversation.type === 'group' || botsById[m.author_id]) && (
                     <span
@@ -2733,7 +2737,7 @@ export function MainPanel({ me, conversation, onBack, onConversationUpdate, bloc
                 </div>
               </div>
             ) : m.kind === 'ephemeral' ? (
-              <div className={`message ${m.author_id === me.id ? 'out' : 'in'}`}>
+              <div className={participantClass} style={participantStyle}>
                 <div className="bubble">
                   {m.author_id !== me.id && (conversation.type === 'group' || botsById[m.author_id]) && (
                     <span
@@ -2839,12 +2843,12 @@ export function MainPanel({ me, conversation, onBack, onConversationUpdate, bloc
               </div>
             ) : (
               <div
-                className={`message ${m.author_id === me.id ? 'out' : 'in'}`}
+                className={participantClass}
                 onPointerDown={(e) => handleMessagePointerDown(e, m)}
                 onPointerMove={(e) => handleMessagePointerMove(e, m)}
                 onPointerUp={() => handleMessagePointerUp(m)}
                 onPointerCancel={() => handleMessagePointerUp(m)}
-                style={dragMsgId === m.id ? { transform: `translateX(${dragX}px)` } : undefined}
+                style={{ ...participantStyle, ...(dragMsgId === m.id ? { transform: `translateX(${dragX}px)` } : {}) }}
               >
                 <div className="bubble message-text-bubble">
                   {m.author_id !== me.id && (conversation.type === 'group' || botsById[m.author_id]) && (
@@ -2892,7 +2896,7 @@ export function MainPanel({ me, conversation, onBack, onConversationUpdate, bloc
         })}
 
         {Object.entries(liveTyping).filter(([userId]) => !blockedIds.has(userId)).map(([userId, text]) => (
-          <div key={userId} className="message in live">
+          <div key={userId} className={`message in live${conversation.type === 'group' ? ' participant-colored' : ''}`} style={conversation.type === 'group' ? messageAuthorStyle(userId) : undefined}>
             <div className="bubble message-text-bubble">
               <span className="author-label">{members[userId] ? displayName(members[userId]) : '...'}</span>
               <span className="live-typing-label">digitando...</span>

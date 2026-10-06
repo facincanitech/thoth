@@ -148,6 +148,7 @@ body{background:#050710 url('../src/assets/themes/cyberpunk-city.png') center bo
 .desktop-chat-shell .header-actions .icon-btn:hover{color:#fff!important;background:#251333!important;border-color:#ff3cac!important;box-shadow:0 0 12px #ff3cac44!important}
 .desktop-chat-shell .bubble .author-label{color:#ff65b7!important;opacity:1!important}
 .msn-avatar-me,.msn-contact-avatar,.header-photo{border-color:#414b78!important;box-shadow:0 0 0 1px #10182d,0 2px 8px #0008!important}
+.desktop-chat-shell .main{background:#050710!important;border-top:1px solid #171d38!important}
 .desktop-chat-shell .messages,.desktop-chat-shell .composer,.desktop-chat-shell .composer-icons{border-color:#2a3865!important}
 `,
   matrix: `
@@ -238,6 +239,10 @@ const presenceFoundation = `
 .presence-online,.presence-afk{opacity:1!important}.presence-offline{opacity:.5!important}
 .play-member-row .presence-offline{opacity:1!important}
 .play-app-shell .avatar-sm,.play-window-shell .avatar-sm{padding:0!important;border:0!important;background:transparent!important;box-shadow:none!important}
+.desktop-chat-shell .message.participant-colored.in .bubble{background:var(--participant-bubble)!important;color:#17212b!important;border:1px solid var(--participant-border)!important;box-shadow:0 1px 2px #0000001f!important}
+.desktop-chat-shell .message.participant-colored.in .bubble .author-label{color:#17212b!important;opacity:.78!important;text-shadow:none!important;-webkit-text-fill-color:#17212b!important}
+.desktop-chat-shell .message.participant-colored.in .bubble .reply-quote{background:#ffffff61!important;border-left-color:var(--participant-border)!important}
+.desktop-chat-shell .message.participant-colored.in .bubble .reply-quote strong,.desktop-chat-shell .message.participant-colored.in .bubble .replay-btn{color:#17212b!important;-webkit-text-fill-color:#17212b!important}
 .window-controls button{color:#fff!important;opacity:1!important}
 .window-minimize span:before,.window-close span:before,.window-close span:after{background:currentColor!important}
 .window-maximize span:before{border-color:currentColor!important}

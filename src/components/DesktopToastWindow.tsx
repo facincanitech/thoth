@@ -4,7 +4,7 @@ import { getCurrentWindow } from '@tauri-apps/api/window'
 import thothLogo from '../../logo/toth_chat.png'
 import { openChatWindow, openMainWindow } from '../lib/desktopWindows'
 import { applyDesktopTheme, followDesktopTheme, readStoredDesktopTheme } from '../lib/desktopTheme'
-import type { DesktopToastPayload } from '../lib/desktopToast'
+import { saveDesktopToastPlacement, type DesktopToastPayload } from '../lib/desktopToast'
 import './DesktopToastWindow.css'
 
 const DISPLAY_MS = 6200
@@ -42,6 +42,7 @@ export function DesktopToastWindow() {
 
   useEffect(() => {
     if (!toast) return
+    void applyDesktopTheme(toast.theme || readStoredDesktopTheme())
     if (timer.current) window.clearTimeout(timer.current)
     timer.current = window.setTimeout(() => {
       setLeaving(true)
@@ -56,12 +57,24 @@ export function DesktopToastWindow() {
     await getCurrentWindow().hide().catch(() => {})
   }
 
+  async function dragToast(event: React.PointerEvent) {
+    event.stopPropagation()
+    const win = getCurrentWindow()
+    await win.startDragging().catch(() => {})
+    const position = await win.outerPosition().catch(() => null)
+    const scaleFactor = await win.scaleFactor().catch(() => 1)
+    if (position) {
+      const logical = position.toLogical(scaleFactor)
+      saveDesktopToastPlacement({ mode: 'custom', x: logical.x, y: logical.y })
+    }
+  }
+
   if (!toast) return null
   return (
     <button className={`desktop-toast${leaving ? ' leaving' : ''}`} onClick={openConversation} type="button">
       <span className={`desktop-toast-icon ${toast.kind}`}><img src={thothLogo} alt="" /></span>
       <span className="desktop-toast-copy">
-        <span className="desktop-toast-brand">THOTH MESSENGER</span>
+        <span className="desktop-toast-brand" onPointerDown={dragToast} title="Arraste para mudar a posição">THOTH MESSENGER</span>
         <strong>{toast.sender}</strong>
         <span className="desktop-toast-message">{toast.message}</span>
       </span>

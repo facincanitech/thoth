@@ -420,6 +420,14 @@
 .presence-online,.presence-afk{opacity:1!important}.presence-offline{opacity:.5!important}
 .play-member-row .presence-offline{opacity:1!important}
 
+/* Em grupos do Messenger, cada participante conserva uma cor clara propria.
+   Esta regra fica no skin desktop para nenhum tema do EXE substituir a regra
+   compartilhada de App.css. Mensagens do proprio usuario continuam no tema. */
+.desktop-chat-shell .message.participant-colored.in .bubble{background:var(--participant-bubble)!important;color:#0c0f23!important;border:1px solid var(--participant-border)!important;box-shadow:0 1px 2px #0c0c111f!important}
+.desktop-chat-shell .message.participant-colored.in .bubble .author-label{color:#0c0f23!important;opacity:.78!important;text-shadow:none!important;-webkit-text-fill-color:#0c0f23!important}
+.desktop-chat-shell .message.participant-colored.in .bubble .reply-quote{background:#464a6561!important;border-left-color:var(--participant-border)!important}
+.desktop-chat-shell .message.participant-colored.in .bubble .reply-quote strong,.desktop-chat-shell .message.participant-colored.in .bubble .replay-btn{color:#0c0f23!important;-webkit-text-fill-color:#0c0f23!important}
+
 /* Chat Frutiger Aero desktop: mensagens precisam manter bolhas visiveis como os demais temas. */
 .desktop-chat-shell .bubble{max-width:min(620px,82%)!important;padding:10px 13px 8px!important;border:1px solid #6cbfcc!important;border-radius:10px!important;box-shadow:0 2px 8px #103d4416!important}
 .desktop-chat-shell .message-text-bubble{max-width:min(40ch,calc(100% - 48px))!important}
@@ -513,12 +521,17 @@ body{background:#050710 url('../src/assets/themes/cyberpunk-city.png') center bo
 .desktop-chat-shell .header-actions .icon-btn:hover{color:#fff!important;background:#251333!important;border-color:#ff3cac!important;box-shadow:0 0 12px #ff3cac44!important}
 .desktop-chat-shell .bubble .author-label{color:#ff65b7!important;opacity:1!important}
 .msn-avatar-me,.msn-contact-avatar,.header-photo{border-color:#414b78!important;box-shadow:0 0 0 1px #10182d,0 2px 8px #0008!important}
+.desktop-chat-shell .main{background:#050710!important;border-top:1px solid #171d38!important}
 .desktop-chat-shell .messages,.desktop-chat-shell .composer,.desktop-chat-shell .composer-icons{border-color:#2a3865!important}
 
 .photo,.header-photo,.avatar-sm,.msn-avatar-frame,.msn-contact-avatar,.msn-avatar-me,.account-avatar,.profile-banner-preview-avatar,.play-group-avatar,.play-profile-card-avatar,.play-server-info-avatar,.play-voice-avatar,.contact-card-avatar,.call-peer-avatar{padding:0!important;border:0!important;box-shadow:none!important;box-sizing:border-box!important}
 .presence-online,.presence-afk{opacity:1!important}.presence-offline{opacity:.5!important}
 .play-member-row .presence-offline{opacity:1!important}
 .play-app-shell .avatar-sm,.play-window-shell .avatar-sm{padding:0!important;border:0!important;background:transparent!important;box-shadow:none!important}
+.desktop-chat-shell .message.participant-colored.in .bubble{background:var(--participant-bubble)!important;color:#17212b!important;border:1px solid var(--participant-border)!important;box-shadow:0 1px 2px #0000001f!important}
+.desktop-chat-shell .message.participant-colored.in .bubble .author-label{color:#17212b!important;opacity:.78!important;text-shadow:none!important;-webkit-text-fill-color:#17212b!important}
+.desktop-chat-shell .message.participant-colored.in .bubble .reply-quote{background:#ffffff61!important;border-left-color:var(--participant-border)!important}
+.desktop-chat-shell .message.participant-colored.in .bubble .reply-quote strong,.desktop-chat-shell .message.participant-colored.in .bubble .replay-btn{color:#17212b!important;-webkit-text-fill-color:#17212b!important}
 .window-controls button{color:#fff!important;opacity:1!important}
 .window-minimize span:before,.window-close span:before,.window-close span:after{background:currentColor!important}
 .window-maximize span:before{border-color:currentColor!important}
