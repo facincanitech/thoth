@@ -165,15 +165,40 @@ function App() {
   }, [])
 
   useEffect(() => {
+    // window.location.reload() normal ainda respeita o cache HTTP (max-age:600 do GitHub Pages)
+    // - no APK isso fazia o WebView as vezes continuar servindo o index.html antigo do cache de
+    // disco em vez de buscar o novo, mesmo apos "recarregar". Navegar pra uma URL com query de
+    // cache-busting forca uma requisicao de rede nova de verdade, sem depender do cache revalidar
+    // sozinho (era a causa real de mudanca de JS/CSS nao aparecer no APK mesmo tendo "atualizado").
+    function hardReload() {
+      const url = new URL(window.location.href)
+      url.searchParams.set('r', Date.now().toString())
+      window.location.href = url.toString()
+    }
+    // No APK, alem do reload por tempo escondido abaixo, confere se o bundle JS rodando ainda e'
+    // o mais novo toda vez que volta pro primeiro plano - compara direto com version.json (sem
+    // cache, ?t= na URL) em vez de confiar cegamente que o reload por tempo vai pegar tudo. Isso
+    // cobre o caso de o WebView ainda servir o index.html antigo do cache mesmo apos o reload, ou
+    // de a pessoa voltar pro app antes dos 60s mas ja ter passado horas desde a ultima vez que o
+    // JS rodando foi buscado de verdade.
+    async function checkVersionAndMaybeReload() {
+      try {
+        const res = await fetch(`https://facincanitech.github.io/thoth/version.json?t=${Date.now()}`, { cache: 'no-store' })
+        if (!res.ok) return
+        const data = await res.json()
+        if (data.version && data.version !== APP_VERSION) hardReload()
+      } catch { /* sem rede ou offline.html, ignora - o reload por tempo ainda cobre o resto */ }
+    }
     let hiddenAt: number | null = null
     function onHidden() { hiddenAt = Date.now() }
     function onResume() {
+      if (Capacitor.isNativePlatform()) void checkVersionAndMaybeReload()
       if (hiddenAt && Date.now() - hiddenAt > 60000) {
         // So recarrega com rede de volta - recarregar logo ao acordar o celular (antes do
         // wifi/dados reconectarem) buscava o bundle e falhava a meio caminho, deixando a tela
         // pela metade (barra no topo, resto sumido) em vez de so terminar de carregar normal.
-        if (navigator.onLine) window.location.reload()
-        else window.addEventListener('online', () => window.location.reload(), { once: true })
+        if (navigator.onLine) hardReload()
+        else window.addEventListener('online', hardReload, { once: true })
       }
       hiddenAt = null
     }
@@ -182,6 +207,9 @@ function App() {
     // a tela apagada, ou vice-versa) - appStateChange e o evento de ciclo de vida nativo de
     // verdade, mais confiavel pra saber quando o app realmente foi pra 2o plano/voltou.
     if (Capacitor.isNativePlatform()) {
+      // Confere tambem na abertura do app (nao so ao voltar do 2o plano) - cobre o caso do
+      // cache de disco do WebView servir o index.html antigo logo de cara, num cold start.
+      void checkVersionAndMaybeReload()
       const listenerPromise = CapacitorApp.addListener('appStateChange', ({ isActive }) => {
         if (isActive) onResume()
         else onHidden()
