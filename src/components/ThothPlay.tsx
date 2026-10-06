@@ -4063,7 +4063,6 @@ function VoiceChannel({ allow, me, membersById, channel, onParticipantsChange, o
     try {
       let ctx = outputAudioCtxRef.current
       if (!ctx) { ctx = new AudioContext(); outputAudioCtxRef.current = ctx }
-      if (ctx.state === 'suspended') void ctx.resume()
       let gain = participantGainRef.current.get(el)
       if (!gain) {
         const source = ctx.createMediaElementSource(el)
@@ -4071,14 +4070,26 @@ function VoiceChannel({ allow, me, membersById, channel, onParticipantsChange, o
         source.connect(gain)
         gain.connect(ctx.destination)
         participantGainRef.current.set(el, gain)
-        // O elemento continua tocando pelo caminho nativo dele em paralelo ao GainNode em alguns
-        // navegadores/WebView (apesar da spec dizer que createMediaElementSource "rouba" a saida) -
-        // sem isso, o audio real ficava preso no volume nativo (sempre o mesmo, 100%) e o slider
-        // so mexia num canal que ninguem ouvia: 0% continuava alto, 200% nao turbinava de verdade.
-        // Zera o nativo pra sempre e deixa o GainNode ser o UNICO caminho audivel.
-        el.volume = 0
       }
       gain.gain.value = Math.max(0, volume)
+      // O elemento continua tocando pelo caminho nativo dele em paralelo ao GainNode em alguns
+      // navegadores/WebView (apesar da spec dizer que createMediaElementSource "rouba" a saida) -
+      // sem isso, o audio real ficava preso no volume nativo (sempre o mesmo, 100%) e o slider
+      // so mexia num canal que ninguem ouvia: 0% continuava alto, 200% nao turbinava de verdade.
+      // So zera o nativo depois de confirmar que o contexto esta de verdade rodando - um
+      // AudioContext novo pode nascer "suspended" (politica de autoplay do navegador, so libera
+      // depois de alguma interacao de verdade) e, se o nativo for zerado antes disso, ninguem
+      // ouve nada ate o contexto resumir (foi o que deixou a voz de alguem sumida de vez - o
+      // boost rodava num contexto que nunca chegou a tocar). Enquanto suspenso, o caminho nativo
+      // continua audivel (sem boost acima de 100%, mas nunca mudo) e tenta resumir sozinho.
+      if (ctx.state === 'running') {
+        el.volume = 0
+      } else {
+        el.volume = Math.min(1, Math.max(0, volume))
+        void ctx.resume().then(() => {
+          if (outputAudioCtxRef.current === ctx && ctx.state === 'running') applyParticipantVolume(el, volume)
+        })
+      }
     } catch {
       // Fallback se o navegador recusar (raro) - sem boost acima de 100%, mas nao quebra o audio.
       try { el.volume = Math.min(1, Math.max(0, volume)) } catch { /* ignora */ }
