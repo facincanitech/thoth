@@ -3949,6 +3949,13 @@ function VoiceChannel({ allow, me, membersById, channel, onParticipantsChange, o
         const closeThreshold = openThreshold * 0.5
         let gateOpen = true
         let lastVoiceAt = performance.now()
+        // Clique de mouse/teclado e um estalo rapidissimo (poucos ms) mas costuma ser BEM mais
+        // alto em RMS do que fala normal por uma fracao de segundo - abrindo o gate na hora,
+        // deixando passar o clique inteiro. Fala de verdade sustenta acima do limiar por mais
+        // tempo. Exige o nivel se manter acima do limiar por alguns frames seguidos antes de
+        // abrir de vez - filtra o clique isolado sem atrasar a fala de um jeito perceptivel.
+        const MIN_SUSTAIN_MS = 45
+        let aboveSince: number | null = null
         const updateGate = () => {
           analyser.getFloatTimeDomainData(samples)
           let sumSquares = 0
@@ -3958,16 +3965,23 @@ function VoiceChannel({ allow, me, membersById, channel, onParticipantsChange, o
           if (rms >= openThreshold) {
             lastVoiceAt = now
             if (!gateOpen) {
-              gateOpen = true
-              gate.gain.cancelScheduledValues(ctx.currentTime)
-              // Abertura mais suave (20ms) - um salto rapido do floor pra 1 produzia um
-              // estalo/pop audivel no inicio de cada fala, pior em "alto" (floor mais baixo).
-              gate.gain.setTargetAtTime(1, ctx.currentTime, 0.02)
+              if (aboveSince == null) aboveSince = now
+              if (now - aboveSince >= MIN_SUSTAIN_MS) {
+                gateOpen = true
+                aboveSince = null
+                gate.gain.cancelScheduledValues(ctx.currentTime)
+                // Abertura mais suave (20ms) - um salto rapido do floor pra 1 produzia um
+                // estalo/pop audivel no inicio de cada fala, pior em "alto" (floor mais baixo).
+                gate.gain.setTargetAtTime(1, ctx.currentTime, 0.02)
+              }
             }
-          } else if (gateOpen && rms < closeThreshold && now - lastVoiceAt >= preset.releaseMs) {
-            gateOpen = false
-            gate.gain.cancelScheduledValues(ctx.currentTime)
-            gate.gain.setTargetAtTime(preset.floor, ctx.currentTime, 0.045)
+          } else {
+            aboveSince = null
+            if (gateOpen && rms < closeThreshold && now - lastVoiceAt >= preset.releaseMs) {
+              gateOpen = false
+              gate.gain.cancelScheduledValues(ctx.currentTime)
+              gate.gain.setTargetAtTime(preset.floor, ctx.currentTime, 0.045)
+            }
           }
           noiseGateLoopRef.current = requestAnimationFrame(updateGate)
         }
