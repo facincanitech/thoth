@@ -3836,19 +3836,15 @@ function VoiceChannel({ allow, me, membersById, channel, onParticipantsChange, o
       // ANTES do loop de volume dos remotos abaixo, de proposito: um valor de volume remoto
       // invalido ali nao pode mais impedir a propria voz de ser reprocessada.
       if (noiseLevelChanged && roomRef.current) void applyMicGainProcessing()
-      // HTMLMediaElement.volume so aceita 0..1 - o slider de volume por participante vai ate 2
-      // (200%, efeito "turbo"), e setar >1 direto lanca DOMException e trava o resto da funcao
-      // (foi o que desconectava a propria voz: a troca de nivel de ruido roda depois no codigo
-      // original). Satura em 1 aqui; sem isso o slider "nao fazia nada" entre 100% e 200% porque
-      // a atribuicao sempre falhava silenciosamente antes.
+      // Boost real acima de 100% via GainNode (applyParticipantVolume) - HTMLMediaElement.volume
+      // sozinho so aceita 0..1 e travava a propria voz aqui (a troca de nivel de ruido rodava
+      // depois no codigo original e nunca era alcancada se isso lancasse excessao).
       for (const [identity, els] of Object.entries(participantAudioEls.current)) {
         const pv = participantVolumesRef.current[identity] ?? 1
-        const safeVolume = Math.min(1, Math.max(0, next.outputVolume * pv))
+        const vol = Math.max(0, next.outputVolume * pv)
         els.forEach((el) => {
-          try { el.volume = safeVolume } catch { /* ignora, elemento pode ja ter saido do DOM */ }
-          if (next.outputDeviceId && 'setSinkId' in el) {
-            void (el as HTMLAudioElement & { setSinkId: (id: string) => Promise<void> }).setSinkId(next.outputDeviceId).catch(() => {})
-          }
+          applyParticipantVolume(el, vol)
+          if (next.outputDeviceId) applyParticipantSink(el, next.outputDeviceId)
         })
       }
     }
@@ -4037,6 +4033,43 @@ function VoiceChannel({ allow, me, membersById, channel, onParticipantsChange, o
   const [shareNotice, setShareNotice] = useState<string | null>(null)
   const attachedAudio = useRef<HTMLMediaElement[]>([])
   const participantAudioEls = useRef<Record<string, HTMLMediaElement[]>>({})
+  // HTMLMediaElement.volume so aceita 0..1 - pra "turbinar" acima de 100% de verdade (o slider vai
+  // ate 200%) precisa de um GainNode de verdade (Web Audio aceita qualquer valor). Uma vez que um
+  // elemento vira fonte de um AudioContext, ele para de tocar sozinho - o audio passa a sair pelo
+  // destino do contexto, entao isso fica ligado o tempo todo (nao so quando passa de 100%).
+  const outputAudioCtxRef = useRef<AudioContext | null>(null)
+  const participantGainRef = useRef<Map<HTMLMediaElement, GainNode>>(new Map())
+  function applyParticipantVolume(el: HTMLMediaElement, volume: number) {
+    try {
+      let ctx = outputAudioCtxRef.current
+      if (!ctx) { ctx = new AudioContext(); outputAudioCtxRef.current = ctx }
+      if (ctx.state === 'suspended') void ctx.resume()
+      let gain = participantGainRef.current.get(el)
+      if (!gain) {
+        const source = ctx.createMediaElementSource(el)
+        gain = ctx.createGain()
+        source.connect(gain)
+        gain.connect(ctx.destination)
+        participantGainRef.current.set(el, gain)
+        el.volume = 1
+      }
+      gain.gain.value = Math.max(0, volume)
+    } catch {
+      // Fallback se o navegador recusar (raro) - sem boost acima de 100%, mas nao quebra o audio.
+      try { el.volume = Math.min(1, Math.max(0, volume)) } catch { /* ignora */ }
+    }
+  }
+  function applyParticipantSink(el: HTMLMediaElement, deviceId: string) {
+    const ctx = outputAudioCtxRef.current
+    // Depois que o elemento vira fonte do AudioContext, o audio sai pelo destino DO CONTEXTO, nao
+    // mais pelo proprio <audio> - setSinkId no elemento nao tem mais efeito nenhum. setSinkId do
+    // AudioContext e recente (Chromium 110+); sem suporte so continua no dispositivo padrao.
+    if (ctx && 'setSinkId' in ctx) {
+      void (ctx as AudioContext & { setSinkId: (id: string) => Promise<void> }).setSinkId(deviceId).catch(() => {})
+    } else if ('setSinkId' in el) {
+      void (el as HTMLAudioElement & { setSinkId: (id: string) => Promise<void> }).setSinkId(deviceId).catch(() => {})
+    }
+  }
   const [participantVolumes, setParticipantVolumes] = useState<Record<string, number>>(() => {
     try { return JSON.parse(localStorage.getItem('thoth-play-participant-volumes') || '{}') } catch { return {} }
   })
@@ -4054,8 +4087,8 @@ function VoiceChannel({ allow, me, membersById, channel, onParticipantsChange, o
       return next
     })
     const els = participantAudioEls.current[id] || []
-    const safeVolume = Math.min(1, Math.max(0, voiceSettingsRef.current.outputVolume * v))
-    els.forEach((el) => { try { el.volume = safeVolume } catch { /* ignora */ } })
+    const vol = Math.max(0, voiceSettingsRef.current.outputVolume * v)
+    els.forEach((el) => applyParticipantVolume(el, vol))
   }
 
   function syncParticipants(room: Room) {
@@ -4100,12 +4133,10 @@ function VoiceChannel({ allow, me, membersById, channel, onParticipantsChange, o
           const el = track.attach()
           el.style.display = 'none'
           el.muted = deafenedRef.current
-          const pv = participantVolumesRef.current[participant.identity] ?? 1
-          el.volume = Math.min(1, Math.max(0, voiceSettings.outputVolume * pv))
-          if (voiceSettings.outputDeviceId && 'setSinkId' in el) {
-            void (el as HTMLAudioElement & { setSinkId: (id: string) => Promise<void> }).setSinkId(voiceSettings.outputDeviceId).catch(() => {})
-          }
           document.body.appendChild(el)
+          const pv = participantVolumesRef.current[participant.identity] ?? 1
+          applyParticipantVolume(el, Math.max(0, voiceSettings.outputVolume * pv))
+          if (voiceSettings.outputDeviceId) applyParticipantSink(el, voiceSettings.outputDeviceId)
           attachedAudio.current.push(el)
           const list = participantAudioEls.current[participant.identity] || []
           list.push(el)
@@ -4116,7 +4147,12 @@ function VoiceChannel({ allow, me, membersById, channel, onParticipantsChange, o
       })
       .on(RoomEvent.TrackUnsubscribed, (track, pub, participant) => {
         if (track.kind === Track.Kind.Audio) {
-          track.detach().forEach((el) => { el.remove(); attachedAudio.current = attachedAudio.current.filter((x) => x !== el) })
+          track.detach().forEach((el) => {
+            el.remove()
+            attachedAudio.current = attachedAudio.current.filter((x) => x !== el)
+            participantGainRef.current.get(el)?.disconnect()
+            participantGainRef.current.delete(el)
+          })
           const list = participantAudioEls.current[participant.identity]
           if (list) participantAudioEls.current[participant.identity] = list.filter((el) => el.isConnected)
           if (pub.source === Track.Source.ScreenShareAudio) {
@@ -4176,6 +4212,9 @@ function VoiceChannel({ allow, me, membersById, channel, onParticipantsChange, o
       rawMicTrackRef.current = null
       micAudioCtxRef.current?.close().catch(() => {})
       micAudioCtxRef.current = null
+      participantGainRef.current.clear()
+      outputAudioCtxRef.current?.close().catch(() => {})
+      outputAudioCtxRef.current = null
       void setMediaAudioMode()
     }
   }, [channel.id])
