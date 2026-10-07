@@ -13,7 +13,13 @@ async function getAccessToken(forceRefresh = false) {
   // Uma unica renovacao compartilhada evita invalidar a sessao por corrida entre requests.
   refreshPromise ||= supabase.auth.refreshSession().finally(() => { refreshPromise = null })
   const refreshed = await refreshPromise
-  return refreshed.data.session?.access_token || session?.access_token
+  // Nunca reutiliza o access token que o servidor acabou de rejeitar. Antes, quando o refresh
+  // token estava expirado/revogado, refreshSession devolvia erro e este fallback mandava o MESMO
+  // JWT invalido outras duas vezes, terminando sempre em "invalid token".
+  if (refreshed.error || !refreshed.data.session?.access_token) {
+    throw new Error('Sua sessao expirou. Entre novamente para conectar na chamada.')
+  }
+  return refreshed.data.session.access_token
 }
 
 // Token do canal de voz. Tenta ate 3 vezes: erro de rede ("Failed to fetch"), 5xx e 401 (sessao velha - renova e tenta de novo)
