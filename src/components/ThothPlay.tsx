@@ -4,9 +4,9 @@ import { openPip, closePip, updatePipTrack } from '../lib/pipBridge'
 import { openMainWindow } from '../lib/desktopWindows'
 import { isTauriDesktop } from '../lib/platform'
 import { useEffect, useMemo, useRef, useState, type ChangeEvent, type CSSProperties, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent } from 'react'
-import { Room, RoomEvent, Track, createLocalScreenTracks, type AudioCaptureOptions, type RemoteParticipant, type LocalParticipant, type TrackPublication } from 'livekit-client'
+import { LocalAudioTrack, Room, RoomEvent, Track, createLocalScreenTracks, type AudioCaptureOptions, type RemoteParticipant, type LocalParticipant, type TrackPublication } from 'livekit-client'
 import { supabase } from '../lib/supabase'
-import { fetchLiveKitToken } from '../lib/livekit'
+import { fetchLiveKitToken, invalidateLiveKitToken } from '../lib/livekit'
 import { setMediaAudioMode, setSpeakerphoneOn } from '../lib/audioRoute'
 import { displayName } from '../lib/displayName'
 import { AvatarBox } from './AvatarBox'
@@ -26,6 +26,7 @@ import { openDirectMessage } from '../lib/directMessage'
 import { ensurePlayBotPanel } from '../lib/playBotPanels'
 import { ThothStore } from './ThothStore'
 import { playInviteUrl } from '../lib/inviteLink'
+import { ThothRnnoiseProcessor } from '../lib/rnnoiseAudioProcessor'
 import type { Bot, PlaySonorSession, PlayCategory, PlayChannel, PlayGroup, PlayMessage, PlayProfile, PlayRole, Profile } from '../types'
 
 function useIsMobile() {
@@ -186,11 +187,18 @@ type PlayVoiceSettings = {
   inputProfile: 'isolation' | 'studio'
   voiceActivation: boolean
   pushToTalkKey: string
-  noiseReduction: 'off' | 'low' | 'medium' | 'high'
+  noiseReduction: 'off' | 'standard' | 'rnnoise'
 }
 
 const PLAY_VOICE_SETTINGS_KEY = 'thoth-play-voice-settings-v1'
 const DEFAULT_VOICE_SETTINGS: PlayVoiceSettings = { inputDeviceId: '', outputDeviceId: '', inputVolume: 1, outputVolume: 1, inputProfile: 'studio', voiceActivation: true, pushToTalkKey: 'Space', noiseReduction: 'off' }
+// Mantido apenas para o caminho legado abaixo, que fica inacessivel enquanto a integracao por
+// TrackProcessor estiver ativa. Evita quebrar builds antigos durante a migracao de configuracao.
+const NOISE_REDUCTION_PRESETS = {
+  off: { thresholdDb: -56, floor: 0.13, releaseMs: 260, highpassHz: 75 },
+  standard: { thresholdDb: -49, floor: 0.045, releaseMs: 210, highpassHz: 95 },
+  rnnoise: { thresholdDb: -43, floor: 0.01, releaseMs: 160, highpassHz: 125 },
+}
 // Um compressor atua justamente nos sons ACIMA do limiar, portanto nao funciona como redutor
 // de ruido de fundo. Estes presets alimentam um noise gate de verdade: abaixo do limiar o ganho
 // cai ate `floor`, com histerese e tempos suaves para nao recortar o inicio/fim das palavras.
@@ -202,11 +210,6 @@ const DEFAULT_VOICE_SETTINGS: PlayVoiceSettings = { inputDeviceId: '', outputDev
 // anterior - ainda mais exigente que o original, mas sem arriscar silenciar voz de verdade. O
 // filtro de sustentação (MIN_SUSTAIN_MS, mais abaixo) continua cuidando dos cliques, que era o
 // motivo de ter subido o limiar numa tentativa anterior.
-const NOISE_REDUCTION_PRESETS: Record<'low' | 'medium' | 'high', { thresholdDb: number; floor: number; releaseMs: number; highpassHz: number }> = {
-  low: { thresholdDb: -56, floor: 0.13, releaseMs: 260, highpassHz: 75 },
-  medium: { thresholdDb: -49, floor: 0.045, releaseMs: 210, highpassHz: 95 },
-  high: { thresholdDb: -43, floor: 0.01, releaseMs: 160, highpassHz: 125 },
-}
 // Dispara sempre que alguem muda as configuracoes de voz (volume, ruido etc.) - a tela de
 // configuracoes e a chamada em si sao componentes separados sem estado compartilhado, o
 // localStorage sozinho nao avisa ninguem na mesma aba (o evento "storage" so dispara em OUTRAS
@@ -218,9 +221,9 @@ function readPlayVoiceSettings(): PlayVoiceSettings {
   try {
     const settings = { ...DEFAULT_VOICE_SETTINGS, ...JSON.parse(localStorage.getItem(PLAY_VOICE_SETTINGS_KEY) || '{}') }
     // Config antiga guardava true/false (so liga/desliga); normaliza pro novo formato com nivel.
-    if (typeof (settings.noiseReduction as unknown) === 'boolean') {
-      settings.noiseReduction = settings.noiseReduction ? 'medium' : 'off'
-    }
+    const oldNoiseReduction = settings.noiseReduction as unknown
+    if (typeof oldNoiseReduction === 'boolean') settings.noiseReduction = oldNoiseReduction ? 'standard' : 'off'
+    if (oldNoiseReduction === 'low' || oldNoiseReduction === 'medium' || oldNoiseReduction === 'high') settings.noiseReduction = 'standard'
     // No WebView2, qualquer processamento de captura pode recolocar toda a sessao na
     // categoria de comunicacao. Desktop fica sempre cru; isolamento continua no APK/web.
     return isTauriDesktop ? { ...settings, inputProfile: 'studio' } : settings
@@ -1199,26 +1202,6 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
   const [expandedVoiceIds, setExpandedVoiceIds] = useState<Set<string>>(new Set())
   const voiceChannelIds = useMemo(() => channels.filter((c) => c.kind === 'voice').map((c) => c.id), [channels])
   const voiceChannelIdsKey = voiceChannelIds.join(',')
-
-  useEffect(() => {
-    // Aquece em segundo plano o caminho mais lento da chamada: sessao/token,
-    // descoberta da melhor regiao LiveKit e conexoes DNS/TLS. Ao clicar no
-    // canal, o VoiceChannel reutiliza o token em cache e conecta direto.
-    let cancelled = false
-    const warmRooms: Room[] = []
-    for (const channelId of voiceChannelIds) {
-      fetchLiveKitToken(channelId).then(async ({ token, url }) => {
-        if (cancelled) return
-        const room = new Room()
-        warmRooms.push(room)
-        await room.prepareConnection(url, token)
-      }).catch(() => { /* a conexao normal mantem as tentativas e mostra o erro */ })
-    }
-    return () => {
-      cancelled = true
-      warmRooms.forEach((room) => room.disconnect())
-    }
-  }, [voiceChannelIds])
 
   // joined_at so e gravado na entrada - se o app fecha de forma suja (crash, perde conexao,
   // forca-parar) o delete de saida (efeito abaixo) nunca roda e a linha fica presa pra sempre,
@@ -3336,13 +3319,12 @@ function VoiceSettingsFields() {
       <div className="appearance-separator" />
       <h3>Redução de ruído</h3>
       <span className="play-share-menu-hint" style={{ display: 'block', marginBottom: 6 }}>
-        Atenua chiado/ruído de fundo no microfone, independente do perfil de entrada. Quanto mais alto o nível, mais agressivo o corte.
-        {isTauriDesktop && ' Pode abafar um pouco o som externo captado pelo microfone (ex.: alto-falante da sala) em níveis mais altos.'}
+        O modo Padrão usa o filtro do aparelho. O RNNoise usa IA gratuita e roda localmente, sem enviar sua voz para outro serviço.
       </span>
-      {(['off', 'low', 'medium', 'high'] as const).map((level) => (
+      {(['off', 'standard', 'rnnoise'] as const).map((level) => (
         <label key={level} className="play-voice-radio">
           <input type="radio" checked={settings.noiseReduction === level} onChange={() => update('noiseReduction', level)} />
-          <span><strong>{level === 'off' ? 'Desligado' : level === 'low' ? 'Baixo' : level === 'medium' ? 'Médio' : 'Alto'}</strong></span>
+          <span><strong>{level === 'off' ? 'Desligado' : level === 'standard' ? 'Padrão' : 'IA (RNNoise)'}</strong><small>{level === 'off' ? 'Áudio puro.' : level === 'standard' ? 'Supressão leve do navegador.' : 'Remove ruído localmente; pode usar mais CPU.'}</small></span>
         </label>
       ))}
       <label className="play-voice-toggle"><span><strong>Detecção de voz</strong><small>Transmite sua voz automaticamente, sem apertar para falar.</small></span><input type="checkbox" checked={settings.voiceActivation} onChange={(event) => update('voiceActivation', event.target.checked)} /></label>
@@ -3801,8 +3783,9 @@ function VoiceChannel({ allow, me, membersById, channel, onParticipantsChange, o
   // saida e ganho do microfone reagirem na hora, mesmo com a chamada ja conectada - "voiceSettings"
   // acima e so o valor inicial (fica parado, preso no fechamento do efeito de conexao).
   const voiceSettingsRef = useRef<PlayVoiceSettings>(voiceSettings)
-  const micGainNodeRef = useRef<GainNode | null>(null)
   const micAudioCtxRef = useRef<AudioContext | null>(null)
+  const micProcessorRef = useRef<ThothRnnoiseProcessor | null>(null)
+  const micGainNodeRef = useRef<GainNode | null>(null)
   const rawMicTrackRef = useRef<MediaStreamTrack | null>(null)
   const micChainNodesRef = useRef<AudioNode[]>([])
   const noiseGateLoopRef = useRef<number | null>(null)
@@ -3814,13 +3797,13 @@ function VoiceChannel({ allow, me, membersById, channel, onParticipantsChange, o
     function onSettingsChanged(e: Event) {
       const next = (e as CustomEvent<PlayVoiceSettings>).detail
       const noiseLevelChanged = next.noiseReduction !== voiceSettingsRef.current.noiseReduction
+      const inputVolumeChanged = next.inputVolume !== voiceSettingsRef.current.inputVolume
       voiceSettingsRef.current = next
-      if (micGainNodeRef.current) micGainNodeRef.current.gain.value = next.inputVolume
       // O nivel muda a topologia/limiar do gate. Remonta a cadeia sobre o mesmo track cru para a
       // alteracao ter efeito imediatamente, sem pedir permissao nem reabrir o microfone. Roda
       // ANTES do loop de volume dos remotos abaixo, de proposito: um valor de volume remoto
       // invalido ali nao pode mais impedir a propria voz de ser reprocessada.
-      if (noiseLevelChanged && roomRef.current) void applyMicGainProcessing()
+      if ((noiseLevelChanged || inputVolumeChanged) && roomRef.current) void applyMicGainProcessing()
       // Boost real acima de 100% via GainNode (applyParticipantVolume) - HTMLMediaElement.volume
       // sozinho so aceita 0..1 e travava a propria voz aqui (a troca de nivel de ruido rodava
       // depois no codigo original e nunca era alcancada se isso lancasse excessao).
@@ -3845,6 +3828,25 @@ function VoiceChannel({ allow, me, membersById, channel, onParticipantsChange, o
       const room = roomRef.current
       const pub = room?.localParticipant.getTrackPublication(Track.Source.Microphone)
       if (!room || !pub?.track) return
+      if (pub.track instanceof LocalAudioTrack) {
+        const settings = voiceSettingsRef.current
+        await pub.track.applyConstraints({
+          echoCancellation: !isTauriDesktop && settings.inputProfile === 'isolation',
+          noiseSuppression: settings.noiseReduction === 'standard',
+          autoGainControl: !isTauriDesktop && settings.inputProfile === 'isolation',
+        })
+        if (micProcessorRef.current) {
+          await pub.track.stopProcessor()
+          micProcessorRef.current = null
+        }
+        if (settings.noiseReduction === 'rnnoise' || settings.inputVolume !== 1) {
+          const processor = new ThothRnnoiseProcessor(settings.inputVolume, settings.noiseReduction === 'rnnoise')
+          await pub.track.setProcessor(processor)
+          micProcessorRef.current = processor
+          if (processor.analysisNode) startLocalSpeakingDetection(processor.analysisNode.context as AudioContext, processor.analysisNode)
+        }
+        return
+      }
       // So recaptura o microfone cru na primeira vez (ou se o anterior parou de verdade) - nas
       // trocas seguintes (mutar/desmutar, apertar-pra-falar) o LiveKit so muta a MESMA
       // publicacao, que ja e o NOSSO track processado (saida do Web Audio). Ler
@@ -3854,8 +3856,10 @@ function VoiceChannel({ allow, me, membersById, channel, onParticipantsChange, o
       // apertar-pra-falar).
       let rawTrack = rawMicTrackRef.current
       if (!rawTrack || rawTrack.readyState === 'ended') {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: await resolvePlayMicOptions() })
-        rawTrack = stream.getAudioTracks()[0]
+        // Usa a captura que o LiveKit acabou de publicar. Antes abríamos um SEGUNDO getUserMedia
+        // e trocávamos a faixa logo depois da conexão; em alguns drivers/WebViews uma das duas
+        // capturas ficava viva sem enviar áudio e o outro participante via o mic ligado, mas mudo.
+        rawTrack = pub.track.mediaStreamTrack
         rawMicTrackRef.current = rawTrack
       }
       // Desconecta a cadeia de nos da chamada anterior (toggle de mic/apertar-pra-falar
@@ -3882,6 +3886,16 @@ function VoiceChannel({ allow, me, membersById, channel, onParticipantsChange, o
       // gate caseiro abaixo (analyser+RMS) so atrapalharia, rodando em cima de um audio que ja
       // foi tratado - prefere o supressor nativo (testado, mantido pelo Chromium) e pula o gate.
       const nativeSuppressionActive = rawTrack.getSettings().noiseSuppression === true
+      const needsCustomTrack = voiceSettingsRef.current.inputVolume !== 1 || (noiseLevel !== 'off' && !nativeSuppressionActive)
+      if (!needsCustomTrack) {
+        // Caminho comum e mais confiável: supressão nativa (ou desligada) + volume normal. Não
+        // substitui o sender por MediaStreamDestination quando não existe processamento real.
+        if (pub.track.mediaStreamTrack !== rawTrack) await pub.track.replaceTrack(rawTrack, true)
+        micGainNodeRef.current = null
+        micChainNodesRef.current = chainNodes
+        startLocalSpeakingDetection(ctx, source)
+        return
+      }
       if (noiseLevel !== 'off' && !nativeSuppressionActive) {
         const preset = NOISE_REDUCTION_PRESETS[noiseLevel]
         const highpass = ctx.createBiquadFilter()
@@ -4020,7 +4034,8 @@ function VoiceChannel({ allow, me, membersById, channel, onParticipantsChange, o
       // Chromium (testado, mantido pelo Google) em vez do gate caseiro, que foi fonte de varios
       // bugs reais nesta sessao (voz sumindo, 0% ficando alto, etc).
       echoCancellation: !isTauriDesktop && voiceSettings.inputProfile === 'isolation',
-      noiseSuppression: voiceSettings.inputProfile === 'isolation' || voiceSettings.noiseReduction !== 'off',
+      // RNNoise faz o tratamento no AudioWorklet; nao empilha o supressor nativo em cima dele.
+      noiseSuppression: voiceSettings.noiseReduction === 'standard',
       autoGainControl: !isTauriDesktop && voiceSettings.inputProfile === 'isolation',
     }
   }
@@ -4078,18 +4093,12 @@ function VoiceChannel({ allow, me, membersById, channel, onParticipantsChange, o
         participantGainRef.current.set(el, gain)
       }
       gain.gain.value = Math.max(0, volume)
-      // O elemento continua tocando pelo caminho nativo dele em paralelo ao GainNode em alguns
-      // navegadores/WebView (apesar da spec dizer que createMediaElementSource "rouba" a saida) -
-      // sem isso, o audio real ficava preso no volume nativo (sempre o mesmo, 100%) e o slider
-      // so mexia num canal que ninguem ouvia: 0% continuava alto, 200% nao turbinava de verdade.
-      // So zera o nativo depois de confirmar que o contexto esta de verdade rodando - um
-      // AudioContext novo pode nascer "suspended" (politica de autoplay do navegador, so libera
-      // depois de alguma interacao de verdade) e, se o nativo for zerado antes disso, ninguem
-      // ouve nada ate o contexto resumir (foi o que deixou a voz de alguem sumida de vez - o
-      // boost rodava num contexto que nunca chegou a tocar). Enquanto suspenso, o caminho nativo
-      // continua audivel (sem boost acima de 100%, mas nunca mudo) e tenta resumir sozinho.
+      // createMediaElementSource redireciona a saida para o AudioContext, mas o volume do proprio
+      // elemento continua fazendo parte do sinal de entrada. Zerar el.volume aqui zerava TAMBEM
+      // o GainNode e deixava a conversa muda assim que o contexto saía de "suspended". O elemento
+      // fica em 100%; todo o controle passa a ser feito exclusivamente pelo GainNode.
       if (ctx.state === 'running') {
-        el.volume = 0
+        el.volume = 1
       } else {
         el.volume = Math.min(1, Math.max(0, volume))
         void ctx.resume().then(() => {
@@ -4212,9 +4221,18 @@ function VoiceChannel({ allow, me, membersById, channel, onParticipantsChange, o
 
     ;(async () => {
       try {
-        const { token, url } = await fetchLiveKitToken(channel.id)
+        let { token, url } = await fetchLiveKitToken(channel.id)
         if (cancelled) return
-        await room.connect(url, token)
+        try {
+          await room.connect(url, token)
+        } catch (connectError) {
+          const message = connectError instanceof Error ? connectError.message : String(connectError)
+          if (!/token|jwt|unauthor/i.test(message)) throw connectError
+          invalidateLiveKitToken(channel.id)
+          ;({ token, url } = await fetchLiveKitToken(channel.id))
+          if (cancelled) return
+          await room.connect(url, token)
+        }
         // Com deteccao de voz, o WebRTC usa supressao de silencio/DTX e transmite quando ha
         // fala. A captura continua aberta por necessidade tecnica, usando o dispositivo e o
         // perfil escolhidos nas configuracoes de voz.
