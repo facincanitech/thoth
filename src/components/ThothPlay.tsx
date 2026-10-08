@@ -9,6 +9,7 @@ import { supabase } from '../lib/supabase'
 import { fetchLiveKitToken, invalidateLiveKitToken } from '../lib/livekit'
 import { setMediaAudioMode, setSpeakerphoneOn } from '../lib/audioRoute'
 import { displayName } from '../lib/displayName'
+import { resolveAssetUrl } from '../lib/assetUrl'
 import { AvatarBox } from './AvatarBox'
 import { getPresenceColor } from '../lib/presence'
 import { ReplayPlayer, type ReplayEvent } from './ReplayPlayer'
@@ -156,8 +157,9 @@ function mergePlayProfile(base: Profile, override: PlayProfile | null | undefine
 
 function PlayProfileName({ profile }: { profile: Profile }) {
   const plate = profile.nameplate
+  const plateUrl = resolveAssetUrl(plate?.asset_url)
   const style = plate ? {
-    '--nameplate-image': plate.asset_url ? `url("${plate.asset_url.replace(/["\\]/g, '')}")` : 'none',
+    '--nameplate-image': plateUrl ? `url("${plateUrl.replace(/["\\]/g, '')}")` : 'none',
     '--nameplate-accent': plate.accent || '#8aa4c7',
   } as CSSProperties : undefined
   return <span className={plate ? 'play-nameplate' : undefined} style={style}><StyledName name={displayName(profile)} font={profile.name_style_font} effect={profile.name_style_effect} color={profile.name_style_color} /></span>
@@ -170,8 +172,9 @@ function PlayIdentityBanner({ profile, avatarClass = 'avatar-sm', onClick, onCon
   onContextMenu?: (event: ReactMouseEvent) => void
 }) {
   const plate = profile.nameplate
+  const plateUrl = resolveAssetUrl(plate?.asset_url)
   const style = plate ? {
-    '--nameplate-image': plate.asset_url ? `url("${plate.asset_url.replace(/["\\]/g, '')}")` : 'none',
+    '--nameplate-image': plateUrl ? `url("${plateUrl.replace(/["\\]/g, '')}")` : 'none',
     '--nameplate-accent': plate.accent || '#8aa4c7',
   } as CSSProperties : undefined
   return (
@@ -2129,7 +2132,7 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
                               className="avatar-sm"
                               frame={p.avatarFrame}
                             />
-                            <span className={p.nameplate ? 'play-nameplate' : undefined} style={p.nameplate ? { '--nameplate-image': p.nameplate.asset_url ? `url("${p.nameplate.asset_url.replace(/["\\]/g, '')}")` : 'none', '--nameplate-accent': p.nameplate.accent || '#8aa4c7' } as CSSProperties : undefined}><StyledName name={p.name} font={p.nameStyleFont} effect={p.nameStyleEffect} color={p.nameStyleColor} /></span>
+                            <span className={p.nameplate ? 'play-nameplate' : undefined} style={p.nameplate ? { '--nameplate-image': resolveAssetUrl(p.nameplate.asset_url) ? `url("${resolveAssetUrl(p.nameplate.asset_url)!.replace(/["\\]/g, '')}")` : 'none', '--nameplate-accent': p.nameplate.accent || '#8aa4c7' } as CSSProperties : undefined}><StyledName name={p.name} font={p.nameStyleFont} effect={p.nameStyleEffect} color={p.nameStyleColor} /></span>
                           </div>
                         ))}
                       </div>
@@ -2167,7 +2170,7 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
                               className="avatar-sm"
                               frame={p.avatarFrame}
                             />
-                            <span className={p.nameplate ? 'play-nameplate' : undefined} style={p.nameplate ? { '--nameplate-image': p.nameplate.asset_url ? `url("${p.nameplate.asset_url.replace(/["\\]/g, '')}")` : 'none', '--nameplate-accent': p.nameplate.accent || '#8aa4c7' } as CSSProperties : undefined}><StyledName name={p.name} font={p.nameStyleFont} effect={p.nameStyleEffect} color={p.nameStyleColor} /></span>
+                            <span className={p.nameplate ? 'play-nameplate' : undefined} style={p.nameplate ? { '--nameplate-image': resolveAssetUrl(p.nameplate.asset_url) ? `url("${resolveAssetUrl(p.nameplate.asset_url)!.replace(/["\\]/g, '')}")` : 'none', '--nameplate-accent': p.nameplate.accent || '#8aa4c7' } as CSSProperties : undefined}><StyledName name={p.name} font={p.nameStyleFont} effect={p.nameStyleEffect} color={p.nameStyleColor} /></span>
                           </div>
                         ))}
                       </div>
@@ -2393,7 +2396,7 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
                             onContextMenu={(e) => { e.preventDefault(); openRoleQuickMenu(p.id, p.name, e.clientX, e.clientY) }}
                             onClick={() => setProfileCardId(p.id)}
                           >
-                            <span className={p.nameplate ? 'play-nameplate' : undefined} style={p.nameplate ? { '--nameplate-image': p.nameplate.asset_url ? `url("${p.nameplate.asset_url.replace(/["\\]/g, '')}")` : 'none', '--nameplate-accent': p.nameplate.accent || '#8aa4c7' } as CSSProperties : undefined}><StyledName name={p.name} font={p.nameStyleFont} effect={p.nameStyleEffect} color={p.nameStyleColor} /></span>
+                            <span className={p.nameplate ? 'play-nameplate' : undefined} style={p.nameplate ? { '--nameplate-image': resolveAssetUrl(p.nameplate.asset_url) ? `url("${resolveAssetUrl(p.nameplate.asset_url)!.replace(/["\\]/g, '')}")` : 'none', '--nameplate-accent': p.nameplate.accent || '#8aa4c7' } as CSSProperties : undefined}><StyledName name={p.name} font={p.nameStyleFont} effect={p.nameStyleEffect} color={p.nameStyleColor} /></span>
                           </span>
                           <IconHeadphones size={14} />
                           {hasPreview && (

@@ -19,6 +19,7 @@ import { isTauriDesktop } from '../lib/platform'
 import { startDesktopGoogleLogin } from '../lib/desktopLogin'
 import { getPresenceColor } from '../lib/presence'
 import { playMessageSound } from '../lib/notificationSound'
+import { resolveAssetUrl } from '../lib/assetUrl'
 import { desktopToastEnabled, messagePreview, readDesktopToastPlacement, saveDesktopToastPlacement, setDesktopToastEnabled, showDesktopToast, type DesktopToastPosition } from '../lib/desktopToast'
 import {
   deviceContactsAvailable,
@@ -2240,8 +2241,9 @@ export function ChatList({
   const useMsnList = true
   const decoratedContactName = (label: string, conv?: ConvWithLabel) => {
     const plate = conv?.nameplate
+    const plateUrl = resolveAssetUrl(plate?.asset_url)
     const style = plate ? {
-      '--nameplate-image': plate.asset_url ? `url("${plate.asset_url.replace(/["\\]/g, '')}")` : 'none',
+      '--nameplate-image': plateUrl ? `url("${plateUrl.replace(/["\\]/g, '')}")` : 'none',
       '--nameplate-accent': plate.accent || '#8aa4c7',
     } as CSSProperties : undefined
     return <span className={plate ? 'play-nameplate msn-contact-nameplate' : undefined} style={style}>{label}</span>

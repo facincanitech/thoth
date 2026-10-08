@@ -13,6 +13,7 @@ import { ensurePlayBotPanel } from '../lib/playBotPanels'
 import { WINKS, playWinkEffect } from '../lib/winks'
 import { useDesktopLayout } from '../lib/useDesktopLayout'
 import { IconChat, IconGamepad, IconSend, IconUser } from './icons'
+import { resolveAssetUrl } from '../lib/assetUrl'
 
 type Category = StoreKind | 'bot' | 'profile_name'
 type StoreSection = 'home' | 'themes' | 'name' | 'messenger' | 'profile' | 'fun' | 'bots'
@@ -334,7 +335,7 @@ function StoreCard({ item, desktop, installed, busy, active, onToggle, onUse, on
   } as CSSProperties : undefined
   return <article className="store-card">
     <div className={`store-preview ${item.kind}`} style={previewStyle}>
-      {item.kind === 'theme' ? <ThemePreviewScene id="community" manifest={item.manifest} desktop={desktop} compact /> : item.preview_url || item.asset_url ? <img src={item.preview_url || item.asset_url || ''} alt="" /> : <span className="store-preview-glyph">{item.kind === 'sound' ? '♫' : item.kind === 'wink' ? '✦' : item.kind === 'emoji' ? '☺' : '▣'}</span>}
+      {item.kind === 'theme' ? <ThemePreviewScene id="community" manifest={item.manifest} desktop={desktop} compact /> : item.preview_url || item.asset_url ? <img src={resolveAssetUrl(item.preview_url || item.asset_url) || ''} alt="" /> : <span className="store-preview-glyph">{item.kind === 'sound' ? '♫' : item.kind === 'wink' ? '✦' : item.kind === 'emoji' ? '☺' : '▣'}</span>}
     </div>
     <div className="store-card-body"><span className="store-kind">{kindNames[item.kind]}</span><h3>{item.name}</h3><p>{item.description || 'Uma criação da comunidade Thoth.'}</p>
       <div className="store-author">{item.creator?.avatar_url ? <img src={item.creator.avatar_url} alt="" /> : <i /> }<span>por {item.creator?.display_name || item.creator?.username || 'comunidade'}</span></div>
