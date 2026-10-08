@@ -1005,7 +1005,7 @@ export function MainPanel({ me, conversation, onBack, onConversationUpdate, bloc
       thothIaReactionTimerRef.current = null
       thothIaLastReactedRef.current = trimmed
       void triggerThothIaLiveReaction(conversation.id, trimmed)
-    }, 1800)
+    }, 1000)
   }
 
   function openStickerSaveMenu(url: string, x: number, y: number) {
