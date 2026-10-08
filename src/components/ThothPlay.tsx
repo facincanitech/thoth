@@ -1357,7 +1357,7 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
         onContextMenu={(e) => { e.preventDefault(); openRoleQuickMenu(m.profile.id, displayName(m.profile), e.clientX, e.clientY) }}
         onClick={() => setProfileCardId(m.profile.id)}
       >
-        {offline ? displayName(m.profile) : <PlayProfileName profile={m.profile} />}
+        <PlayProfileName profile={m.profile} />
       </span>
       {!offline && inVoiceIds.has(m.profile.id) && <IconHeadphones size={14} />}
     </div>
@@ -3015,7 +3015,7 @@ function GroupInfoPanel({ group, myRole, members, me, can, open, onClose, onUpda
           {filteredMembers.map((m) => (
             <div key={m.profile.id} className="play-manage-member-row">
               <AvatarBox src={m.profile.avatar_url} id={m.profile.id} fallbackLetter={displayName(m.profile)[0]?.toUpperCase()} className="avatar-sm" frame={m.profile.avatar_frame} />
-              <span>{displayName(m.profile)}{m.profile.id === me.id ? ' (você)' : ''}</span>
+              <span><PlayProfileName profile={m.profile} />{m.profile.id === me.id ? ' (você)' : ''}</span>
               <span className="play-manage-member-role">{m.role}</span>
               {m.role === 'member' && m.profile.id !== me.id && (
                 <div className="play-manage-member-actions">
@@ -3160,7 +3160,7 @@ function GroupInfoPanel({ group, myRole, members, me, can, open, onClose, onUpda
                       {withoutRole.map((m) => (
                         <div key={m.profile.id} className="play-manage-member-row">
                           <AvatarBox src={m.profile.avatar_url} id={m.profile.id} fallbackLetter={displayName(m.profile)[0]?.toUpperCase()} className="avatar-sm" frame={m.profile.avatar_frame} />
-                          <span>{displayName(m.profile)}</span>
+                          <span><PlayProfileName profile={m.profile} /></span>
                           <button type="button" className="play-manage-member-unban" onClick={() => toggleRoleMember(role.id, m.profile.id, false)}>Adicionar</button>
                         </div>
                       ))}
@@ -3172,7 +3172,7 @@ function GroupInfoPanel({ group, myRole, members, me, can, open, onClose, onUpda
                       {withRole.map((m) => (
                         <div key={m.profile.id} className="play-manage-member-row">
                           <AvatarBox src={m.profile.avatar_url} id={m.profile.id} fallbackLetter={displayName(m.profile)[0]?.toUpperCase()} className="avatar-sm" frame={m.profile.avatar_frame} />
-                          <span>{displayName(m.profile)}</span>
+                          <span><PlayProfileName profile={m.profile} /></span>
                           <div className="play-manage-member-actions">
                             <button type="button" onClick={() => toggleRoleMember(role.id, m.profile.id, true)} title="Remover"><IconLogout size={14} /></button>
                           </div>
@@ -3464,7 +3464,7 @@ function ProfilePanel({ me, open, onClose, onSaved }: { me: Profile; open: boole
           <button type="button" onClick={() => setView('settings')}><IconSettingsGear size={20} /><span><strong>Configurações</strong><small>Voz, microfone e alto-falante</small></span><IconChevronDown size={16} /></button>
         </div>
       ) : view === 'store' || view === 'library' ? (
-        <ThothStore me={me} mode={view === 'library' ? 'library' : 'store'} scope="play" onProfileChange={() => {}} backSignal={storeBackSignal} onExit={() => { onSaved(); setView('menu') }} />
+        <ThothStore me={me} mode={view === 'library' ? 'library' : 'store'} scope="play" onProfileChange={() => onSaved()} backSignal={storeBackSignal} onExit={() => { onSaved(); setView('menu') }} />
       ) : view === 'settings' ? (
         <div className="play-group-info-body">
           <h2>Tema do Play</h2>

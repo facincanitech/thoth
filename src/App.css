@@ -2896,6 +2896,21 @@ html .desktop-window-shell.desktop-web-shell{
 .desktop-chat-shell .chat-header{border-left:0!important;border-right:0!important;box-shadow:none!important}
 .desktop-chat-shell .messages,.desktop-chat-shell .composer{border-left:0!important;border-right:0!important;box-shadow:none!important}
 
+/* No Messenger, a placa equipada no perfil do Play tambem identifica o contato.
+   O selo de grupo organico fica sempre antes da placa/nome. */
+.msn-contact-info strong,.chat-info .name{display:flex;align-items:center;gap:5px;min-width:0}
+.msn-contact-nameplate,.chat-info .name .play-nameplate{min-width:0;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chat-info .name .msn-contact-tag{flex:none;margin-right:0}
+
+/* A janela dedicada do Play no EXE tinha participantes e perfil pequenos. Estas
+   dimensoes nao atingem navegador nem APK, que nao usam .play-window-shell. */
+.play-window-shell .play-icon-rail-profile{width:48px;height:48px}
+.play-window-shell .play-channel-sidebar{width:250px}
+.play-window-shell .play-channel-voice-member{min-height:42px;gap:10px;padding:5px 14px 5px 36px;font-size:14px;color:var(--text-secondary)}
+.play-window-shell .play-channel-voice-member .avatar-sm,
+[data-theme="messenger"] .play-window-shell .play-channel-voice-member .avatar-sm{width:32px;height:32px}
+.play-window-shell .play-channel-voice-member .play-nameplate{font-size:14px}
+
 /* Cards de contato precisam continuar legiveis mesmo quando um tema define texto
    secundario muito proximo da cor do fundo. */
 .profile-popup{border:0!important;color:var(--text-base,var(--text))!important}

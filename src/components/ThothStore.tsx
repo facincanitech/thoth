@@ -167,7 +167,11 @@ export function ThothStore({ me, mode = 'store', scope = 'all', onProfileChange,
       setInstalled((old) => new Set(old).add(item.id))
       if (item.kind === 'theme') setActiveTheme(item.id)
       if (item.kind === 'sound') setActiveSounds((old) => ({ ...old, [item.manifest.soundType === 'nudge' ? 'nudge' : 'message']: item.id }))
-      if (item.kind === 'avatar_frame' || item.kind === 'nameplate' || item.kind === 'profile_background') setActiveCosmetics((old) => ({ ...old, [item.kind]: item.id }))
+      if (item.kind === 'avatar_frame' || item.kind === 'nameplate' || item.kind === 'profile_background') {
+        setActiveCosmetics((old) => ({ ...old, [item.kind]: item.id }))
+        if (item.kind === 'profile_background') onProfileChange({ banner_image_url: item.asset_url })
+        else onProfileChange({ [item.kind]: { item_id: item.id, asset_url: item.asset_url, accent: typeof item.manifest.accent === 'string' ? item.manifest.accent : null } })
+      }
     } catch (cause) { setError(getErrorMessage(cause)) }
     finally { setBusyId(null) }
   }
@@ -179,6 +183,7 @@ export function ThothStore({ me, mode = 'store', scope = 'all', onProfileChange,
     try {
       await deactivateStoreCosmetic(me.id, item.kind)
       setActiveCosmetics((old) => ({ ...old, [item.kind]: '' }))
+      onProfileChange(item.kind === 'profile_background' ? { banner_image_url: null } : { [item.kind]: null })
     } catch (cause) { setError(getErrorMessage(cause)) }
     finally { setBusyId(null) }
   }

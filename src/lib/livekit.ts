@@ -26,9 +26,11 @@ async function getAccessToken(forceRefresh = false) {
 // acontecem quando o Supabase esta instavel, e a 2a tentativa quase sempre passa.
 async function requestLiveKitToken(channelId: string): Promise<{ token: string; url: string }> {
   let lastError: Error = new Error('falha ao gerar token do canal de voz')
+  let forceRefresh = false
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
-      const accessToken = await getAccessToken(attempt > 0)
+      const accessToken = await getAccessToken(forceRefresh)
+      forceRefresh = false
       if (!accessToken) throw new Error('sem sessão')
 
       const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/livekit-token`, {
@@ -43,7 +45,14 @@ async function requestLiveKitToken(channelId: string): Promise<{ token: string; 
       if (res.ok) return res.json()
       const body = await res.json().catch(() => ({}))
       lastError = new Error(body.error || body.message || `falha ao gerar token do canal de voz (${res.status})`)
-      // 4xx de verdade (sem acesso ao canal etc.) nao adianta repetir; 401 e 5xx sim
+      // So um 401 significa que a sessao precisa ser renovada. Antes qualquer falha de rede/5xx
+      // forcava refresh nas tentativas seguintes; no WebView do EXE isso criava corridas com o
+      // auto-refresh do Supabase e podia terminar em "invalid token".
+      if (res.status === 401) {
+        forceRefresh = true
+        continue
+      }
+      // 4xx de verdade (sem acesso ao canal etc.) nao adianta repetir; 5xx usa o mesmo JWT.
       if (res.status < 500 && res.status !== 401) throw lastError
     } catch (err) {
       if (err instanceof TypeError) {
@@ -52,7 +61,8 @@ async function requestLiveKitToken(channelId: string): Promise<{ token: string; 
         throw err
       }
     }
-    await wait(800 * (attempt + 1))
+    // Renovacao por 401 deve ser imediata; backoff fica apenas para rede/servidor instavel.
+    if (!forceRefresh) await wait(500 * (attempt + 1))
   }
   throw lastError
 }

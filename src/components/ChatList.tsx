@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { Capacitor } from '@capacitor/core'
 import { supabase } from '../lib/supabase'
 import thothLogo from '../../logo/toth_chat.png'
@@ -146,6 +146,7 @@ type ConvWithLabel = Conversation & {
   nameStyleFont: string | null
   nameStyleEffect: 'solid' | 'gradient' | 'neon' | 'prism' | null
   nameStyleColor: string | null
+  nameplate: Profile['nameplate']
   isFavorite: boolean
   favoritedAt: string | null
   isOrganicGroup: boolean
@@ -983,6 +984,12 @@ export function ChatList({
       allMembers = data
     }
 
+    const playProfileIds = Array.from(new Set((allMembers || []).map((m) => (m.profile as unknown as Profile | null)?.id).filter((id): id is string => !!id)))
+    const { data: playProfileRows } = playProfileIds.length
+      ? await supabase.from('play_profiles').select('user_id, nameplate').in('user_id', playProfileIds)
+      : { data: [] }
+    const nameplateByUser = new Map<string, Profile['nameplate']>((playProfileRows || []).map((p) => [p.user_id as string, (p.nameplate as Profile['nameplate']) || null]))
+
     const labeled: ConvWithLabel[] = convs
       .map((c) => {
         const mine = myRows.find((r) => (r.conversation as unknown as Conversation)?.id === c.id)
@@ -1016,6 +1023,7 @@ export function ChatList({
               nameStyleFont: p?.name_style_font || null,
               nameStyleEffect: p?.name_style_effect || null,
               nameStyleColor: p?.name_style_color || null,
+              nameplate: p?.id ? nameplateByUser.get(p.id) || null : null,
               ...extra,
               isOrganicGroup: true,
             }
@@ -1030,6 +1038,7 @@ export function ChatList({
             nameStyleFont: null,
             nameStyleEffect: null,
             nameStyleColor: null,
+            nameplate: null,
             ...extra,
             isOrganicGroup: false,
           }
@@ -1045,6 +1054,7 @@ export function ChatList({
           nameStyleFont: p?.name_style_font || null,
           nameStyleEffect: p?.name_style_effect || null,
           nameStyleColor: p?.name_style_color || null,
+          nameplate: p?.id ? nameplateByUser.get(p.id) || null : null,
           ...extra,
           isOrganicGroup: false,
         }
@@ -2234,6 +2244,14 @@ export function ChatList({
   // Estrutura oficial do Thoth: lista Frutiger/MSN em todas as skins.
   // No APK a navegacao continua embaixo; no desktop continua na lateral.
   const useMsnList = true
+  const decoratedContactName = (label: string, conv?: ConvWithLabel) => {
+    const plate = conv?.nameplate
+    const style = plate ? {
+      '--nameplate-image': plate.asset_url ? `url("${plate.asset_url.replace(/["\\]/g, '')}")` : 'none',
+      '--nameplate-accent': plate.accent || '#8aa4c7',
+    } as CSSProperties : undefined
+    return <span className={plate ? 'play-nameplate msn-contact-nameplate' : undefined} style={style}>{label}</span>
+  }
   let desktopContactsSurface: ReactNode = null
   if (useMsnList) {
     const sortByChatOrder = <T extends { id: string }>(items: T[]): T[] => {
@@ -2310,7 +2328,7 @@ export function ChatList({
         <div className="msn-contact-info">
           <strong>
             {conv?.isOrganicGroup && <span className="grupal-badge msn-contact-tag">Grupo Orgânico</span>}
-            {label}
+            {decoratedContactName(label, conv)}
           </strong>
         </div>
         {unreadCount > 0 && <b className="msn-unread">{unreadCount}</b>}
@@ -2751,7 +2769,7 @@ export function ChatList({
                   <div className="chat-info">
                     <div className="row">
                       {/* estilo do nome fica so no card de perfil por pedido do usuario - c.nameStyle* continua disponivel se quiser trazer de volta aqui */}
-                      <div className="name">{c.label}</div>
+                      <div className="name">{c.isOrganicGroup && <span className="grupal-badge msn-contact-tag">Grupo Orgânico</span>}{decoratedContactName(c.label, c)}</div>
                       {(c.unreadCount > 0 || c.isManuallyUnread) && (
                         <span className="unread-badge">{c.unreadCount > 0 ? c.unreadCount : ''}</span>
                       )}
@@ -2844,7 +2862,7 @@ export function ChatList({
                     <div className="row">
                       <div style={{ display: 'flex', alignItems: 'center', gap: 5, minWidth: 0 }}>
                         {/* estilo do nome fica so no card de perfil por pedido do usuario - c.nameStyle* continua disponivel se quiser trazer de volta aqui */}
-                        <div className="name">{c.label}</div>
+                        <div className="name">{c.isOrganicGroup && <span className="grupal-badge msn-contact-tag">Grupo Orgânico</span>}{decoratedContactName(c.label, c)}</div>
                         {c.isFavorite && (
                           <span className="favorite-heart" title="Favoritado">
                             <IconHeart size={13} />
