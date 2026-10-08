@@ -193,6 +193,39 @@ function PlayIdentityBanner({ profile, avatarClass = 'avatar-sm', onClick, onCon
   )
 }
 
+type PlayVoiceIdentity = {
+  id: string
+  name: string
+  avatar_url: string | null
+  nameStyleFont: string | null
+  nameStyleEffect: Profile['name_style_effect']
+  nameStyleColor: string | null
+  avatarFrame: Profile['avatar_frame']
+  nameplate: Profile['nameplate']
+}
+
+function PlayVoiceIdentityBanner({ entry, onClick, onContextMenu }: {
+  entry: PlayVoiceIdentity
+  onClick?: () => void
+  onContextMenu?: (event: ReactMouseEvent) => void
+}) {
+  const plateUrl = resolveAssetUrl(entry.nameplate?.asset_url)
+  const style = entry.nameplate ? {
+    '--nameplate-image': plateUrl ? `url("${plateUrl.replace(/["\\]/g, '')}")` : 'none',
+    '--nameplate-accent': entry.nameplate.accent || '#8aa4c7',
+  } as CSSProperties : undefined
+  return (
+    <span className={`play-identity-banner${entry.nameplate ? ' has-plate' : ''}`} style={style}>
+      <AvatarBox src={entry.avatar_url} id={entry.id} fallbackLetter={entry.name[0]?.toUpperCase()} className="avatar-sm" frame={entry.avatarFrame} />
+      <span className="play-name-clickable" onClick={onClick} onContextMenu={onContextMenu}>
+        <span className={entry.nameplate ? 'play-nameplate' : undefined}>
+          <StyledName name={entry.name} font={entry.nameStyleFont} effect={entry.nameStyleEffect} color={entry.nameStyleColor} />
+        </span>
+      </span>
+    </span>
+  )
+}
+
 async function fetchPlayProfiles(ids: string[]): Promise<Record<string, PlayProfile>> {
   if (!ids.length) return {}
   const { data } = await supabase.from('play_profiles').select('*').in('user_id', ids)
@@ -2125,14 +2158,7 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
                         </button>
                         {c.kind === 'voice' && channelVoiceList(c.id).map((p) => (
                           <div key={p.id} className="play-channel-voice-member">
-                            <AvatarBox
-                              src={p.avatar_url}
-                              id={p.id}
-                              fallbackLetter={p.name[0]?.toUpperCase()}
-                              className="avatar-sm"
-                              frame={p.avatarFrame}
-                            />
-                            <span className={p.nameplate ? 'play-nameplate' : undefined} style={p.nameplate ? { '--nameplate-image': resolveAssetUrl(p.nameplate.asset_url) ? `url("${resolveAssetUrl(p.nameplate.asset_url)!.replace(/["\\]/g, '')}")` : 'none', '--nameplate-accent': p.nameplate.accent || '#8aa4c7' } as CSSProperties : undefined}><StyledName name={p.name} font={p.nameStyleFont} effect={p.nameStyleEffect} color={p.nameStyleColor} /></span>
+                            <PlayVoiceIdentityBanner entry={p} />
                           </div>
                         ))}
                       </div>
@@ -2163,14 +2189,7 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
                         </button>
                         {c.kind === 'voice' && channelVoiceList(c.id).map((p) => (
                           <div key={p.id} className="play-channel-voice-member">
-                            <AvatarBox
-                              src={p.avatar_url}
-                              id={p.id}
-                              fallbackLetter={p.name[0]?.toUpperCase()}
-                              className="avatar-sm"
-                              frame={p.avatarFrame}
-                            />
-                            <span className={p.nameplate ? 'play-nameplate' : undefined} style={p.nameplate ? { '--nameplate-image': resolveAssetUrl(p.nameplate.asset_url) ? `url("${resolveAssetUrl(p.nameplate.asset_url)!.replace(/["\\]/g, '')}")` : 'none', '--nameplate-accent': p.nameplate.accent || '#8aa4c7' } as CSSProperties : undefined}><StyledName name={p.name} font={p.nameStyleFont} effect={p.nameStyleEffect} color={p.nameStyleColor} /></span>
+                            <PlayVoiceIdentityBanner entry={p} />
                           </div>
                         ))}
                       </div>
@@ -2390,14 +2409,11 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
                       const hasPreview = !!(p.videoTrack || p.cameraTrack)
                       return (
                         <div key={key} className="play-member-row">
-                          <AvatarBox src={p.avatar_url} id={p.id} fallbackLetter={p.name[0]?.toUpperCase()} className="avatar-sm" frame={p.avatarFrame} />
-                          <span
-                            className="play-name-clickable"
+                          <PlayVoiceIdentityBanner
+                            entry={p}
                             onContextMenu={(e) => { e.preventDefault(); openRoleQuickMenu(p.id, p.name, e.clientX, e.clientY) }}
                             onClick={() => setProfileCardId(p.id)}
-                          >
-                            <span className={p.nameplate ? 'play-nameplate' : undefined} style={p.nameplate ? { '--nameplate-image': resolveAssetUrl(p.nameplate.asset_url) ? `url("${resolveAssetUrl(p.nameplate.asset_url)!.replace(/["\\]/g, '')}")` : 'none', '--nameplate-accent': p.nameplate.accent || '#8aa4c7' } as CSSProperties : undefined}><StyledName name={p.name} font={p.nameStyleFont} effect={p.nameStyleEffect} color={p.nameStyleColor} /></span>
-                          </span>
+                          />
                           <IconHeadphones size={14} />
                           {hasPreview && (
                             <button
