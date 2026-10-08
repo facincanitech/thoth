@@ -33,6 +33,7 @@ export type Profile = {
   name_style_color?: string | null
   avatar_frame?: ProfileCosmetic | null
   nameplate?: ProfileCosmetic | null
+  messenger_nameplate?: ProfileCosmetic | null
 }
 
 export type Conversation = {

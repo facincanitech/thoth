@@ -32,6 +32,8 @@ import { ContactOnboarding } from './components/ContactOnboarding'
 import { parseInviteDeepLink } from './lib/inviteLink'
 import { applyCommunityTheme, hydrateInstalledMedia, type StoreItem } from './lib/store'
 import { isBuiltInTheme } from './lib/storeDefaults'
+import { openDirectMessage } from './lib/directMessage'
+import { THOTH_IA_ID } from './lib/thothIa'
 import './App.css'
 
 type Theme = 'dark' | 'light' | 'contrast' | 'frutiger' | 'messenger' | 'cyberpunk' | 'matrix' | 'wood'
@@ -751,6 +753,13 @@ function App() {
     }
   }
 
+  function openThothIa() {
+    requireAuth(() => {
+      if (!profile) return
+      void openDirectMessage(profile.id, THOTH_IA_ID, 'Thoth IA')
+    })
+  }
+
   function openPlay() {
     requireAuth(() => {
       if (isTauriDesktop) {
@@ -792,6 +801,7 @@ function App() {
         onOpenGroups={openGroups}
         onOpenStatus={openStatus}
         onOpenPlay={openPlay}
+        onOpenThothIa={openThothIa}
         onGoHome={openNudger}
         nudgeCount={nudgers.length}
         activeSection={

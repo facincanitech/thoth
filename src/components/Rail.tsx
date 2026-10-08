@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { displayName } from '../lib/displayName'
-import { IconBell, IconChat, IconGamepad, IconGroup, IconPlus, IconStar, IconStatus, IconUser } from './icons'
+import { IconBell, IconChat, IconGamepad, IconGroup, IconPlus, IconSparkle, IconStar, IconStatus, IconUser } from './icons'
 import type { Profile } from '../types'
 import thothLogo from '../../logo/toth_chat.png'
 
@@ -13,12 +13,13 @@ type Props = {
   onOpenGroups: () => void
   onOpenStatus: () => void
   onOpenPlay: () => void
+  onOpenThothIa: () => void
   onGoHome: () => void
   nudgeCount: number
   activeSection: 'chats' | 'new' | 'groups' | 'communities' | 'account' | 'status' | 'play'
 }
 
-export function Rail({ me, onRequireAuth, onNewConversation, onOpenAccount, onOpenGroups, onOpenStatus, onOpenPlay, onGoHome, nudgeCount, activeSection }: Props) {
+export function Rail({ me, onRequireAuth, onNewConversation, onOpenAccount, onOpenGroups, onOpenStatus, onOpenPlay, onOpenThothIa, onGoHome, nudgeCount, activeSection }: Props) {
   const [pendingCount, setPendingCount] = useState(0)
 
   useEffect(() => {
@@ -85,6 +86,14 @@ export function Rail({ me, onRequireAuth, onNewConversation, onOpenAccount, onOp
     onOpenPlay()
   }
 
+  function handleThothIaClick() {
+    if (!me) {
+      onRequireAuth()
+      return
+    }
+    onOpenThothIa()
+  }
+
   return (
     <aside className="rail" aria-label="Navegação principal">
       <div className="rail-brand" aria-label="Thoth Messenger">
@@ -128,6 +137,12 @@ export function Rail({ me, onRequireAuth, onNewConversation, onOpenAccount, onOp
           aria-current={activeSection === 'groups' || activeSection === 'communities' ? 'page' : undefined}>
           <span className="rail-symbol"><IconGroup /></span>
           <span className="rail-label">Espaços</span>
+        </button>
+      </div>
+      <div className="rail-item">
+        <button type="button" className="rail-link" title="Thoth IA" onClick={handleThothIaClick}>
+          <span className="rail-symbol"><IconSparkle size={22} /></span>
+          <span className="rail-label">Thoth IA</span>
         </button>
       </div>
       <div className="rail-item">

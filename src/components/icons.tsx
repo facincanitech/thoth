@@ -17,6 +17,15 @@ export function IconChat({ size = 20 }: IconProps) {
   )
 }
 
+export function IconSparkle({ size = 20 }: IconProps) {
+  return (
+    <svg {...base} width={size} height={size}>
+      <path d="M12 3v4M12 17v4M3 12h4M17 12h4M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M18.4 5.6l-2.8 2.8M8.4 15.6l-2.8 2.8" />
+      <circle cx="12" cy="12" r="2.4" />
+    </svg>
+  )
+}
+
 export function IconPlus({ size = 20 }: IconProps) {
   return (
     <svg {...base} width={size} height={size}>

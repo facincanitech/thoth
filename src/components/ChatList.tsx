@@ -146,7 +146,7 @@ type ConvWithLabel = Conversation & {
   nameStyleFont: string | null
   nameStyleEffect: 'solid' | 'gradient' | 'neon' | 'prism' | null
   nameStyleColor: string | null
-  nameplate: Profile['nameplate']
+  nameplate: Profile['messenger_nameplate']
   isFavorite: boolean
   favoritedAt: string | null
   isOrganicGroup: boolean
@@ -975,7 +975,7 @@ export function ChatList({
       if (attempt > 0) await new Promise((r) => setTimeout(r, 400 * attempt))
       const { data, error } = await supabase
         .from('conversation_members')
-        .select('conversation_id, added_by, role, profile:profiles!conversation_members_user_id_fkey(id, username, display_name, avatar_url, name_style_font, name_style_effect, name_style_color)')
+        .select('conversation_id, added_by, role, profile:profiles!conversation_members_user_id_fkey(id, username, display_name, avatar_url, name_style_font, name_style_effect, name_style_color, messenger_nameplate)')
         .in('conversation_id', ids)
       if (error) {
         console.error('loadConversations: allMembers query failed', error)
@@ -983,12 +983,6 @@ export function ChatList({
       }
       allMembers = data
     }
-
-    const playProfileIds = Array.from(new Set((allMembers || []).map((m) => (m.profile as unknown as Profile | null)?.id).filter((id): id is string => !!id)))
-    const { data: playProfileRows } = playProfileIds.length
-      ? await supabase.from('play_profiles').select('user_id, nameplate').in('user_id', playProfileIds)
-      : { data: [] }
-    const nameplateByUser = new Map<string, Profile['nameplate']>((playProfileRows || []).map((p) => [p.user_id as string, (p.nameplate as Profile['nameplate']) || null]))
 
     const labeled: ConvWithLabel[] = convs
       .map((c) => {
@@ -1023,7 +1017,7 @@ export function ChatList({
               nameStyleFont: p?.name_style_font || null,
               nameStyleEffect: p?.name_style_effect || null,
               nameStyleColor: p?.name_style_color || null,
-              nameplate: p?.id ? nameplateByUser.get(p.id) || null : null,
+              nameplate: p?.messenger_nameplate || null,
               ...extra,
               isOrganicGroup: true,
             }
@@ -1054,7 +1048,7 @@ export function ChatList({
           nameStyleFont: p?.name_style_font || null,
           nameStyleEffect: p?.name_style_effect || null,
           nameStyleColor: p?.name_style_color || null,
-          nameplate: p?.id ? nameplateByUser.get(p.id) || null : null,
+          nameplate: p?.messenger_nameplate || null,
           ...extra,
           isOrganicGroup: false,
         }
@@ -2327,8 +2321,8 @@ export function ChatList({
         />
         <div className="msn-contact-info">
           <strong>
-            {conv?.isOrganicGroup && <span className="grupal-badge msn-contact-tag">Grupo Orgânico</span>}
             {decoratedContactName(label, conv)}
+            {conv?.isOrganicGroup && <span className="grupal-badge msn-contact-tag">Grupo Orgânico</span>}
           </strong>
         </div>
         {unreadCount > 0 && <b className="msn-unread">{unreadCount}</b>}
@@ -2769,7 +2763,7 @@ export function ChatList({
                   <div className="chat-info">
                     <div className="row">
                       {/* estilo do nome fica so no card de perfil por pedido do usuario - c.nameStyle* continua disponivel se quiser trazer de volta aqui */}
-                      <div className="name">{c.isOrganicGroup && <span className="grupal-badge msn-contact-tag">Grupo Orgânico</span>}{decoratedContactName(c.label, c)}</div>
+                      <div className="name">{decoratedContactName(c.label, c)}{c.isOrganicGroup && <span className="grupal-badge msn-contact-tag">Grupo Orgânico</span>}</div>
                       {(c.unreadCount > 0 || c.isManuallyUnread) && (
                         <span className="unread-badge">{c.unreadCount > 0 ? c.unreadCount : ''}</span>
                       )}
@@ -2862,7 +2856,7 @@ export function ChatList({
                     <div className="row">
                       <div style={{ display: 'flex', alignItems: 'center', gap: 5, minWidth: 0 }}>
                         {/* estilo do nome fica so no card de perfil por pedido do usuario - c.nameStyle* continua disponivel se quiser trazer de volta aqui */}
-                        <div className="name">{c.isOrganicGroup && <span className="grupal-badge msn-contact-tag">Grupo Orgânico</span>}{decoratedContactName(c.label, c)}</div>
+                        <div className="name">{decoratedContactName(c.label, c)}{c.isOrganicGroup && <span className="grupal-badge msn-contact-tag">Grupo Orgânico</span>}</div>
                         {c.isFavorite && (
                           <span className="favorite-heart" title="Favoritado">
                             <IconHeart size={13} />

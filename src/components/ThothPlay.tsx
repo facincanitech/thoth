@@ -163,6 +163,33 @@ function PlayProfileName({ profile }: { profile: Profile }) {
   return <span className={plate ? 'play-nameplate' : undefined} style={style}><StyledName name={displayName(profile)} font={profile.name_style_font} effect={profile.name_style_effect} color={profile.name_style_color} /></span>
 }
 
+function PlayIdentityBanner({ profile, avatarClass = 'avatar-sm', onClick, onContextMenu }: {
+  profile: Profile
+  avatarClass?: string
+  onClick?: () => void
+  onContextMenu?: (event: ReactMouseEvent) => void
+}) {
+  const plate = profile.nameplate
+  const style = plate ? {
+    '--nameplate-image': plate.asset_url ? `url("${plate.asset_url.replace(/["\\]/g, '')}")` : 'none',
+    '--nameplate-accent': plate.accent || '#8aa4c7',
+  } as CSSProperties : undefined
+  return (
+    <span className={`play-identity-banner${plate ? ' has-plate' : ''}`} style={style}>
+      <AvatarBox
+        src={profile.avatar_url}
+        id={profile.id}
+        fallbackLetter={displayName(profile)[0]?.toUpperCase()}
+        className={avatarClass}
+        frame={profile.avatar_frame}
+      />
+      <span className="play-name-clickable" onClick={onClick} onContextMenu={onContextMenu}>
+        <PlayProfileName profile={profile} />
+      </span>
+    </span>
+  )
+}
+
 async function fetchPlayProfiles(ids: string[]): Promise<Record<string, PlayProfile>> {
   if (!ids.length) return {}
   const { data } = await supabase.from('play_profiles').select('*').in('user_id', ids)
@@ -1351,14 +1378,12 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
   const isOnline = memberOnline
   const renderMemberRow = (m: GroupMember, offline: boolean) => (
     <div key={m.profile.id} className={'play-member-row' + (offline ? ' offline' : '')}>
-      <AvatarBox src={m.profile.avatar_url} id={m.profile.id} fallbackLetter={displayName(m.profile)[0]?.toUpperCase()} className={'avatar-sm presence-' + (m.profile.id === me.id ? 'online' : getPresenceColor(m.profile.last_seen_at, m.profile.is_idle))} frame={m.profile.avatar_frame} />
-      <span
-        className="play-name-clickable"
+      <PlayIdentityBanner
+        profile={m.profile}
+        avatarClass={'avatar-sm presence-' + (m.profile.id === me.id ? 'online' : getPresenceColor(m.profile.last_seen_at, m.profile.is_idle))}
         onContextMenu={(e) => { e.preventDefault(); openRoleQuickMenu(m.profile.id, displayName(m.profile), e.clientX, e.clientY) }}
         onClick={() => setProfileCardId(m.profile.id)}
-      >
-        <PlayProfileName profile={m.profile} />
-      </span>
+      />
       {!offline && inVoiceIds.has(m.profile.id) && <IconHeadphones size={14} />}
     </div>
   )
@@ -2260,18 +2285,13 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
                   </div>
                 ) : (
                   <div key={m.id} className="play-message">
-                    <AvatarBox src={m.author?.avatar_url} id={m.author_id} fallbackLetter={(m.author ? displayName(m.author) : '?')[0]?.toUpperCase()} className="avatar-sm" frame={m.author?.avatar_frame} />
                     <div className="play-message-body">
                       <div className="play-message-row">
-                        <strong
-                          className="play-name-clickable"
-                          onContextMenu={(e) => { if (m.author) { e.preventDefault(); openRoleQuickMenu(m.author_id, displayName(m.author), e.clientX, e.clientY) } }}
-                          onClick={() => { if (m.author) setProfileCardId(m.author_id) }}
-                        >
-                          {m.author ? (
-                            <PlayProfileName profile={m.author} />
-                          ) : '...'}
-                        </strong>
+                        {m.author ? <PlayIdentityBanner
+                          profile={m.author}
+                          onContextMenu={(e) => { e.preventDefault(); openRoleQuickMenu(m.author_id, displayName(m.author!), e.clientX, e.clientY) }}
+                          onClick={() => setProfileCardId(m.author_id)}
+                        /> : <strong>...</strong>}
                         <span className="play-message-time">{new Date(m.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
                         <button type="button" className="play-replay-btn" onClick={() => openReplay(m)}>
                           replay

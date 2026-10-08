@@ -10,6 +10,7 @@ import { readMediaFavorites, recordMediaFavorite, saveMediaFavorites, type Media
 import { formatLastSeenClock, getPresenceColor } from '../lib/presence'
 import { useDesktopLayout } from '../lib/useDesktopLayout'
 import { openDirectMessage } from '../lib/directMessage'
+import { THOTH_IA_ID } from '../lib/thothIa'
 import { getErrorMessage } from '../lib/errors'
 import { displayName } from '../lib/displayName'
 import { SettingsRow } from './SettingsRow'
@@ -446,6 +447,7 @@ export function MainPanel({ me, conversation, onBack, onConversationUpdate, bloc
 
   const [recording, setRecording] = useState(false)
   const [replayFor, setReplayFor] = useState<Message | null>(null)
+  const [thothIaTyping, setThothIaTyping] = useState(false)
   const [replayEvents, setReplayEvents] = useState<ReplayEvent[] | null>(null)
   const [showChatConfig, setShowChatConfig] = useState(false)
   const [configView, setConfigView] = useState<'root' | 'invite' | 'members' | 'bots'>('root')
@@ -2089,6 +2091,37 @@ export function MainPanel({ me, conversation, onBack, onConversationUpdate, bloc
       const recipientIds = Object.keys(members).filter((id) => id !== me.id)
       sendPush(recipientIds, displayName(me), content, conversation.id)
     }
+
+    if (conversation.type === 'dm' && otherMemberEntry?.[0] === THOTH_IA_ID) {
+      void replyAsThothIa(conversation.id, content)
+    }
+  }
+
+  // Resposta do bot Thoth IA - chama a Edge Function (que busca o historico e fala com a IA)
+  // e posta a resposta via post_bot_message, igual qualquer outro bot do catalogo.
+  async function replyAsThothIa(conversationId: string, message: string) {
+    setThothIaTyping(true)
+    try {
+      const { data: sessionData } = await supabase.auth.getSession()
+      const accessToken = sessionData.session?.access_token
+      if (!accessToken) return
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/thoth-ia-chat`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ conversationId, message }),
+      })
+      const data = await res.json().catch(() => ({}))
+      const reply = res.ok ? (data.reply as string) : 'Deu ruim aqui do meu lado agora, tenta de novo?'
+      await supabase.rpc('post_thoth_ia_message', { p_conversation_id: conversationId, p_content: reply })
+    } catch {
+      await supabase.rpc('post_thoth_ia_message', { p_conversation_id: conversationId, p_content: 'Deu ruim aqui do meu lado agora, tenta de novo?' })
+    } finally {
+      setThothIaTyping(false)
+    }
   }
 
 
@@ -2904,6 +2937,15 @@ export function MainPanel({ me, conversation, onBack, onConversationUpdate, bloc
             </div>
           </div>
         ))}
+
+        {thothIaTyping && (
+          <div className="message in">
+            <div className="bubble message-text-bubble">
+              <span className="author-label">Thoth IA</span>
+              <span className="live-typing-label">digitando...</span>
+            </div>
+          </div>
+        )}
 
         <div ref={bottomRef} />
       </section>
