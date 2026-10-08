@@ -100,7 +100,7 @@ input,textarea{user-select:text;-webkit-user-select:text}
 *::-webkit-scrollbar-track{background:transparent}
 *::-webkit-scrollbar-thumb{background:var(--scrollbar);border-radius:4px}
 *::-webkit-scrollbar-thumb:hover{background:var(--avatar-bg)}
-html,body{height:100%;margin:0;overflow:hidden;max-width:100%;overscroll-behavior:none}
+html,body{width:100%;height:100%;margin:0;overflow:hidden;max-width:100%;overscroll-behavior:none}
 body{
   font-family:Inter,"Segoe UI",Roboto,Arial,sans-serif;
   -webkit-font-smoothing:antialiased;
@@ -1362,9 +1362,11 @@ body{
   .compose-btn{width:36px}
 }
 @media(max-width:899px){
-  .app{flex-direction:column}
-  .chats{width:100%;flex:1;min-width:0;min-height:0;border-right:0;order:0}
-  .main{display:none;min-width:0;min-height:0;order:0}
+  html,body,#root{width:100%;max-width:100vw;overflow-x:hidden}
+  .app{width:100%;max-width:100%;flex-direction:column;overflow-x:hidden}
+  .chats{width:100%;max-width:100%;flex:1;min-width:0;min-height:0;border-right:0;order:0;overflow-x:hidden}
+  .main{display:none;width:100%;max-width:100%;min-width:0;min-height:0;order:0;overflow-x:hidden}
+  .msn-contacts-window,.play-app-shell,.play-home,.play-group-main,.play-group-body{width:100%;max-width:100%;min-width:0}
   .app.chat-open .chats{display:none}
   .app.chat-open .main{display:flex}
   .app.chat-open.panel-open .chats{display:flex}

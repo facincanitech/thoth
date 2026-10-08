@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Capacitor } from '@capacitor/core'
 import { IconBell } from './icons'
 import { checkForUpdate } from '../lib/updateCheck'
@@ -29,7 +30,9 @@ export function NotificationCenter({ onOpenAppearance, onOpenStatus, onOpenCommu
   const [updating, setUpdating] = useState(false)
   const [updateError, setUpdateError] = useState<string | null>(null)
   const [visited, setVisited] = useState<Record<string, boolean>>({})
+  const [panelPosition, setPanelPosition] = useState({ top: 0, right: 12 })
   const checkingUpdateRef = useRef(false)
+  const buttonRef = useRef<HTMLButtonElement>(null)
 
   function readVisited() {
     const keys = ['ferus-visited-appearance', 'ferus-visited-chat-config', 'ferus-visited-groups', 'ferus-visited-status']
@@ -140,20 +143,31 @@ export function NotificationCenter({ onOpenAppearance, onOpenStatus, onOpenCommu
     tip.onClick()
   }
 
+  function togglePanel() {
+    if (!open && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect()
+      setPanelPosition({
+        top: Math.min(rect.bottom + 8, window.innerHeight - 80),
+        right: Math.max(12, window.innerWidth - rect.right),
+      })
+    }
+    setOpen((value) => !value)
+  }
+
   // O ponto no sininho significa exclusivamente "ha uma versao nova".
   // Dicas continuam acessiveis no painel, mas nao simulam uma atualizacao.
   const hasBadge = !!updateVersion
 
   return (
     <div style={{ position: 'relative' }}>
-      <button className="icon-btn" title="Novidades do app" onClick={() => setOpen((v) => !v)}>
+      <button ref={buttonRef} className="icon-btn" title="Novidades do app" onClick={togglePanel}>
         <IconBell size={20} />
       </button>
       {hasBadge && <span className="rail-badge" />}
-      {open && (
+      {open && createPortal(
         <>
           <div className="notif-backdrop" onClick={() => setOpen(false)} />
-          <div className="notif-panel">
+          <div className="notif-panel" style={{ position: 'fixed', top: panelPosition.top, right: panelPosition.right }}>
             {updateVersion && (
               <button
                 type="button"
@@ -173,7 +187,8 @@ export function NotificationCenter({ onOpenAppearance, onOpenStatus, onOpenCommu
             ))}
             {!updateVersion && pendingTips.length === 0 && <p className="notif-empty">nenhuma novidade do app no momento</p>}
           </div>
-        </>
+        </>,
+        document.body,
       )}
     </div>
   )
