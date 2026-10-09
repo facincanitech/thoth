@@ -4193,9 +4193,10 @@ function VoiceChannel({ allow, me, membersById, channel, onParticipantsChange, o
         // só no canal esquerdo (bug real, Chromium/WebRTC). Forçar canais/upmix explicitamente
         // em vez de depender do comportamento implicito do navegador.
         const outChannels = Math.min(2, ctx.destination.maxChannelCount || 2)
-        source.channelCount = outChannels
-        source.channelCountMode = 'explicit'
-        source.channelInterpretation = 'speakers'
+        // So no gain (GainNode livre, sem restricao do elemento de midia de origem) - setar
+        // channelCount/mode no proprio MediaElementAudioSourceNode pode lancar excecao em alguns
+        // navegadores (o elemento ja fixa seu numero de canais), o que travava a funcao inteira
+        // ANTES de aplicar o gain.gain.value - bug real: volume parava de fazer qualquer efeito.
         gain.channelCount = outChannels
         gain.channelCountMode = 'explicit'
         gain.channelInterpretation = 'speakers'
