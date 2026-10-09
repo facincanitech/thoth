@@ -3906,6 +3906,16 @@ function VoiceChannel({ allow, me, membersById, channel, onParticipantsChange, o
           await pub.track.setProcessor(processor)
           micProcessorRef.current = processor
           if (processor.analysisNode) startLocalSpeakingDetection(processor.analysisNode.context as AudioContext, processor.analysisNode)
+        } else {
+          // Sem processor (nivel "desligado"/"padrao" com volume em 100%) o track publicado e o
+          // cru direto do LiveKit - mas a borda verde de "falando" depende de um AnalyserNode
+          // ligado em algum no do Web Audio, que só era criado dentro do if acima. Sem isso a
+          // deteccao de fala local nunca ligava nesses dois niveis (bug real: mic "nao detectado").
+          const ctx = micAudioCtxRef.current || new AudioContext()
+          micAudioCtxRef.current = ctx
+          if (ctx.state === 'suspended') await ctx.resume()
+          const source = ctx.createMediaStreamSource(new MediaStream([pub.track.mediaStreamTrack]))
+          startLocalSpeakingDetection(ctx, source)
         }
         return
       }
