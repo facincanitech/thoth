@@ -165,9 +165,10 @@ function PlayProfileName({ profile }: { profile: Profile }) {
   return <span className={plate ? 'play-nameplate' : undefined} style={style}><StyledName name={displayName(profile)} font={profile.name_style_font} effect={profile.name_style_effect} color={profile.name_style_color} /></span>
 }
 
-function PlayIdentityBanner({ profile, avatarClass = 'avatar-sm', onClick, onContextMenu }: {
+function PlayIdentityBanner({ profile, avatarClass = 'avatar-sm', compact = false, onClick, onContextMenu }: {
   profile: Profile
   avatarClass?: string
+  compact?: boolean
   onClick?: () => void
   onContextMenu?: (event: ReactMouseEvent) => void
 }) {
@@ -178,7 +179,7 @@ function PlayIdentityBanner({ profile, avatarClass = 'avatar-sm', onClick, onCon
     '--nameplate-accent': plate.accent || '#8aa4c7',
   } as CSSProperties : undefined
   return (
-    <span className={`play-identity-banner${plate ? ' has-plate' : ''}`} style={style}>
+    <span className={`play-identity-banner${compact ? ' compact' : ''}`}>
       <AvatarBox
         src={profile.avatar_url}
         id={profile.id}
@@ -186,9 +187,14 @@ function PlayIdentityBanner({ profile, avatarClass = 'avatar-sm', onClick, onCon
         className={avatarClass}
         frame={profile.avatar_frame}
       />
-      <span className="play-name-clickable" onClick={onClick} onContextMenu={onContextMenu}>
-        <PlayProfileName profile={profile} />
-      </span>
+      {plate && plateUrl ? <span className="play-identity-plate" style={style}>
+        <img className="play-identity-banner-art" src={plateUrl} alt="" aria-hidden="true" />
+        <span className="play-name-clickable" onClick={onClick} onContextMenu={onContextMenu}>
+          <PlayProfileName profile={profile} />
+        </span>
+      </span> : <span className="play-name-clickable" onClick={onClick} onContextMenu={onContextMenu}>
+        <StyledName name={displayName(profile)} font={profile.name_style_font} effect={profile.name_style_effect} color={profile.name_style_color} />
+      </span>}
     </span>
   )
 }
@@ -204,8 +210,9 @@ type PlayVoiceIdentity = {
   nameplate: Profile['nameplate']
 }
 
-function PlayVoiceIdentityBanner({ entry, onClick, onContextMenu }: {
+function PlayVoiceIdentityBanner({ entry, showPlate = true, onClick, onContextMenu }: {
   entry: PlayVoiceIdentity
+  showPlate?: boolean
   onClick?: () => void
   onContextMenu?: (event: ReactMouseEvent) => void
 }) {
@@ -215,13 +222,18 @@ function PlayVoiceIdentityBanner({ entry, onClick, onContextMenu }: {
     '--nameplate-accent': entry.nameplate.accent || '#8aa4c7',
   } as CSSProperties : undefined
   return (
-    <span className={`play-identity-banner${entry.nameplate ? ' has-plate' : ''}`} style={style}>
+    <span className="play-identity-banner">
       <AvatarBox src={entry.avatar_url} id={entry.id} fallbackLetter={entry.name[0]?.toUpperCase()} className="avatar-sm" frame={entry.avatarFrame} />
-      <span className="play-name-clickable" onClick={onClick} onContextMenu={onContextMenu}>
-        <span className={entry.nameplate ? 'play-nameplate' : undefined}>
+      {showPlate && entry.nameplate && plateUrl ? <span className="play-identity-plate" style={style}>
+        <img className="play-identity-banner-art" src={plateUrl} alt="" aria-hidden="true" />
+        <span className="play-name-clickable" onClick={onClick} onContextMenu={onContextMenu}>
+          <span className="play-nameplate">
           <StyledName name={entry.name} font={entry.nameStyleFont} effect={entry.nameStyleEffect} color={entry.nameStyleColor} />
+          </span>
         </span>
-      </span>
+      </span> : <span className="play-name-clickable" onClick={onClick} onContextMenu={onContextMenu}>
+        <StyledName name={entry.name} font={entry.nameStyleFont} effect={entry.nameStyleEffect} color={entry.nameStyleColor} />
+      </span>}
     </span>
   )
 }
@@ -2158,7 +2170,7 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
                         </button>
                         {c.kind === 'voice' && channelVoiceList(c.id).map((p) => (
                           <div key={p.id} className="play-channel-voice-member">
-                            <PlayVoiceIdentityBanner entry={p} />
+                            <PlayVoiceIdentityBanner entry={p} showPlate={false} />
                           </div>
                         ))}
                       </div>
@@ -2189,7 +2201,7 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
                         </button>
                         {c.kind === 'voice' && channelVoiceList(c.id).map((p) => (
                           <div key={p.id} className="play-channel-voice-member">
-                            <PlayVoiceIdentityBanner entry={p} />
+                            <PlayVoiceIdentityBanner entry={p} showPlate={false} />
                           </div>
                         ))}
                       </div>
@@ -2307,13 +2319,14 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
                   </div>
                 ) : (
                   <div key={m.id} className="play-message">
+                    <AvatarBox src={m.author?.avatar_url} id={m.author_id} fallbackLetter={(m.author ? displayName(m.author) : '?')[0]?.toUpperCase()} className="avatar-sm" />
                     <div className="play-message-body">
                       <div className="play-message-row">
-                        {m.author ? <PlayIdentityBanner
-                          profile={m.author}
+                        {m.author ? <span
+                          className="play-name-clickable"
                           onContextMenu={(e) => { e.preventDefault(); openRoleQuickMenu(m.author_id, displayName(m.author!), e.clientX, e.clientY) }}
                           onClick={() => setProfileCardId(m.author_id)}
-                        /> : <strong>...</strong>}
+                        ><StyledName name={displayName(m.author)} font={m.author.name_style_font} effect={m.author.name_style_effect} color={m.author.name_style_color} /></span> : <strong>...</strong>}
                         <span className="play-message-time">{new Date(m.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
                         <button type="button" className="play-replay-btn" onClick={() => openReplay(m)}>
                           replay

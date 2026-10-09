@@ -227,8 +227,6 @@ export function MainPanel({ me, conversation, onBack, onConversationUpdate, bloc
   const typingPendingRef = useRef('')
   const typingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const typingLastSentRef = useRef(0)
-  const thothIaReactionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const thothIaLastReactedRef = useRef('')
   const [showEmoji, setShowEmoji] = useState(false)
   const [showWinks, setShowWinks] = useState(false)
   const [customWinks, setCustomWinks] = useState<CustomWink[]>([])
@@ -990,22 +988,6 @@ export function MainPanel({ me, conversation, onBack, onConversationUpdate, bloc
     }
     if (elapsed >= 80) send()
     else if (!typingTimerRef.current) typingTimerRef.current = setTimeout(send, 80 - elapsed)
-  }
-
-  // Thoth IA "espiando" o rascunho ao vivo (antes de enviar) - so na DM dela, com uma pausa real
-  // de digitacao (nao reage a cada tecla, senao vira spam/custo bobo na Cloudflare) e nunca repete
-  // reacao pro mesmo texto exato.
-  function scheduleThothIaLiveReaction(text: string) {
-    if (!conversation || conversation.type !== 'dm' || otherMemberEntry?.[0] !== THOTH_IA_ID) return
-    if (thothIaReactionTimerRef.current) clearTimeout(thothIaReactionTimerRef.current)
-    thothIaReactionTimerRef.current = null
-    const trimmed = text.trim()
-    if (trimmed.length < 4 || trimmed === thothIaLastReactedRef.current) return
-    thothIaReactionTimerRef.current = setTimeout(() => {
-      thothIaReactionTimerRef.current = null
-      thothIaLastReactedRef.current = trimmed
-      void triggerThothIaLiveReaction(conversation.id, trimmed)
-    }, 1000)
   }
 
   function openStickerSaveMenu(url: string, x: number, y: number) {
@@ -1817,7 +1799,6 @@ export function MainPanel({ me, conversation, onBack, onConversationUpdate, bloc
     setDraft(text)
     recordReplayEvent(text)
     broadcastTyping(text)
-    scheduleThothIaLiveReaction(text)
   }
 
   function pickEmojiPreview(emoji: string | null) {
@@ -1829,7 +1810,6 @@ export function MainPanel({ me, conversation, onBack, onConversationUpdate, bloc
     setDraft(next)
     recordReplayEvent(next)
     broadcastTyping(next)
-    scheduleThothIaLiveReaction(next)
     rememberFavorite({ kind: 'emoji', id: emoji, value: emoji })
     setShowEmoji(false)
   }
@@ -2084,9 +2064,6 @@ export function MainPanel({ me, conversation, onBack, onConversationUpdate, bloc
     typingTimerRef.current = null
     typingPendingRef.current = ''
     typingLastSentRef.current = Date.now()
-    if (thothIaReactionTimerRef.current) clearTimeout(thothIaReactionTimerRef.current)
-    thothIaReactionTimerRef.current = null
-    thothIaLastReactedRef.current = ''
     channelRef.current?.send({ type: 'broadcast', event: 'typing', payload: { userId: me.id, text: '' } })
     setDraft('')
     setAtBottom(true)
@@ -2142,37 +2119,6 @@ export function MainPanel({ me, conversation, onBack, onConversationUpdate, bloc
       await supabase.rpc('post_thoth_ia_message', { p_conversation_id: conversationId, p_content: reply })
     } catch {
       await supabase.rpc('post_thoth_ia_message', { p_conversation_id: conversationId, p_content: 'Deu ruim aqui do meu lado agora, tenta de novo?' })
-    } finally {
-      setThothIaTyping(false)
-    }
-  }
-
-  // Reacao ao vivo da Thoth IA olhando o rascunho antes de enviar (ver scheduleThothIaLiveReaction).
-  // Se a pessoa ja tiver mandado a mensagem de verdade por enquanto (corrida rara entre o timeout
-  // de 1.8s e um envio manual rapido), o backend ja teria o historico atualizado mesmo assim - nao
-  // precisa de trava extra aqui, só evita gastar a chamada se o rascunho ja ficou vazio.
-  async function triggerThothIaLiveReaction(conversationId: string, draftText: string) {
-    if (!draftText.trim()) return
-    setThothIaTyping(true)
-    try {
-      const { data: sessionData } = await supabase.auth.getSession()
-      const accessToken = sessionData.session?.access_token
-      if (!accessToken) return
-      const snapshots = replayBuffer.current.slice(-8).map((e) => e.text).filter(Boolean)
-      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/thoth-ia-chat`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ conversationId, liveDraft: draftText, replaySnapshots: snapshots }),
-      })
-      const data = await res.json().catch(() => ({}))
-      if (!res.ok || !data.reply) return
-      await supabase.rpc('post_thoth_ia_message', { p_conversation_id: conversationId, p_content: data.reply })
-    } catch {
-      // reacao ao vivo e so um extra - se falhar, nao interrompe nem avisa, so nao reage dessa vez
     } finally {
       setThothIaTyping(false)
     }
