@@ -382,16 +382,11 @@ body{
 .meta{color:inherit;opacity:.65;font-size:10px;white-space:nowrap}
 .author-label{font-size:11px;color:var(--muted);margin-bottom:2px;display:block}
 .bubble .author-label{color:inherit;opacity:.72;font-weight:600}
-.message.participant-colored.in .bubble{
-  background:var(--participant-bubble)!important;
-  color:#17212b!important;
-  border:1px solid var(--participant-border)!important;
-  box-shadow:0 1px 2px rgb(0 0 0 / 12%)!important;
-}
-.message.participant-colored.in .bubble .author-label{color:#17212b!important;opacity:.78}
-.message.participant-colored.in .bubble .reply-quote{background:rgb(255 255 255 / 38%);border-left-color:var(--participant-border)}
-.message.participant-colored.in .bubble .reply-quote strong{color:#17212b}
-.message.participant-colored.in .bubble .replay-btn{color:#17212b;border-color:rgb(23 33 43 / 42%)}
+/* Nome do remetente ganha uma cor automatica por pessoa (estilo WhatsApp); a bolha em si
+   mantem a aparencia normal do tema atual, sem forcar fundo/texto fixos que ignoravam
+   tema escuro/outros temas (bug reportado: parecia sempre Frutiger, mesmo no tema escuro). */
+.message.participant-colored.in .bubble .author-label{color:var(--participant-name);opacity:1}
+.message.participant-colored.in .bubble{border-left:3px solid var(--participant-border)}
 .message.live .bubble{opacity:.65;font-style:italic}
 .live-typing-label{display:block;font-size:10px;font-style:normal;opacity:.7;margin-bottom:2px}
 .read-receipt{
