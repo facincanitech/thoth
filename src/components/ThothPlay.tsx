@@ -146,7 +146,7 @@ function mergePlayProfile(base: Profile, override: PlayProfile | null | undefine
     status: override.status || base.status,
     name_style_font: override.name_style_font || base.name_style_font,
     name_style_effect: override.name_style_effect || base.name_style_effect,
-    name_style_color: override.name_style_effect ? override.name_style_color : base.name_style_color,
+    name_style_color: override.name_style_color || base.name_style_color,
     avatar_frame: override.avatar_frame || base.avatar_frame,
     nameplate: override.nameplate || base.nameplate,
     banner_color: override.banner_color || base.banner_color,
@@ -190,7 +190,7 @@ function PlayIdentityBanner({ profile, avatarClass = 'avatar-sm', compact = fals
       {plate && plateUrl ? <span className="play-identity-plate" style={style}>
         <img className="play-identity-banner-art" src={plateUrl} alt="" aria-hidden="true" />
         <span className="play-name-clickable" onClick={onClick} onContextMenu={onContextMenu}>
-          <PlayProfileName profile={profile} />
+          <StyledName name={displayName(profile)} font={profile.name_style_font} effect={profile.name_style_effect} color={profile.name_style_color} />
         </span>
       </span> : <span className="play-name-clickable" onClick={onClick} onContextMenu={onContextMenu}>
         <StyledName name={displayName(profile)} font={profile.name_style_font} effect={profile.name_style_effect} color={profile.name_style_color} />
@@ -223,13 +223,11 @@ function PlayVoiceIdentityBanner({ entry, showPlate = true, onClick, onContextMe
   } as CSSProperties : undefined
   return (
     <span className="play-identity-banner">
-      <AvatarBox src={entry.avatar_url} id={entry.id} fallbackLetter={entry.name[0]?.toUpperCase()} className="avatar-sm" frame={entry.avatarFrame} />
+      <AvatarBox src={entry.avatar_url} id={entry.id} fallbackLetter={entry.name[0]?.toUpperCase()} className="avatar-sm" frame={showPlate ? entry.avatarFrame : null} />
       {showPlate && entry.nameplate && plateUrl ? <span className="play-identity-plate" style={style}>
         <img className="play-identity-banner-art" src={plateUrl} alt="" aria-hidden="true" />
         <span className="play-name-clickable" onClick={onClick} onContextMenu={onContextMenu}>
-          <span className="play-nameplate">
           <StyledName name={entry.name} font={entry.nameStyleFont} effect={entry.nameStyleEffect} color={entry.nameStyleColor} />
-          </span>
         </span>
       </span> : <span className="play-name-clickable" onClick={onClick} onContextMenu={onContextMenu}>
         <StyledName name={entry.name} font={entry.nameStyleFont} effect={entry.nameStyleEffect} color={entry.nameStyleColor} />
@@ -4092,6 +4090,34 @@ function VoiceChannel({ allow, me, membersById, channel, onParticipantsChange, o
     }
   }
   const roomRef = useRef<Room | null>(null)
+  const callNoticeAudioCtxRef = useRef<AudioContext | null>(null)
+  async function playCallNotice(kind: 'join' | 'leave') {
+    if (deafenedRef.current) return
+    try {
+      let ctx = callNoticeAudioCtxRef.current
+      if (!ctx || ctx.state === 'closed') {
+        ctx = new AudioContext()
+        callNoticeAudioCtxRef.current = ctx
+      }
+      if (ctx.state === 'suspended') await ctx.resume()
+      const now = ctx.currentTime + 0.015
+      const frequencies = kind === 'join' ? [392, 523.25] : [440, 329.63]
+      frequencies.forEach((frequency, index) => {
+        const start = now + index * 0.09
+        const oscillator = ctx!.createOscillator()
+        const gain = ctx!.createGain()
+        oscillator.type = 'sine'
+        oscillator.frequency.setValueAtTime(frequency, start)
+        gain.gain.setValueAtTime(0.0001, start)
+        gain.gain.exponentialRampToValueAtTime(0.075, start + 0.03)
+        gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.22)
+        oscillator.connect(gain)
+        gain.connect(ctx!.destination)
+        oscillator.start(start)
+        oscillator.stop(start + 0.24)
+      })
+    } catch { /* aviso sonoro e opcional; a chamada continua normalmente */ }
+  }
   const [connected, setConnected] = useState(false)
   const [connecting, setConnecting] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -4229,8 +4255,14 @@ function VoiceChannel({ allow, me, membersById, channel, onParticipantsChange, o
     roomRef.current = room
 
     room
-      .on(RoomEvent.ParticipantConnected, () => syncParticipants(room))
-      .on(RoomEvent.ParticipantDisconnected, () => syncParticipants(room))
+      .on(RoomEvent.ParticipantConnected, () => {
+        void playCallNotice('join')
+        syncParticipants(room)
+      })
+      .on(RoomEvent.ParticipantDisconnected, () => {
+        void playCallNotice('leave')
+        syncParticipants(room)
+      })
       .on(RoomEvent.TrackSubscribed, (track, pub, participant) => {
         if (track.kind === Track.Kind.Audio) {
           const el = track.attach()
@@ -4327,6 +4359,8 @@ function VoiceChannel({ allow, me, membersById, channel, onParticipantsChange, o
       participantGainRef.current.clear()
       outputAudioCtxRef.current?.close().catch(() => {})
       outputAudioCtxRef.current = null
+      callNoticeAudioCtxRef.current?.close().catch(() => {})
+      callNoticeAudioCtxRef.current = null
       void setMediaAudioMode()
     }
   }, [channel.id])
