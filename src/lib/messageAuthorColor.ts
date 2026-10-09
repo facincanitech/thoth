@@ -15,5 +15,18 @@ export function messageAuthorStyle(authorId: string): CSSProperties {
   return {
     '--participant-bubble': `hsl(${hue} 78% 89%)`,
     '--participant-border': `hsl(${hue} 48% 67%)`,
+    '--participant-name': `hsl(${hue} 70% 58%)`,
   } as CSSProperties
+}
+
+// So a cor (nao o estilo de fundo da bolha) - usado pro nome do remetente em listas/chat do
+// Play, onde nao tem bolha colorida por participante, so o nome mesmo (estilo WhatsApp).
+export function authorNameColor(authorId: string): string {
+  let hash = 2166136261
+  for (let i = 0; i < authorId.length; i += 1) {
+    hash ^= authorId.charCodeAt(i)
+    hash = Math.imul(hash, 16777619)
+  }
+  const hue = (hash >>> 0) % 360
+  return `hsl(${hue} 70% 58%)`
 }

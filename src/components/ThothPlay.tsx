@@ -9,6 +9,7 @@ import { supabase } from '../lib/supabase'
 import { fetchLiveKitToken, invalidateLiveKitToken } from '../lib/livekit'
 import { setMediaAudioMode, setSpeakerphoneOn } from '../lib/audioRoute'
 import { displayName } from '../lib/displayName'
+import { authorNameColor } from '../lib/messageAuthorColor'
 import { resolveAssetUrl } from '../lib/assetUrl'
 import { AvatarBox } from './AvatarBox'
 import { getPresenceColor } from '../lib/presence'
@@ -155,6 +156,13 @@ function mergePlayProfile(base: Profile, override: PlayProfile | null | undefine
   }
 }
 
+// Sem estilo de nome custom definido pela pessoa, usa uma cor automatica por usuario (estilo
+// WhatsApp) em vez de deixar o nome na cor padrao do tema - some igual o texto normal no fundo escuro.
+function autoStyledNameProps(profile: Profile) {
+  if (profile.name_style_effect) return { effect: profile.name_style_effect, color: profile.name_style_color }
+  return { effect: 'solid' as const, color: authorNameColor(profile.id) }
+}
+
 function PlayProfileName({ profile }: { profile: Profile }) {
   const plate = profile.nameplate
   const plateUrl = resolveAssetUrl(plate?.asset_url)
@@ -162,7 +170,8 @@ function PlayProfileName({ profile }: { profile: Profile }) {
     '--nameplate-image': plateUrl ? `url("${plateUrl.replace(/["\\]/g, '')}")` : 'none',
     '--nameplate-accent': plate.accent || '#8aa4c7',
   } as CSSProperties : undefined
-  return <span className={plate ? 'play-nameplate' : undefined} style={style}><StyledName name={displayName(profile)} font={profile.name_style_font} effect={profile.name_style_effect} color={profile.name_style_color} /></span>
+  const nameStyle = autoStyledNameProps(profile)
+  return <span className={plate ? 'play-nameplate' : undefined} style={style}><StyledName name={displayName(profile)} font={profile.name_style_font} effect={nameStyle.effect} color={nameStyle.color} /></span>
 }
 
 function PlayIdentityBanner({ profile, avatarClass = 'avatar-sm', compact = false, onClick, onContextMenu }: {
@@ -178,6 +187,7 @@ function PlayIdentityBanner({ profile, avatarClass = 'avatar-sm', compact = fals
     '--nameplate-image': plateUrl ? `url("${plateUrl.replace(/["\\]/g, '')}")` : 'none',
     '--nameplate-accent': plate.accent || '#8aa4c7',
   } as CSSProperties : undefined
+  const nameStyle = autoStyledNameProps(profile)
   return (
     <span className={`play-identity-banner${compact ? ' compact' : ''}`}>
       <AvatarBox
@@ -190,10 +200,10 @@ function PlayIdentityBanner({ profile, avatarClass = 'avatar-sm', compact = fals
       {plate && plateUrl ? <span className="play-identity-plate" style={style}>
         <img className="play-identity-banner-art" src={plateUrl} alt="" aria-hidden="true" />
         <span className="play-name-clickable" onClick={onClick} onContextMenu={onContextMenu}>
-          <StyledName name={displayName(profile)} font={profile.name_style_font} effect={profile.name_style_effect} color={profile.name_style_color} />
+          <StyledName name={displayName(profile)} font={profile.name_style_font} effect={nameStyle.effect} color={nameStyle.color} />
         </span>
       </span> : <span className="play-name-clickable" onClick={onClick} onContextMenu={onContextMenu}>
-        <StyledName name={displayName(profile)} font={profile.name_style_font} effect={profile.name_style_effect} color={profile.name_style_color} />
+        <StyledName name={displayName(profile)} font={profile.name_style_font} effect={nameStyle.effect} color={nameStyle.color} />
       </span>}
     </span>
   )
@@ -2324,7 +2334,9 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
                           className="play-name-clickable"
                           onContextMenu={(e) => { e.preventDefault(); openRoleQuickMenu(m.author_id, displayName(m.author!), e.clientX, e.clientY) }}
                           onClick={() => setProfileCardId(m.author_id)}
-                        ><StyledName name={displayName(m.author)} font={m.author.name_style_font} effect={m.author.name_style_effect} color={m.author.name_style_color} /></span> : <strong>...</strong>}
+                        >
+                          <StyledName name={displayName(m.author)} font={m.author.name_style_font} {...autoStyledNameProps(m.author)} />
+                        </span> : <strong>...</strong>}
                         <span className="play-message-time">{new Date(m.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
                         <button type="button" className="play-replay-btn" onClick={() => openReplay(m)}>
                           replay

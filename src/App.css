@@ -1839,6 +1839,8 @@ body{
 .play-member-tabs button.active{background:var(--accent-text);border-color:var(--accent-text);color:#fff}
 .play-member-group-title{padding:8px 14px 4px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
 .play-member-row{display:flex;align-items:center;flex-wrap:wrap;gap:8px;padding:6px 14px;font-size:13px}
+.play-member-row .avatar-sm,.play-member-row .avatar-has-frame{width:28px!important;height:28px!important;min-width:28px!important;min-height:28px!important;flex:0 0 28px!important;aspect-ratio:1/1}
+.play-member-row .avatar-sm img:not(.avatar-frame-decoration){width:100%!important;height:100%!important;object-fit:cover!important}
 .play-member-row.offline{opacity:.5}
 .play-member-row span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .play-voice-preview-toggle{border:0;background:none;color:var(--muted);cursor:pointer;display:grid;place-items:center;padding:2px;flex-shrink:0;transition:transform .15s ease}
