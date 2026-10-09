@@ -382,11 +382,15 @@ body{
 .meta{color:inherit;opacity:.65;font-size:10px;white-space:nowrap}
 .author-label{font-size:11px;color:var(--muted);margin-bottom:2px;display:block}
 .bubble .author-label{color:inherit;opacity:.72;font-weight:600}
-/* Nome do remetente ganha uma cor automatica por pessoa (estilo WhatsApp); a bolha em si
-   mantem a aparencia normal do tema atual, sem forcar fundo/texto fixos que ignoravam
-   tema escuro/outros temas (bug reportado: parecia sempre Frutiger, mesmo no tema escuro). */
+/* Cada pessoa num grupo ganha uma bolha com tom diferente - mas em vez de um pastel fixo
+   (que ignorava o tema e sempre parecia Frutiger), mistura a cor da pessoa com a cor de
+   bolha que o TEMA ATUAL ja usa (color-mix), entao escurece/clareia sozinho em tema escuro,
+   claro, etc. Nome do remetente tambem ganha a mesma cor, pra reforcar quem e quem. */
+.message.participant-colored.in .bubble{
+  background:color-mix(in srgb, var(--participant-border) 22%, var(--in-custom,var(--bg-surface)));
+  border-left:3px solid var(--participant-border);
+}
 .message.participant-colored.in .bubble .author-label{color:var(--participant-name);opacity:1}
-.message.participant-colored.in .bubble{border-left:3px solid var(--participant-border)}
 .message.live .bubble{opacity:.65;font-style:italic}
 .live-typing-label{display:block;font-size:10px;font-style:normal;opacity:.7;margin-bottom:2px}
 .read-receipt{
