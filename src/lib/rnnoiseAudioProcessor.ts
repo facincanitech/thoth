@@ -18,6 +18,7 @@ export class ThothRnnoiseProcessor implements TrackProcessor<Track.Kind.Audio, A
   analysisNode?: AudioNode
   private source?: MediaStreamAudioSourceNode
   private suppressor?: RnnoiseWorkletNode
+  private merger?: ChannelMergerNode
   private gain?: GainNode
   private destination?: MediaStreamAudioDestinationNode
   private readonly inputVolume: number
@@ -47,7 +48,14 @@ export class ThothRnnoiseProcessor implements TrackProcessor<Track.Kind.Audio, A
       }
       this.suppressor = new RnnoiseWorkletNode(audioContext, { wasmBinary, maxChannels: 1 })
       this.source.connect(this.suppressor)
-      this.suppressor.connect(this.gain)
+      // O RnnoiseWorkletNode processa em mono e saiu so no canal esquerdo em vez de centralizado -
+      // o upmix automatico do navegador nao funcionou certo com esse worklet especifico (bug real
+      // relatado, só no modo IA). Duplica o canal unico explicitamente pros dois lados via merger
+      // em vez de depender do upmix implicito.
+      this.merger = audioContext.createChannelMerger(2)
+      this.suppressor.connect(this.merger, 0, 0)
+      this.suppressor.connect(this.merger, 0, 1)
+      this.merger.connect(this.gain)
     } else {
       this.source.connect(this.gain)
     }
@@ -59,11 +67,13 @@ export class ThothRnnoiseProcessor implements TrackProcessor<Track.Kind.Audio, A
   private disconnect() {
     try { this.source?.disconnect() } catch { /* already disconnected */ }
     try { this.suppressor?.disconnect() } catch { /* already disconnected */ }
+    try { this.merger?.disconnect() } catch { /* already disconnected */ }
     try { this.gain?.disconnect() } catch { /* already disconnected */ }
     try { this.suppressor?.destroy() } catch { /* already destroyed */ }
     this.processedTrack?.stop()
     this.source = undefined
     this.suppressor = undefined
+    this.merger = undefined
     this.gain = undefined
     this.destination = undefined
     this.analysisNode = undefined
