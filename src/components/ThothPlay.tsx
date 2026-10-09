@@ -4188,6 +4188,17 @@ function VoiceChannel({ allow, me, membersById, channel, onParticipantsChange, o
       if (!gain) {
         const source = ctx.createMediaElementSource(el)
         gain = ctx.createGain()
+        // Audio de voz do WebRTC/LiveKit normalmente chega em 1 canal (mono) - o upmix implicito
+        // pra estereo (modo "max") deveria centralizar nos dois lados, mas foi reportado saindo
+        // só no canal esquerdo (bug real, Chromium/WebRTC). Forçar canais/upmix explicitamente
+        // em vez de depender do comportamento implicito do navegador.
+        const outChannels = Math.min(2, ctx.destination.maxChannelCount || 2)
+        source.channelCount = outChannels
+        source.channelCountMode = 'explicit'
+        source.channelInterpretation = 'speakers'
+        gain.channelCount = outChannels
+        gain.channelCountMode = 'explicit'
+        gain.channelInterpretation = 'speakers'
         source.connect(gain)
         gain.connect(ctx.destination)
         participantGainRef.current.set(el, gain)
