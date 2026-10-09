@@ -4367,6 +4367,9 @@ function VoiceChannel({ allow, me, membersById, channel, onParticipantsChange, o
         if (cancelled) { room.disconnect(); return }
         setConnected(true)
         syncParticipants(room)
+        // Som de entrada toca pra quem ja estava na call (ver RoomEvent.ParticipantConnected
+        // abaixo), mas quem esta entrando agora nunca ouvia o proprio som - toca aqui tambem.
+        void playCallNotice('join')
       } catch (err) {
         if (!cancelled) setError(err instanceof Error ? err.message : 'falha ao conectar')
       } finally {
@@ -4376,6 +4379,13 @@ function VoiceChannel({ allow, me, membersById, channel, onParticipantsChange, o
 
     return () => {
       cancelled = true
+      // Quem sai da call tambem nunca ouvia o proprio som de saida (so quem ficava ouvia, via
+      // RoomEvent.ParticipantDisconnected). Toca ANTES de fechar o contexto - fechar na hora
+      // cortava o som no meio, entao o fechamento do contexto de aviso fica com um atraso curto.
+      void playCallNotice('leave')
+      const noticeCtx = callNoticeAudioCtxRef.current
+      callNoticeAudioCtxRef.current = null
+      if (noticeCtx) setTimeout(() => { noticeCtx.close().catch(() => {}) }, 350)
       room.disconnect()
       roomRef.current = null
       attachedAudio.current.forEach((el) => el.remove())
@@ -4393,8 +4403,6 @@ function VoiceChannel({ allow, me, membersById, channel, onParticipantsChange, o
       participantGainRef.current.clear()
       outputAudioCtxRef.current?.close().catch(() => {})
       outputAudioCtxRef.current = null
-      callNoticeAudioCtxRef.current?.close().catch(() => {})
-      callNoticeAudioCtxRef.current = null
       void setMediaAudioMode()
     }
   }, [channel.id])
