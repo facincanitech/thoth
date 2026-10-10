@@ -2959,7 +2959,10 @@ html .desktop-window-shell.desktop-web-shell{
    irmao separado, fora deste flex) nem sair da borda (o pai/.msn-contact-info ja trava a largura
    com min-width:0 e a linha inteira nunca estoura o card). Minimo garante que nomes curtos nao
    fiquem minusculos. */
-.msn-contact-nameplate{display:inline-flex;flex:1 1 auto;min-width:90px;max-width:260px;width:auto;height:26px;box-sizing:border-box}
+/* Tamanho fixo pedido: altura igual a foto do contato (.msn-contact-avatar, 42px) e largura 6x
+   isso (252px) - texto comprido ja trunca sozinho com reticencias (overflow:hidden;
+   text-overflow:ellipsis logo abaixo), entao nao precisa limitar o tamanho do nome em JS. */
+.msn-contact-nameplate{display:inline-flex;flex:0 0 auto;width:252px;height:42px;box-sizing:border-box}
 .chat-info .name .play-nameplate{display:inline-flex;height:24px;width:clamp(80px,14ch,135px);box-sizing:border-box}
 .chat-info .name .msn-contact-tag{flex:none;margin-right:0}
 
