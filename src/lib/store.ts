@@ -105,6 +105,21 @@ export async function publishStoreItem(input: Pick<StoreItem, 'kind' | 'name' | 
   return data as StoreItem
 }
 
+// Molduras/placas podem ser GIF animado - por padrao so mostra a primeira frame (preview_url,
+// estatica, gerada no momento da criacao) e so anima de verdade no hover (ver NameplateArt).
+// Guarda os campos extras no cosmetico equipado pra nao precisar voltar no store_items toda vez
+// que o perfil e exibido.
+function buildCosmetic(item: StoreItem): { item_id: string; asset_url: string | null; accent: string | null; preview_url: string | null; animated: boolean; position: string | null } {
+  return {
+    item_id: item.id,
+    asset_url: item.asset_url,
+    accent: typeof item.manifest.accent === 'string' ? item.manifest.accent : null,
+    preview_url: item.preview_url,
+    animated: item.manifest.animated === true,
+    position: typeof item.manifest.position === 'string' ? item.manifest.position : null,
+  }
+}
+
 export async function activateStoreItem(userId: string, item: StoreItem) {
   const update = item.kind === 'theme' ? { active_theme_id: item.id }
     : item.kind === 'sound' && item.manifest.soundType === 'nudge' ? { nudge_sound_id: item.id }
@@ -119,12 +134,12 @@ export async function activateStoreItem(userId: string, item: StoreItem) {
   if (item.kind === 'theme') applyCommunityTheme(item)
   if (item.kind === 'sound' && item.asset_url) localStorage.setItem(item.manifest.soundType === 'nudge' ? 'thoth-nudge-sound' : 'thoth-message-sound', item.asset_url)
   if (item.kind === 'avatar_frame' || item.kind === 'nameplate') {
-    const cosmetic = { item_id: item.id, asset_url: item.asset_url, accent: typeof item.manifest.accent === 'string' ? item.manifest.accent : null }
+    const cosmetic = buildCosmetic(item)
     const { error: profileError } = await supabase.from('play_profiles').upsert({ user_id: userId, [item.kind === 'avatar_frame' ? 'avatar_frame' : 'nameplate']: cosmetic }, { onConflict: 'user_id' })
     if (profileError) throw profileError
   }
   if (item.kind === 'messenger_nameplate') {
-    const cosmetic = { item_id: item.id, asset_url: item.asset_url, accent: typeof item.manifest.accent === 'string' ? item.manifest.accent : null }
+    const cosmetic = buildCosmetic(item)
     const { error: profileError } = await supabase.from('profiles').update({ messenger_nameplate: cosmetic }).eq('id', userId)
     if (profileError) throw profileError
   }

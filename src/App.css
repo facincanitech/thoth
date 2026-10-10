@@ -1700,6 +1700,10 @@ body{
 }
 .play-profile-panel-backdrop{position:absolute;inset:0;background:rgb(0 0 0 / 35%);z-index:39}
 .play-profile-panel{inset:0 auto 0 0;width:360px;max-width:88vw;box-shadow:2px 0 24px rgb(0 0 0 / 25%)}
+/* Dentro de um servidor, o painel de perfil fica montado em cima da coluna de canais
+   (.play-channel-sidebar-wrap) - a largura fixa de 360px estourava pra dentro da area do chat,
+   passando por cima da borda que separa as duas colunas. Preenche so a largura real da coluna. */
+.play-channel-sidebar-wrap .play-profile-panel,.play-channel-sidebar-wrap .play-profile-panel-backdrop{width:100%;max-width:100%}
 
 /* Aero claro: identidade diurna propria, sem perder a hierarquia do Play. */
 .play-app-shell[data-theme="light"] .play-icon-rail{
