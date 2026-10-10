@@ -6,7 +6,7 @@ import type { ProfileCosmetic } from '../types'
 // Algumas placas sao renderizadas como background-image CSS (.play-nameplate, via a variavel
 // --nameplate-image) em vez de <img> de verdade - mesmo recurso de "so anima no hover" aplicado
 // ali, trocando a variavel CSS no mouseenter/leave em vez de trocar o src de uma img.
-export function useNameplateHoverStyle(plate: { asset_url: string | null; preview_url?: string | null; animated?: boolean; accent: string | null } | null | undefined) {
+export function useNameplateHoverStyle(plate: { asset_url: string | null; preview_url?: string | null; animated?: boolean; accent: string | null; position?: string | null } | null | undefined) {
   const [hovered, setHovered] = useState(false)
   if (!plate) return { style: undefined, onMouseEnter: undefined, onMouseLeave: undefined }
   const staticUrl = resolveAssetUrl(plate.preview_url || plate.asset_url)
@@ -16,6 +16,9 @@ export function useNameplateHoverStyle(plate: { asset_url: string | null; previe
     style: {
       '--nameplate-image': url ? `url("${url.replace(/["\\]/g, '')}")` : 'none',
       '--nameplate-accent': plate.accent || '#8aa4c7',
+      // Posicao escolhida na criacao (arrastar a previa) - sem isso o CSS base sempre centraliza
+      // (background-position:center), ignorando o enquadramento que a pessoa ajustou.
+      ...(plate.position ? { backgroundPosition: plate.position } : {}),
     } as CSSProperties,
     onMouseEnter: plate.animated ? () => setHovered(true) : undefined,
     onMouseLeave: plate.animated ? () => setHovered(false) : undefined,
