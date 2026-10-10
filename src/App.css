@@ -946,11 +946,21 @@ body{
 }
 .profile-banner-preview-avatar{
   position:absolute;left:50%;bottom:-24px;transform:translateX(-50%);
-  width:64px;height:64px;border-radius:14px;overflow:hidden;
+  width:64px;height:64px;border-radius:14px;overflow:visible;
   background:var(--avatar-bg);border:3px solid var(--bg-surface);
   display:grid;place-items:center;pointer-events:none;color:var(--muted);
 }
-.profile-banner-preview-avatar img{width:100%;height:100%;object-fit:cover}
+.profile-banner-preview-avatar img{width:100%;height:100%;object-fit:cover;border-radius:inherit}
+/* Versao da foto do Play dentro do preview do banner, que agora usa AvatarBox (pra poder mostrar
+   moldura equipada) em vez de um <img> cru - preenche a mesma caixa, clipping fica so aqui (o
+   wrapper externo precisa ficar overflow:visible pra moldura poder estourar pra fora). */
+.profile-banner-preview-avatar-inner{width:100%;height:100%;border-radius:inherit;overflow:hidden;display:grid;place-items:center}
+.profile-banner-preview-avatar-inner.avatar-has-frame{overflow:visible}
+.profile-media-grid{display:flex;gap:14px;margin-top:28px}
+.profile-media-grid-section{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px}
+.profile-media-grid-section>label{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+.profile-media-grid-row{display:flex;gap:8px}
+.profile-media-grid-row button{flex:1;min-width:0}
 .profile-banner-preview-avatar .account-avatar-edit{width:22px;height:22px;right:-2px;bottom:-2px;border-width:2px;pointer-events:none}
 .color-field{position:relative;margin-top:12px}
 .color-field label{display:block;margin-bottom:6px;color:var(--text)}

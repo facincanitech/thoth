@@ -3419,6 +3419,7 @@ function ProfilePanel({ me, open, onClose, onSaved }: { me: Profile; open: boole
   const [storeBackSignal, setStoreBackSignal] = useState(0)
   const [loaded, setLoaded] = useState(false)
   const [avatarUrl, setAvatarUrl] = useState<string | null>(me.avatar_url ?? null)
+  const [avatarFrame, setAvatarFrame] = useState<Profile['avatar_frame']>(null)
   const [displayNameDraft, setDisplayNameDraft] = useState(me.display_name || me.username)
   const [statusDraft, setStatusDraft] = useState(me.status || '')
   const [themePref, setThemePref] = useState<PlayThemeId>(DEFAULT_PLAY_THEME)
@@ -3442,6 +3443,7 @@ function ProfilePanel({ me, open, onClose, onSaved }: { me: Profile; open: boole
     supabase.from('play_profiles').select('*').eq('user_id', me.id).maybeSingle().then(({ data }) => {
       const p = data as PlayProfile | null
       setAvatarUrl(p?.avatar_url || me.avatar_url || null)
+      setAvatarFrame(p?.avatar_frame || null)
       setDisplayNameDraft(p?.display_name || me.display_name || me.username)
       setStatusDraft(p?.status || me.status || '')
       setThemePref(normalizePlayTheme(p?.theme_preference))
@@ -3540,6 +3542,12 @@ function ProfilePanel({ me, open, onClose, onSaved }: { me: Profile; open: boole
     e.target.value = ''
   }
 
+  async function removeAvatarImage() {
+    setAvatarUrl(null)
+    await upsert({ avatar_url: null })
+    onSaved()
+  }
+
   async function handleCropConfirm(blob: Blob) {
     setCropFile(null)
     setUploading(true)
@@ -3596,21 +3604,35 @@ function ProfilePanel({ me, open, onClose, onSaved }: { me: Profile; open: boole
           onPointerUp={handleBannerPointerUp}
           onPointerLeave={handleBannerPointerUp}
         >
-          <div className="profile-banner-preview-avatar" style={{ pointerEvents: 'auto', cursor: 'pointer', position: 'relative' }} title="Trocar foto" onClick={() => fileRef.current?.click()}>
-            {avatarUrl ? <img src={avatarUrl} alt="" /> : <IconUser size={26} />}
+          <div className="profile-banner-preview-avatar" style={{ pointerEvents: 'auto', cursor: 'pointer' }} title="Trocar foto" onClick={() => fileRef.current?.click()}>
+            <AvatarBox src={avatarUrl} id={me.id} fallbackLetter={displayName(me)[0]?.toUpperCase()} className="profile-banner-preview-avatar-inner" frame={avatarFrame} />
             <span className="account-avatar-edit">{uploading ? '…' : <IconEdit size={13} />}</span>
           </div>
         </div>
         <input ref={fileRef} type="file" accept="image/*" hidden onChange={handleAvatarPick} />
         {uploading && <p className="play-empty">enviando foto...</p>}
-        <label style={{ marginTop: 12 }}>Imagem ou GIF</label>
+
+        <div className="profile-media-grid">
+          <div className="profile-media-grid-section">
+            <label>Card</label>
+            <div className="profile-media-grid-row">
+              <button type="button" className="google-btn" disabled={bannerUploading} onClick={() => bannerFileRef.current?.click()}>
+                {bannerUploading ? 'enviando...' : 'Trocar'}
+              </button>
+              <button type="button" className="google-btn" disabled={!bannerImage} onClick={removeBannerImage}>Remover</button>
+            </div>
+          </div>
+          <div className="profile-media-grid-section">
+            <label>Foto Perfil</label>
+            <div className="profile-media-grid-row">
+              <button type="button" className="google-btn" disabled={uploading} onClick={() => fileRef.current?.click()}>
+                {uploading ? 'enviando...' : 'Trocar'}
+              </button>
+              <button type="button" className="google-btn" disabled={!avatarUrl} onClick={removeAvatarImage}>Remover</button>
+            </div>
+          </div>
+        </div>
         <input ref={bannerFileRef} type="file" accept="image/*" hidden onChange={handleBannerPick} />
-        <button type="button" className="google-btn" disabled={bannerUploading} onClick={() => bannerFileRef.current?.click()}>
-          {bannerUploading ? 'enviando...' : bannerImage ? 'Trocar imagem' : 'Escolher imagem'}
-        </button>
-        {bannerImage && (
-          <button type="button" className="google-btn" style={{ marginTop: 6 }} onClick={removeBannerImage}>Remover imagem</button>
-        )}
 
         <label style={{ marginTop: 12 }}>Cor de fundo (foto)</label>
         <div className="banner-color-picker">
