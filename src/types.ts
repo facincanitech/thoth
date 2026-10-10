@@ -4,6 +4,12 @@ export type ProfileCosmetic = {
   item_id: string
   asset_url: string | null
   accent: string | null
+  // Molduras/placas podem ser GIF animado - por padrao mostra so a primeira frame (preview_url,
+  // estatica) e so anima de verdade quando o mouse passa em cima (ver NameplateArt/StyledName).
+  // Itens antigos/estaticos nao tem esses campos - animated fica undefined, tratado como false.
+  preview_url?: string | null
+  animated?: boolean
+  position?: string | null
 }
 
 export type Profile = {

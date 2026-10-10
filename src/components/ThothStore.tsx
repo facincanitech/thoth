@@ -49,7 +49,7 @@ const profileCategories = categories.filter((entry) => entry.id === 'profile_nam
 const messengerCategories = categories.filter((entry) => entry.id === 'messenger_nameplate')
 const playLibraryCategories = profileCategories.filter((entry) => entry.id !== 'profile_name')
 
-const kindNames: Record<StoreKind, string> = { theme: 'tema', sound: 'som', wink: 'wink', sticker: 'sticker', emoji: 'emoji', avatar_frame: 'moldura', nameplate: 'placa de nome do Play', messenger_nameplate: 'placa do Messenger', profile_background: 'fundo de perfil' }
+const kindNames: Record<StoreKind, string> = { theme: 'tema', sound: 'som', wink: 'wink', sticker: 'sticker', emoji: 'emoji', avatar_frame: 'moldura', nameplate: 'placa de nome do Play', messenger_nameplate: 'placa', profile_background: 'fundo de perfil' }
 
 export function ThothStore({ me, mode = 'store', scope = 'all', onProfileChange, backSignal, onExit }: { me: Profile; mode?: 'store' | 'library'; scope?: 'all' | 'play'; onOpenStore?: () => void; onProfileChange: (patch: Partial<Profile>) => void; backSignal: number; onExit: () => void }) {
   const desktopLayout = useDesktopLayout()
@@ -345,7 +345,9 @@ function StoreCard({ item, desktop, installed, busy, active, onToggle, onUse, on
 }
 
 function CreatorModal({ me, initialKind, botSubmission, onClose, onDone }: { me: Profile; initialKind: StoreKind; botSubmission: boolean; onClose: () => void; onDone: () => void }) {
-  const [kind, setKind] = useState<StoreKind>(initialKind)
+  // A categoria ja vem decidida por onde a pessoa clicou "Criar" (a loja so mostra o botao
+  // dentro de uma categoria especifica) - um seletor aqui so duplicava uma escolha obvia.
+  const kind = initialKind
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [file, setFile] = useState<File | null>(null)
@@ -378,7 +380,6 @@ function CreatorModal({ me, initialKind, botSubmission, onClose, onDone }: { me:
 
   return <div className="store-modal-backdrop" onMouseDown={onClose}><div className="store-modal" onMouseDown={(event) => event.stopPropagation()}>
     <button className="store-modal-close" onClick={onClose}>×</button><span className="store-kicker">ESTÚDIO DA COMUNIDADE</span><h2>{botSubmission ? 'Enviar bot para análise' : `Criar ${kindNames[kind]}`}</h2><p>{help}</p>
-    {!botSubmission && <label>Categoria<select value={kind} onChange={(event) => setKind(event.target.value as StoreKind)}>{Object.entries(kindNames).map(([id, label]) => <option key={id} value={id}>{label}</option>)}</select></label>}
     <label>Nome da criação<input maxLength={60} value={name} onChange={(event) => setName(event.target.value)} placeholder="Ex.: Noite em Neo Thoth" /></label>
     <label>Descrição<textarea maxLength={500} value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Conte a ideia e o que torna isso especial" /></label>
     {!botSubmission && kind === 'theme' && <><p className="store-color-help">Essas cores controlam áreas gerais do app; os temas oficiais ainda podem ter detalhes próprios.</p><div className="store-color-grid">{Object.entries(colors).map(([key, value]) => <label key={key}>{({ primary: 'Cor principal', accent: 'Destaque e botões', background: 'Fundo', surface: 'Painéis', text: 'Texto principal', muted: 'Texto secundário', incoming: 'Mensagem recebida', outgoing: 'Mensagem enviada' } as Record<string, string>)[key]}<input type="color" value={value} onChange={(event) => setColors((old) => ({ ...old, [key]: event.target.value }))} /></label>)}</div></>}
