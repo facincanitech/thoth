@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Capacitor } from '@capacitor/core'
 import { supabase } from '../lib/supabase'
 import thothLogo from '../../logo/toth_chat.png'
@@ -9,6 +9,7 @@ import { displayName } from '../lib/displayName'
 import { AvatarBox } from './AvatarBox'
 import { NotificationCenter } from './NotificationCenter'
 import { ThothStore } from './ThothStore'
+import { useNameplateHoverStyle } from './StyledName'
 import { StatusView } from './StatusView'
 import { readCache, writeCache } from '../lib/cache'
 import { APP_VERSION, APK_DOWNLOAD_URL, DESKTOP_DOWNLOAD_URL } from '../version'
@@ -19,7 +20,6 @@ import { isTauriDesktop } from '../lib/platform'
 import { startDesktopGoogleLogin } from '../lib/desktopLogin'
 import { getPresenceColor } from '../lib/presence'
 import { playMessageSound } from '../lib/notificationSound'
-import { resolveAssetUrl } from '../lib/assetUrl'
 import { desktopToastEnabled, messagePreview, readDesktopToastPlacement, saveDesktopToastPlacement, setDesktopToastEnabled, showDesktopToast, type DesktopToastPosition } from '../lib/desktopToast'
 import {
   deviceContactsAvailable,
@@ -171,6 +171,11 @@ type OutgoingRequest = {
 
 type BlockedUser = { id: string; username: string; email: string }
 type Friend = { id: string; username: string; display_name: string | null; avatar_url: string | null; name_style_color: string | null }
+
+function ContactNameplate({ label, plate }: { label: string; plate: Profile['messenger_nameplate'] }) {
+  const { style, onMouseEnter, onMouseLeave } = useNameplateHoverStyle(plate)
+  return <span className={plate ? 'play-nameplate msn-contact-nameplate' : undefined} style={style} onMouseEnter={onMouseEnter} onMouseLeave={onMouseLeave}>{label}</span>
+}
 
 export function ChatList({
   me,
@@ -2239,15 +2244,10 @@ export function ChatList({
   // Estrutura oficial do Thoth: lista Frutiger/MSN em todas as skins.
   // No APK a navegacao continua embaixo; no desktop continua na lateral.
   const useMsnList = true
-  const decoratedContactName = (label: string, conv?: ConvWithLabel) => {
-    const plate = conv?.nameplate
-    const plateUrl = resolveAssetUrl(plate?.asset_url)
-    const style = plate ? {
-      '--nameplate-image': plateUrl ? `url("${plateUrl.replace(/["\\]/g, '')}")` : 'none',
-      '--nameplate-accent': plate.accent || '#8aa4c7',
-    } as CSSProperties : undefined
-    return <span className={plate ? 'play-nameplate msn-contact-nameplate' : undefined} style={style}>{label}</span>
-  }
+  // Precisa ser um componente de verdade (nao uma funcao helper chamada varias vezes dentro do
+  // render) porque usa o hook useNameplateHoverStyle por baixo - chamar hook dentro de uma funcao
+  // invocada em loop (uma vez por contato da lista) quebra as Rules of Hooks do React.
+  const decoratedContactName = (label: string, conv?: ConvWithLabel) => <ContactNameplate label={label} plate={conv?.nameplate} />
   let desktopContactsSurface: ReactNode = null
   if (useMsnList) {
     const sortByChatOrder = <T extends { id: string }>(items: T[]): T[] => {

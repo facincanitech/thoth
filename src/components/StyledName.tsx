@@ -1,7 +1,26 @@
-import { useLayoutEffect, useRef, useState } from 'react'
+import { useLayoutEffect, useRef, useState, type CSSProperties } from 'react'
 import { isTauriDesktop } from '../lib/platform'
 import { resolveAssetUrl } from '../lib/assetUrl'
 import type { ProfileCosmetic } from '../types'
+
+// Algumas placas sao renderizadas como background-image CSS (.play-nameplate, via a variavel
+// --nameplate-image) em vez de <img> de verdade - mesmo recurso de "so anima no hover" aplicado
+// ali, trocando a variavel CSS no mouseenter/leave em vez de trocar o src de uma img.
+export function useNameplateHoverStyle(plate: { asset_url: string | null; preview_url?: string | null; animated?: boolean; accent: string | null } | null | undefined) {
+  const [hovered, setHovered] = useState(false)
+  if (!plate) return { style: undefined, onMouseEnter: undefined, onMouseLeave: undefined }
+  const staticUrl = resolveAssetUrl(plate.preview_url || plate.asset_url)
+  const animatedUrl = resolveAssetUrl(plate.asset_url)
+  const url = (plate.animated && hovered ? animatedUrl : staticUrl) || animatedUrl
+  return {
+    style: {
+      '--nameplate-image': url ? `url("${url.replace(/["\\]/g, '')}")` : 'none',
+      '--nameplate-accent': plate.accent || '#8aa4c7',
+    } as CSSProperties,
+    onMouseEnter: plate.animated ? () => setHovered(true) : undefined,
+    onMouseLeave: plate.animated ? () => setHovered(false) : undefined,
+  }
+}
 
 // Imagem de fundo de uma placa (nameplate) - pode ser GIF animado. Por padrao so mostra a
 // primeira frame estatica (preview_url, gerada na criacao) e so troca pro arquivo animado de

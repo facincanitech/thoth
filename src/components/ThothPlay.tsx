@@ -14,7 +14,7 @@ import { resolveAssetUrl } from '../lib/assetUrl'
 import { AvatarBox } from './AvatarBox'
 import { getPresenceColor } from '../lib/presence'
 import { ReplayPlayer, type ReplayEvent } from './ReplayPlayer'
-import { StyledName } from './StyledName'
+import { StyledName, NameplateArt, useNameplateHoverStyle } from './StyledName'
 import { uploadImage } from '../lib/uploadImage'
 import {
   IconArrowLeft, IconChat, IconChevronDown, IconCopy, IconEdit, IconGamepad, IconGrip, IconHash, IconHeadphones,
@@ -165,13 +165,9 @@ function autoStyledNameProps(profile: Profile) {
 
 function PlayProfileName({ profile }: { profile: Profile }) {
   const plate = profile.nameplate
-  const plateUrl = resolveAssetUrl(plate?.asset_url)
-  const style = plate ? {
-    '--nameplate-image': plateUrl ? `url("${plateUrl.replace(/["\\]/g, '')}")` : 'none',
-    '--nameplate-accent': plate.accent || '#8aa4c7',
-  } as CSSProperties : undefined
+  const { style, onMouseEnter, onMouseLeave } = useNameplateHoverStyle(plate)
   const nameStyle = autoStyledNameProps(profile)
-  return <span className={plate ? 'play-nameplate' : undefined} style={style}><StyledName name={displayName(profile)} font={profile.name_style_font} effect={nameStyle.effect} color={nameStyle.color} /></span>
+  return <span className={plate ? 'play-nameplate' : undefined} style={style} onMouseEnter={onMouseEnter} onMouseLeave={onMouseLeave}><StyledName name={displayName(profile)} font={profile.name_style_font} effect={nameStyle.effect} color={nameStyle.color} /></span>
 }
 
 function PlayIdentityBanner({ profile, avatarClass = 'avatar-sm', compact = false, onClick, onContextMenu }: {
@@ -198,7 +194,7 @@ function PlayIdentityBanner({ profile, avatarClass = 'avatar-sm', compact = fals
         frame={profile.avatar_frame}
       />
       {plate && plateUrl ? <span className="play-identity-plate" style={style}>
-        <img className="play-identity-banner-art" src={plateUrl} alt="" aria-hidden="true" />
+        <NameplateArt plate={plate} className="play-identity-banner-art" />
         <span className="play-name-clickable" onClick={onClick} onContextMenu={onContextMenu}>
           <StyledName name={displayName(profile)} font={profile.name_style_font} effect={nameStyle.effect} color={nameStyle.color} />
         </span>
