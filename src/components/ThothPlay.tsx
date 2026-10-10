@@ -3424,9 +3424,13 @@ function ProfilePanel({ me, open, onClose, onSaved }: { me: Profile; open: boole
   const [themePref, setThemePref] = useState<PlayThemeId>(DEFAULT_PLAY_THEME)
   const [bannerColor, setBannerColor] = useState<string | null>(null)
   const [bannerImage, setBannerImage] = useState<string | null>(null)
+  const [bannerImagePos, setBannerImagePos] = useState('50% 50%')
   const [profileTags, setProfileTags] = useState<string[]>([])
   const [bannerUploading, setBannerUploading] = useState(false)
   const bannerFileRef = useRef<HTMLInputElement>(null)
+  const bannerPreviewRef = useRef<HTMLDivElement>(null)
+  const bannerDragRef = useRef<{ startX: number; startY: number; startPosX: number; startPosY: number } | null>(null)
+  const bannerPosRef = useRef('50% 50%')
   const [uploading, setUploading] = useState(false)
   const [cropFile, setCropFile] = useState<File | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
@@ -3443,6 +3447,7 @@ function ProfilePanel({ me, open, onClose, onSaved }: { me: Profile; open: boole
       setThemePref(normalizePlayTheme(p?.theme_preference))
       setBannerColor(p?.banner_color || null)
       setBannerImage(p?.banner_image_url || null)
+      setBannerImagePos(p?.banner_image_position || '50% 50%')
       setProfileTags(p?.tags || [])
       setLoaded(true)
     })
@@ -3471,6 +3476,37 @@ function ProfilePanel({ me, open, onClose, onSaved }: { me: Profile; open: boole
   async function autosave(patch: Partial<PlayProfile>) {
     await upsert(patch)
     onSaved()
+  }
+
+  // Arrastar pra reposicionar o banner - mesmo mecanismo do Messenger (ChatList.tsx), so que
+  // grava em play_profiles em vez de profiles (banners/fotos sao independentes entre os dois).
+  function parseBannerPos(pos: string): [number, number] {
+    const [x, y] = pos.split(' ').map((p) => parseFloat(p))
+    return [Number.isFinite(x) ? x : 50, Number.isFinite(y) ? y : 50]
+  }
+  function handleBannerPointerDown(e: ReactPointerEvent<HTMLDivElement>) {
+    if (!bannerImage) return
+    const [x, y] = parseBannerPos(bannerImagePos)
+    bannerPosRef.current = bannerImagePos
+    bannerDragRef.current = { startX: e.clientX, startY: e.clientY, startPosX: x, startPosY: y }
+    e.currentTarget.setPointerCapture(e.pointerId)
+  }
+  function handleBannerPointerMove(e: ReactPointerEvent<HTMLDivElement>) {
+    const drag = bannerDragRef.current
+    if (!drag || !bannerPreviewRef.current) return
+    const rect = bannerPreviewRef.current.getBoundingClientRect()
+    const dxPct = ((e.clientX - drag.startX) / rect.width) * 100
+    const dyPct = ((e.clientY - drag.startY) / rect.height) * 100
+    const nextX = Math.min(100, Math.max(0, drag.startPosX - dxPct))
+    const nextY = Math.min(100, Math.max(0, drag.startPosY - dyPct))
+    const nextPosition = `${nextX.toFixed(0)}% ${nextY.toFixed(0)}%`
+    bannerPosRef.current = nextPosition
+    setBannerImagePos(nextPosition)
+  }
+  async function handleBannerPointerUp() {
+    if (!bannerDragRef.current) return
+    bannerDragRef.current = null
+    await autosave({ banner_image_position: bannerPosRef.current })
   }
 
   async function handleBannerPick(e: ChangeEvent<HTMLInputElement>) {
@@ -3547,16 +3583,22 @@ function ProfilePanel({ me, open, onClose, onSaved }: { me: Profile; open: boole
       ) : view === 'profile' ? (
       <div className="play-group-info-body">
         <div
+          ref={bannerPreviewRef}
           className="profile-banner-preview"
           style={{
             display: 'block', width: '100%', minWidth: '100%', height: 188, minHeight: 188, boxSizing: 'border-box',
             ...(bannerImage
-              ? { backgroundImage: 'url(' + bannerImage + ')', backgroundPosition: '50% 50%', backgroundSize: 'cover' }
+              ? { backgroundImage: 'url(' + bannerImage + ')', backgroundPosition: bannerImagePos, backgroundSize: 'cover', cursor: 'grab' }
               : { background: bannerColor || 'var(--green)' }),
           }}
+          onPointerDown={handleBannerPointerDown}
+          onPointerMove={handleBannerPointerMove}
+          onPointerUp={handleBannerPointerUp}
+          onPointerLeave={handleBannerPointerUp}
         >
-          <div className="profile-banner-preview-avatar" style={{ pointerEvents: 'auto', cursor: 'pointer' }} title="Trocar foto" onClick={() => fileRef.current?.click()}>
+          <div className="profile-banner-preview-avatar" style={{ pointerEvents: 'auto', cursor: 'pointer', position: 'relative' }} title="Trocar foto" onClick={() => fileRef.current?.click()}>
             {avatarUrl ? <img src={avatarUrl} alt="" /> : <IconUser size={26} />}
+            <span className="account-avatar-edit">{uploading ? '…' : <IconEdit size={13} />}</span>
           </div>
         </div>
         <input ref={fileRef} type="file" accept="image/*" hidden onChange={handleAvatarPick} />

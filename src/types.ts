@@ -103,6 +103,7 @@ export type PlayProfile = {
   theme_preference: PlayThemeId | null
   banner_color: string | null
   banner_image_url: string | null
+  banner_image_position: string | null
   tags: string[] | null
   updated_at: string
 }
