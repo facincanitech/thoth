@@ -1,5 +1,30 @@
 import { useLayoutEffect, useRef, useState } from 'react'
 import { isTauriDesktop } from '../lib/platform'
+import { resolveAssetUrl } from '../lib/assetUrl'
+import type { ProfileCosmetic } from '../types'
+
+// Imagem de fundo de uma placa (nameplate) - pode ser GIF animado. Por padrao so mostra a
+// primeira frame estatica (preview_url, gerada na criacao) e so troca pro arquivo animado de
+// verdade (asset_url) enquanto o mouse estiver em cima, pra nao ficar tudo se mexendo a toa numa
+// lista cheia de gente. Itens antigos/sem preview_url proprio so mostram o asset normal sempre.
+export function NameplateArt({ plate, className }: { plate: ProfileCosmetic; className?: string }) {
+  const [hovered, setHovered] = useState(false)
+  const staticUrl = resolveAssetUrl(plate.preview_url || plate.asset_url)
+  const animatedUrl = resolveAssetUrl(plate.asset_url)
+  const src = (plate.animated && hovered ? animatedUrl : staticUrl) || animatedUrl
+  if (!src) return null
+  return (
+    <img
+      className={className}
+      src={src}
+      alt=""
+      aria-hidden="true"
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={plate.position ? { objectPosition: plate.position } : undefined}
+    />
+  )
+}
 
 export const NAME_FONTS = [
   { id: 'default', label: 'Padrão', family: 'inherit' },

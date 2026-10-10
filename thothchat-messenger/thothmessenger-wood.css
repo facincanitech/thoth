@@ -245,6 +245,12 @@
   --play-glass-top:#e6bb8e;--play-glass-bottom:#d8ad79;--play-rail-top:#9f672b;--play-rail-bottom:#7a4f1c;
   --play-canvas:#d1bba9;--play-heading:#744f1c;--play-cyan:#9e6925;--shadow:0 10px 28px #5339122e;
   background:var(--bg-deep);color:var(--text);
+  /* .desktop-window-shell (regra base, bem acima neste arquivo) poe um box-shadow BRANCO
+     (inset 0 0 0 1px #d1bba9b3) ao redor de toda a janela - pensado pro fundo claro do
+     Messenger. O Play e sempre escuro, entao esse brilho branco sobrava como uma linha clara
+     visivel em cima do titulo e na lateral esquerda. So a sombra externa continua, sem o brilho
+     interno branco. */
+  box-shadow:0 12px 35px #2a1d098c;
 }
 .play-window-shell .titlebar{background:linear-gradient(#2f2616,#241c10)!important;border-bottom:1px solid #140f0b;text-shadow:none;box-shadow:none}
 .play-window-shell .titlebar-logo{filter:drop-shadow(0 0 4px #c47e2b)}

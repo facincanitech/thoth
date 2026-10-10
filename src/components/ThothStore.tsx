@@ -359,6 +359,68 @@ function CreatorModal({ me, initialKind, botSubmission, onClose, onDone }: { me:
   const needsFile = kind !== 'theme'
   const help = useMemo(() => botSubmission ? 'Bots executam ações, então a publicação passa por revisão antes de entrar no catálogo.' : 'Você escolhe o nome; seu perfil aparece como autor em todos os aparelhos.', [botSubmission])
 
+  // Moldura/placa/fundo podem ser GIF animado e tem um recorte fixo quando exibidos (pilula
+  // estreita, moldura de avatar etc.) - deixa arrastar a imagem dentro de uma previa pra escolher
+  // a posicao, igual ja existe pro banner de perfil. Nao reusa o crop por canvas da foto (that
+  // "achata" a imagem numa so frame, destruiria a animacao do GIF) - so guarda um offset em %,
+  // aplicado via CSS na hora de exibir.
+  const positionable = kind === 'nameplate' || kind === 'messenger_nameplate' || kind === 'avatar_frame' || kind === 'profile_background'
+  const isGif = file?.type === 'image/gif'
+  const [filePreviewUrl, setFilePreviewUrl] = useState<string | null>(null)
+  const [position, setPosition] = useState('50% 50%')
+  const previewBoxRef = useRef<HTMLDivElement>(null)
+  const dragRef = useRef<{ startX: number; startY: number; startPosX: number; startPosY: number } | null>(null)
+
+  useEffect(() => {
+    if (!file) { setFilePreviewUrl(null); return }
+    const url = URL.createObjectURL(file)
+    setFilePreviewUrl(url)
+    setPosition('50% 50%')
+    return () => URL.revokeObjectURL(url)
+  }, [file])
+
+  function parsePos(pos: string): [number, number] {
+    const [x, y] = pos.split(' ').map((p) => parseFloat(p))
+    return [Number.isFinite(x) ? x : 50, Number.isFinite(y) ? y : 50]
+  }
+  function onPreviewPointerDown(e: React.PointerEvent<HTMLDivElement>) {
+    const [x, y] = parsePos(position)
+    dragRef.current = { startX: e.clientX, startY: e.clientY, startPosX: x, startPosY: y }
+    e.currentTarget.setPointerCapture(e.pointerId)
+  }
+  function onPreviewPointerMove(e: React.PointerEvent<HTMLDivElement>) {
+    const drag = dragRef.current
+    if (!drag || !previewBoxRef.current) return
+    const rect = previewBoxRef.current.getBoundingClientRect()
+    const dxPct = ((e.clientX - drag.startX) / rect.width) * 100
+    const dyPct = ((e.clientY - drag.startY) / rect.height) * 100
+    const nextX = Math.min(100, Math.max(0, drag.startPosX - dxPct))
+    const nextY = Math.min(100, Math.max(0, drag.startPosY - dyPct))
+    setPosition(`${nextX.toFixed(0)}% ${nextY.toFixed(0)}%`)
+  }
+  function onPreviewPointerUp() { dragRef.current = null }
+
+  // GIF: extrai a primeira frame num canvas pra virar a miniatura estatica (preview_url) - o
+  // arquivo animado de verdade (asset_url) so toca no hover (ver NameplateArt). Extrair so da
+  // pra fazer com uma IMG de verdade carregada (nao funciona direto em cima do File/Blob).
+  function extractFirstFrame(url: string): Promise<Blob | null> {
+    return new Promise((resolve) => {
+      const img = new Image()
+      img.crossOrigin = 'anonymous'
+      img.onload = () => {
+        const canvas = document.createElement('canvas')
+        canvas.width = img.naturalWidth
+        canvas.height = img.naturalHeight
+        const ctx = canvas.getContext('2d')
+        if (!ctx) { resolve(null); return }
+        ctx.drawImage(img, 0, 0)
+        canvas.toBlob((blob) => resolve(blob), 'image/png')
+      }
+      img.onerror = () => resolve(null)
+      img.src = url
+    })
+  }
+
   async function submit() {
     if (!name.trim() || (needsFile && !file)) { setError('Dê um nome e escolha o arquivo do item.'); return }
     setBusy(true); setError('')
@@ -372,7 +434,18 @@ function CreatorModal({ me, initialKind, botSubmission, onClose, onDone }: { me:
       const manifest: StoreManifest = kind === 'theme' ? { ...colors } : kind === 'sound' ? { soundType } : {}
       if (kind === 'theme' && assetUrl) manifest.railImage = assetUrl
       if (kind === 'wink' && soundFile) manifest.soundUrl = await uploadStoreAsset(me.id, soundFile)
-      await publishStoreItem({ kind, name: name.trim(), description: description.trim(), creator_id: me.id, manifest, asset_url: assetUrl, preview_url: kind === 'sound' ? null : assetUrl })
+      let previewUrl = kind === 'sound' ? null : assetUrl
+      if (positionable) {
+        manifest.position = position
+        if (isGif && file) {
+          const frameBlob = await extractFirstFrame(URL.createObjectURL(file))
+          if (frameBlob) {
+            previewUrl = await uploadStoreAsset(me.id, new File([frameBlob], 'preview.png', { type: 'image/png' }))
+            manifest.animated = true
+          }
+        }
+      }
+      await publishStoreItem({ kind, name: name.trim(), description: description.trim(), creator_id: me.id, manifest, asset_url: assetUrl, preview_url: previewUrl })
       onDone()
     } catch (cause) { setError(getErrorMessage(cause)) }
     finally { setBusy(false) }
@@ -384,7 +457,22 @@ function CreatorModal({ me, initialKind, botSubmission, onClose, onDone }: { me:
     <label>Descrição<textarea maxLength={500} value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Conte a ideia e o que torna isso especial" /></label>
     {!botSubmission && kind === 'theme' && <><p className="store-color-help">Essas cores controlam áreas gerais do app; os temas oficiais ainda podem ter detalhes próprios.</p><div className="store-color-grid">{Object.entries(colors).map(([key, value]) => <label key={key}>{({ primary: 'Cor principal', accent: 'Destaque e botões', background: 'Fundo', surface: 'Painéis', text: 'Texto principal', muted: 'Texto secundário', incoming: 'Mensagem recebida', outgoing: 'Mensagem enviada' } as Record<string, string>)[key]}<input type="color" value={value} onChange={(event) => setColors((old) => ({ ...old, [key]: event.target.value }))} /></label>)}</div></>}
     {!botSubmission && kind === 'sound' && <label>Usar para<select value={soundType} onChange={(event) => setSoundType(event.target.value as 'message' | 'nudge')}><option value="message">Nova mensagem</option><option value="nudge">Chamar atenção</option></select></label>}
-    {!botSubmission && (needsFile || kind === 'theme') && <label>{kind === 'theme' ? 'Imagem da barra/fundo (opcional)' : 'Arquivo'}<input type="file" accept={accepts} onChange={(event) => setFile(event.target.files?.[0] || null)} /></label>}
+    {!botSubmission && (needsFile || kind === 'theme') && <label>{kind === 'theme' ? 'Imagem da barra/fundo (opcional)' : 'Arquivo (aceita GIF animado)'}<input type="file" accept={accepts} onChange={(event) => setFile(event.target.files?.[0] || null)} /></label>}
+    {!botSubmission && positionable && filePreviewUrl && (
+      <div className="store-position-field">
+        <label>Posição {isGif && <em className="store-gif-badge">GIF - só anima no hover</em>}</label>
+        <div
+          ref={previewBoxRef}
+          className="store-position-preview"
+          style={{ backgroundImage: `url(${filePreviewUrl})`, backgroundPosition: position }}
+          onPointerDown={onPreviewPointerDown}
+          onPointerMove={onPreviewPointerMove}
+          onPointerUp={onPreviewPointerUp}
+          onPointerLeave={onPreviewPointerUp}
+        />
+        <small>Arrasta a imagem pra ajustar o enquadramento</small>
+      </div>
+    )}
     {!botSubmission && kind === 'wink' && <label>Som do wink (opcional)<input type="file" accept="audio/*" onChange={(event) => setSoundFile(event.target.files?.[0] || null)} /></label>}
     {error && <div className="store-error">{error}</div>}<button className="store-publish" disabled={busy} onClick={submit}>{busy ? 'Publicando…' : botSubmission ? 'Enviar para análise' : 'Publicar na loja'}</button>
   </div></div>
