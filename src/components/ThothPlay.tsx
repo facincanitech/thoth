@@ -2178,7 +2178,12 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
                         </button>
                         {c.kind === 'voice' && channelVoiceList(c.id).map((p) => (
                           <div key={p.id} className="play-channel-voice-member">
-                            <PlayVoiceIdentityBanner entry={p} showPlate={false} />
+                            <PlayVoiceIdentityBanner
+                              entry={p}
+                              showPlate={false}
+                              onClick={() => setProfileCardId(p.id)}
+                              onContextMenu={(e) => { e.preventDefault(); openRoleQuickMenu(p.id, p.name, e.clientX, e.clientY) }}
+                            />
                           </div>
                         ))}
                       </div>
@@ -2209,7 +2214,12 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
                         </button>
                         {c.kind === 'voice' && channelVoiceList(c.id).map((p) => (
                           <div key={p.id} className="play-channel-voice-member">
-                            <PlayVoiceIdentityBanner entry={p} showPlate={false} />
+                            <PlayVoiceIdentityBanner
+                              entry={p}
+                              showPlate={false}
+                              onClick={() => setProfileCardId(p.id)}
+                              onContextMenu={(e) => { e.preventDefault(); openRoleQuickMenu(p.id, p.name, e.clientX, e.clientY) }}
+                            />
                           </div>
                         ))}
                       </div>
@@ -2327,7 +2337,7 @@ function GroupView({ me, myPlayProfile, group, channels, categories, selectedCha
                   </div>
                 ) : (
                   <div key={m.id} className="play-message">
-                    <AvatarBox src={m.author?.avatar_url} id={m.author_id} fallbackLetter={(m.author ? displayName(m.author) : '?')[0]?.toUpperCase()} className="avatar-sm" />
+                    <AvatarBox src={m.author?.avatar_url} id={m.author_id} fallbackLetter={(m.author ? displayName(m.author) : '?')[0]?.toUpperCase()} className="avatar-sm" style={m.author ? { cursor: 'pointer' } : undefined} onClick={m.author ? () => setProfileCardId(m.author_id) : undefined} />
                     <div className="play-message-body">
                       <div className="play-message-row">
                         {m.author ? <span
@@ -3682,6 +3692,7 @@ type ParticipantTile = {
   isSpeaking: boolean
   videoTrack?: Track
   cameraTrack?: Track
+  avatarFrame?: Profile['avatar_frame']
 }
 
 function fmtElapsed(ms: number) {
@@ -3808,7 +3819,7 @@ function VoiceTile({ p, avatarUrl, bannerColor, bannerImageUrl, startedAt, maxim
             <span>Você está transmitindo sua tela</span>
           </div>
         ) : (
-          <AvatarBox src={avatarUrl} id={p.id} fallbackLetter={p.name[0]?.toUpperCase()} className="play-voice-avatar" />
+          <AvatarBox src={avatarUrl} id={p.id} fallbackLetter={p.name[0]?.toUpperCase()} className="play-voice-avatar" frame={p.avatarFrame} />
         )}
         {ownScreen && (
           <button type="button" className="play-voice-preview-toggle" onClick={(e) => { e.stopPropagation(); setShowOwnPreview((v) => !v) }}>
@@ -3871,7 +3882,7 @@ function VoiceChannel({ allow, me, membersById, channel, onParticipantsChange, o
       // depois no codigo original e nunca era alcancada se isso lancasse excessao).
       for (const [identity, els] of Object.entries(participantAudioEls.current)) {
         const pv = participantVolumesRef.current[identity] ?? 1
-        const vol = Math.max(0, next.outputVolume * pv)
+        const vol = Math.max(0, next.outputVolume * boostCurve(pv))
         els.forEach((el) => {
           applyParticipantVolume(el, vol)
           if (next.outputDeviceId) applyParticipantSink(el, next.outputDeviceId)
@@ -4243,6 +4254,16 @@ function VoiceChannel({ allow, me, membersById, channel, onParticipantsChange, o
   // Volume individual por participante (tipo Discord) - multiplica em cima do volume geral de
   // saida. Guardado por localStorage (nao por pessoa especifica, so pelo identity/id do perfil)
   // pra persistir entre chamadas.
+  //
+  // O slider vai ate 2 (200%), mas GainNode e amplitude LINEAR - ganho humano de volume e
+  // logaritmico, entao 2x de ganho linear da so uns +6dB, perceptivelmente "um pouco mais alto",
+  // nao "o dobro" como o rotulo "200%" sugere (bug relatado: "só aumenta pouco"). Acima de 100%
+  // usa uma curva mais agressiva (ganho real ate 4x em vez de 2x) pra um boost que realmente se
+  // sente como um boost; abaixo de 100% continua linear normal (silenciar/abaixar precisa ser
+  // previsivel).
+  function boostCurve(v: number): number {
+    return v <= 1 ? v : 1 + (v - 1) * 3
+  }
   function setParticipantVolume(id: string, v: number) {
     setParticipantVolumes((prev) => {
       const next = { ...prev, [id]: v }
@@ -4250,7 +4271,7 @@ function VoiceChannel({ allow, me, membersById, channel, onParticipantsChange, o
       return next
     })
     const els = participantAudioEls.current[id] || []
-    const vol = Math.max(0, voiceSettingsRef.current.outputVolume * v)
+    const vol = Math.max(0, voiceSettingsRef.current.outputVolume * boostCurve(v))
     els.forEach((el) => applyParticipantVolume(el, vol))
   }
 
@@ -4277,6 +4298,7 @@ function VoiceChannel({ allow, me, membersById, channel, onParticipantsChange, o
         isSpeaking: isLocal ? localSpeakingRef.current : p.isSpeaking,
         videoTrack: videoPub?.track,
         cameraTrack: screenPub ? camPub?.track : undefined,
+        avatarFrame: isLocal ? me.avatar_frame : membersById[p.identity]?.avatar_frame || null,
       }
     })
     setParticipants(tiles)
@@ -4304,7 +4326,7 @@ function VoiceChannel({ allow, me, membersById, channel, onParticipantsChange, o
           el.muted = deafenedRef.current
           document.body.appendChild(el)
           const pv = participantVolumesRef.current[participant.identity] ?? 1
-          applyParticipantVolume(el, Math.max(0, voiceSettings.outputVolume * pv))
+          applyParticipantVolume(el, Math.max(0, voiceSettings.outputVolume * boostCurve(pv)))
           if (voiceSettings.outputDeviceId) applyParticipantSink(el, voiceSettings.outputDeviceId)
           attachedAudio.current.push(el)
           const list = participantAudioEls.current[participant.identity] || []

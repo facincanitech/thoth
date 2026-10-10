@@ -11,9 +11,10 @@ type Props = {
   style?: React.CSSProperties
   lazy?: boolean
   frame?: ProfileCosmetic | null
+  onClick?: () => void
 }
 
-export function AvatarBox({ src, id, fallbackLetter, className, style, lazy, frame }: Props) {
+export function AvatarBox({ src, id, fallbackLetter, className, style, lazy, frame, onClick }: Props) {
   const [failed, setFailed] = useState(false)
   const [frameFailed, setFrameFailed] = useState(false)
 
@@ -29,7 +30,7 @@ export function AvatarBox({ src, id, fallbackLetter, className, style, lazy, fra
   const frameUrl = resolveAssetUrl(frame?.asset_url)
 
   return (
-    <div className={`${className || ''}${frameUrl && !frameFailed ? ' avatar-has-frame' : ''}`} style={showImage ? style : { ...style, background: colorFromId(id), color: '#fff' }}>
+    <div className={`${className || ''}${frameUrl && !frameFailed ? ' avatar-has-frame' : ''}`} style={showImage ? style : { ...style, background: colorFromId(id), color: '#fff' }} onClick={onClick}>
       {showImage ? <img src={src!} alt="" loading={lazy ? 'lazy' : undefined} decoding="async" onError={() => setFailed(true)} /> : fallbackLetter}
       {frameUrl && !frameFailed && <img className="avatar-frame-decoration" src={frameUrl} alt="" aria-hidden="true" onError={() => setFrameFailed(true)} />}
     </div>
