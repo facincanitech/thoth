@@ -152,6 +152,7 @@ function mergePlayProfile(base: Profile, override: PlayProfile | null | undefine
     nameplate: override.nameplate,
     banner_color: override.banner_color || base.banner_color,
     banner_image_url: override.banner_image_url || base.banner_image_url,
+    banner_image_position: override.banner_image_position || base.banner_image_position,
     play_tags: override.tags || [],
   }
 }
@@ -3823,8 +3824,8 @@ function FullscreenOverlay({ name, track, onClose }: { name: string; track: Trac
   )
 }
 
-function VoiceTile({ p, avatarUrl, bannerColor, bannerImageUrl, startedAt, maximized, inPip, screenAudio, onFullscreen, onToggleMaximize, onVolumeMenu }: {
-  p: ParticipantTile; avatarUrl: string | null; bannerColor?: string | null; bannerImageUrl?: string | null
+function VoiceTile({ p, avatarUrl, bannerColor, bannerImageUrl, bannerImagePosition, startedAt, maximized, inPip, screenAudio, onFullscreen, onToggleMaximize, onVolumeMenu }: {
+  p: ParticipantTile; avatarUrl: string | null; bannerColor?: string | null; bannerImageUrl?: string | null; bannerImagePosition?: string | null
   startedAt?: number; maximized: boolean; inPip: boolean; screenAudio?: HTMLMediaElement
   onFullscreen: (id: string) => void; onTogglePip: (id: string) => void; onToggleMaximize: (id: string) => void
   onVolumeMenu: (id: string, x: number, y: number) => void
@@ -3868,7 +3869,7 @@ function VoiceTile({ p, avatarUrl, bannerColor, bannerImageUrl, startedAt, maxim
       </div>
       <div
         className="play-voice-tile-stage"
-        style={!showVideo ? (bannerImageUrl ? { backgroundImage: 'url(' + bannerImageUrl + ')', backgroundSize: 'cover', backgroundPosition: '50% 50%' } : { background: bannerColor || 'var(--bg-panel)' }) : undefined}
+        style={!showVideo ? (bannerImageUrl ? { backgroundImage: 'url(' + bannerImageUrl + ')', backgroundSize: 'cover', backgroundPosition: bannerImagePosition || '50% 50%' } : { background: bannerColor || 'var(--bg-panel)' }) : undefined}
         onClick={() => { if (showVideo && !ownScreen) onToggleMaximize(p.id) }}
         onContextMenu={(e) => { e.preventDefault(); onVolumeMenu(p.id, e.clientX, e.clientY) }}
       >
@@ -4653,6 +4654,7 @@ function VoiceChannel({ allow, me, membersById, channel, onParticipantsChange, o
                 avatarUrl={(p.isLocal ? me.avatar_url : membersById[p.id.replace(':cam', '')]?.avatar_url) || null}
                 bannerColor={(p.isLocal ? me.banner_color : membersById[p.id.replace(':cam', '')]?.banner_color) || null}
                 bannerImageUrl={(p.isLocal ? me.banner_image_url : membersById[p.id.replace(':cam', '')]?.banner_image_url) || null}
+                bannerImagePosition={(p.isLocal ? me.banner_image_position : membersById[p.id.replace(':cam', '')]?.banner_image_position) || null}
                 startedAt={shareStart.current[p.id.replace(':cam', '')]}
                 maximized={maximizedId === p.id}
                 inPip={pipIds.includes(p.id)}

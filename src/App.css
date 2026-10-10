@@ -291,7 +291,7 @@ body{
 /* Na lista de membros do servidor ("No servidor") a placa pode crescer e ocupar quase a linha
    toda (pedido do usuario), diferente do tamanho compacto padrao usado em outros lugares (ex:
    cabecalho do painel). */
-.play-member-row .play-identity-banner{flex:1 1 auto;min-width:0}
+.play-member-row .play-identity-banner{flex:1 1 auto!important;min-width:0}
 .play-member-row .play-identity-plate{flex:1 1 auto!important;width:auto;max-width:100%}
 /* As artes de placa (fogo, cristal etc.) tem uma margem transparente dentro do proprio PNG -
    com inset pequeno isso sobrava como uma borda cinza (o fundo de fallback aparecendo atraves
@@ -952,10 +952,12 @@ body{
   width:110px;height:110px;border-radius:22px;background:var(--line);color:var(--muted);
   display:grid;place-items:center;
 }
+/* Minimalista: so contorno + fundo cinza neutro (nao mais preenchido verde) - z-index acima da
+   moldura (.avatar-frame-decoration fica em z-index:2) pra nunca ficar escondido atras dela. */
 .account-avatar-edit{
-  position:absolute;right:10px;bottom:10px;width:30px;height:30px;border-radius:50%;
-  background:var(--green);color:var(--on-button,#fff);display:grid;place-items:center;
-  border:2px solid var(--bg-surface);
+  position:absolute;right:10px;bottom:10px;width:30px;height:30px;border-radius:50%;z-index:3;
+  background:rgb(50 55 64 / 82%);color:#fff;display:grid;place-items:center;
+  border:1.5px solid rgb(255 255 255 / 38%);
 }
 .profile-banner-preview{
   position:relative;width:100%;height:230px;border-radius:16px;background-size:cover;
@@ -2967,7 +2969,7 @@ html .desktop-window-shell.desktop-web-shell{
 /* Tamanho fixo pedido: altura igual a foto do contato (.msn-contact-avatar, 42px) e largura 6x
    isso (252px) - texto comprido ja trunca sozinho com reticencias (overflow:hidden;
    text-overflow:ellipsis logo abaixo), entao nao precisa limitar o tamanho do nome em JS. */
-.msn-contact-nameplate{display:inline-flex;flex:0 0 auto;width:252px;height:42px;box-sizing:border-box}
+.msn-contact-nameplate{display:inline-flex;align-items:center;flex:0 0 auto;width:252px;height:42px;box-sizing:border-box;background-size:170%!important;padding-left:22px!important}
 .chat-info .name .play-nameplate{display:inline-flex;height:24px;width:clamp(80px,14ch,135px);box-sizing:border-box}
 .chat-info .name .msn-contact-tag{flex:none;margin-right:0}
 
