@@ -4366,6 +4366,15 @@ function VoiceChannel({ allow, me, membersById, channel, onParticipantsChange, o
     onParticipantsChange(tiles.map((t) => ({ id: t.id, name: t.name, micOn: t.micOn, isScreen: t.isScreen, videoTrack: t.videoTrack, cameraTrack: t.cameraTrack })))
   }
 
+  // syncParticipants() so roda em eventos nativos do LiveKit (entrar/sair, mutar, etc) - trocar a
+  // moldura equipada no meio da chamada nao dispara nenhum desses eventos, entao o card no meio da
+  // tela ficava com a moldura antiga ate a proxima acao de voz. Mesmo padrao do fix do banner: refaz
+  // o snapshot sempre que a moldura de alguem muda, sem esperar o LiveKit avisar nada.
+  const avatarFramesKey = me.avatar_frame + '|' + Object.values(membersById).map((m) => m.avatar_frame || '').join(',')
+  useEffect(() => {
+    if (roomRef.current) syncParticipants(roomRef.current)
+  }, [avatarFramesKey])
+
   useEffect(() => {
     let cancelled = false
     const room = new Room()

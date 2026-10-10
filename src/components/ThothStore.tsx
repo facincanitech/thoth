@@ -3,8 +3,8 @@ import type { Profile } from '../types'
 import { supabase } from '../lib/supabase'
 import { getErrorMessage } from '../lib/errors'
 import {
-  activateStoreItem, deactivateStoreCosmetic, installStoreItem, loadInstalledIds, loadStoreItems, publishStoreItem,
-  uninstallStoreItem, uploadStoreAsset, type StoreItem, type StoreKind, type StoreManifest,
+  activateStoreItem, deactivateStoreCosmetic, deleteStoreItem, installStoreItem, loadInstalledIds, loadStoreItems, publishStoreItem,
+  uninstallStoreItem, updateStoreItem, uploadStoreAsset, type StoreItem, type StoreKind, type StoreManifest,
 } from '../lib/store'
 import { builtInSounds, builtInThemes, type BuiltInTheme } from '../lib/storeDefaults'
 import { applyCommunityTheme } from '../lib/store'
@@ -65,6 +65,8 @@ export function ThothStore({ me, mode = 'store', scope = 'all', onProfileChange,
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [creatorOpen, setCreatorOpen] = useState(false)
+  const [editingItem, setEditingItem] = useState<StoreItem | null>(null)
+  const [deletingItem, setDeletingItem] = useState<StoreItem | null>(null)
   const [botTarget, setBotTarget] = useState<Bot | null>(null)
   const [targets, setTargets] = useState<Target[]>([])
   const [busyId, setBusyId] = useState<string | null>(null)
@@ -163,6 +165,17 @@ export function ThothStore({ me, mode = 'store', scope = 'all', onProfileChange,
     finally { setBusyId(null) }
   }
 
+  async function confirmDeleteItem() {
+    if (!deletingItem) return
+    setBusyId(deletingItem.id); setError('')
+    try {
+      await deleteStoreItem(deletingItem.id)
+      setDeletingItem(null)
+      await reload()
+    } catch (cause) { setError(getErrorMessage(cause)) }
+    finally { setBusyId(null) }
+  }
+
   async function activateItem(item: StoreItem) {
     setBusyId(item.id); setError('')
     try {
@@ -231,7 +244,9 @@ export function ThothStore({ me, mode = 'store', scope = 'all', onProfileChange,
 
   const title = libraryOpen ? libraryCategory ? categories.find((entry) => entry.id === libraryCategory)?.label || 'Meus itens' : 'Meus itens' : category ? categories.find((entry) => entry.id === category)?.label || 'Loja' : sections.find((entry) => entry.id === section)?.label || 'Loja Thoth'
   const canCreate = !libraryOpen && !!category && category !== 'profile_name'
-  const visibleItems = libraryOpen ? items.filter((item) => installed.has(item.id)) : items
+  // Em "Meus itens" tambem mostra o que a propria pessoa criou mesmo sem ter instalado - sem isso,
+  // publicar algo e nunca "baixar" o proprio item escondia ele pra sempre de "editar/remover".
+  const visibleItems = libraryOpen ? items.filter((item) => installed.has(item.id) || item.creator_id === me.id) : items
 
   function openLibrary() { setLibraryCategory(null); setLibraryOpen(true) }
   function openSection(id: StoreSection | 'mine') {
@@ -280,7 +295,7 @@ export function ThothStore({ me, mode = 'store', scope = 'all', onProfileChange,
         {activeCategory === 'sound' && builtInSounds.map((sound) => <article className="store-card" key={sound.id}><div className="store-preview sound"><span className="store-preview-glyph">♫</span></div><div className="store-card-body"><span className="store-kind">SOM PADRÃO · {sound.type === 'message' ? 'MENSAGEM' : 'CHAMAR ATENÇÃO'}</span><h3>{sound.name}</h3><p>{sound.description}</p><div className="store-author">por Thoth Messenger</div><div className="store-card-actions"><button onClick={() => setPreview({ kind: 'sound', id: sound.id, name: sound.name, description: sound.description, soundUrl: `${import.meta.env.BASE_URL}${sound.url}` })}>Ouvir prévia</button></div></div></article>)}
         {activeCategory === 'wink' && WINKS.map((wink) => <article className="store-card" key={wink.id}><div className="store-preview wink"><span className="store-preview-glyph">{wink.emoji}</span></div><div className="store-card-body"><span className="store-kind">WINK PADRÃO</span><h3>{wink.label}</h3><p>Disponível para todos, sempre no seu acervo.</p><div className="store-author">por Thoth Messenger</div><div className="store-card-actions"><button onClick={() => playWinkEffect(wink.id)}>Ver prévia</button></div></div></article>)}
         {activeCategory === 'emoji' && <article className="store-card"><div className="store-preview emoji"><span className="store-preview-glyph">😀 💙 🎉</span></div><div className="store-card-body"><span className="store-kind">EMOJIS PADRÃO</span><h3>Emojis do Messenger</h3><p>A coleção que já vem no teclado de conversa.</p><div className="store-author">por Thoth Messenger · sempre disponível</div></div></article>}
-        {visibleItems.map((item) => <StoreCard key={item.id} item={item} desktop={desktopLayout} installed={installed.has(item.id)} busy={busyId === item.id} active={activeTheme === item.id || activeSounds.message === item.id || activeSounds.nudge === item.id || activeCosmetics.avatar_frame === item.id || activeCosmetics.nameplate === item.id || activeCosmetics.messenger_nameplate === item.id || activeCosmetics.profile_background === item.id} onToggle={() => toggleInstall(item)} onUse={() => toggleCosmetic(item)} onPreview={() => setPreview({ kind: item.kind as 'theme' | 'sound', id: item.id, name: item.name, description: item.description || '', item, colors: item.manifest, soundUrl: item.kind === 'sound' ? item.asset_url || undefined : undefined })} />)}
+        {visibleItems.map((item) => <StoreCard key={item.id} item={item} desktop={desktopLayout} installed={installed.has(item.id)} busy={busyId === item.id} active={activeTheme === item.id || activeSounds.message === item.id || activeSounds.nudge === item.id || activeCosmetics.avatar_frame === item.id || activeCosmetics.nameplate === item.id || activeCosmetics.messenger_nameplate === item.id || activeCosmetics.profile_background === item.id} isOwner={item.creator_id === me.id} onToggle={() => toggleInstall(item)} onUse={() => toggleCosmetic(item)} onPreview={() => setPreview({ kind: item.kind as 'theme' | 'sound', id: item.id, name: item.name, description: item.description || '', item, colors: item.manifest, soundUrl: item.kind === 'sound' ? item.asset_url || undefined : undefined })} onEdit={() => setEditingItem(item)} onDelete={() => setDeletingItem(item)} />)}
         {!visibleItems.length && !['theme', 'sound', 'wink', 'emoji'].includes(activeCategory || '') && <div className="store-empty">{libraryOpen ? 'Nada salvo nesta categoria ainda. Explore a Loja Thoth.' : 'Ainda não há itens nesta categoria.'}</div>}
       </div>}
       {preview && <div className="store-modal-backdrop" onMouseDown={() => setPreview(null)}><div className="store-modal store-use-preview" onMouseDown={(event) => event.stopPropagation()}>
@@ -289,6 +304,12 @@ export function ThothStore({ me, mode = 'store', scope = 'all', onProfileChange,
         <div className="store-preview-actions"><button className="secondary" onClick={() => setPreview(null)}>Fechar</button><button disabled={busyId === preview.id || (preview.kind === 'theme' ? activeTheme === preview.id : activeSounds[preview.item?.manifest.soundType === 'nudge' || preview.id === 'nudge' ? 'nudge' : 'message'] === preview.id)} onClick={async () => { if (preview.item) await activateItem(preview.item); else if (preview.kind === 'theme') await activateBuiltInTheme(preview.id as BuiltInTheme); else await activateBuiltInSound(preview.id as 'message' | 'nudge'); setPreview(null) }}>{(preview.kind === 'theme' ? activeTheme === preview.id : activeSounds[preview.item?.manifest.soundType === 'nudge' || preview.id === 'nudge' ? 'nudge' : 'message'] === preview.id) ? 'Em uso' : 'Usar'}</button></div>
       </div></div>}
       {creatorOpen && <CreatorModal me={me} initialKind={category === 'bot' || category === 'profile_name' || !category ? 'theme' : category} botSubmission={category === 'bot'} onClose={() => setCreatorOpen(false)} onDone={() => { setCreatorOpen(false); reload() }} />}
+      {editingItem && <CreatorModal me={me} initialKind={editingItem.kind} botSubmission={false} editItem={editingItem} onClose={() => setEditingItem(null)} onDone={() => { setEditingItem(null); reload() }} />}
+      {deletingItem && <div className="store-modal-backdrop" onMouseDown={() => setDeletingItem(null)}><div className="store-modal" onMouseDown={(event) => event.stopPropagation()}>
+        <button className="store-modal-close" onClick={() => setDeletingItem(null)}>×</button><span className="store-kicker">EXCLUIR</span><h2>Excluir "{deletingItem.name}"?</h2><p>Quem já instalou/equipou perde o acesso a esse item. Essa ação não pode ser desfeita.</p>
+        {error && <div className="store-error">{error}</div>}
+        <div className="store-preview-actions"><button className="secondary" onClick={() => setDeletingItem(null)}>Cancelar</button><button className="store-card-delete" disabled={busyId === deletingItem.id} onClick={confirmDeleteItem}>{busyId === deletingItem.id ? 'Excluindo…' : 'Excluir de vez'}</button></div>
+      </div></div>}
       {botTarget && <div className="store-modal-backdrop" onMouseDown={() => setBotTarget(null)}><div className="store-modal" onMouseDown={(event) => event.stopPropagation()}>
         <button className="store-modal-close" onClick={() => setBotTarget(null)}>×</button><span className="store-kicker">INSTALAR {botTarget.name.toUpperCase()}</span><h2>Onde ele vai morar?</h2>
         <p>Escolha um grupo do Messenger ou servidor do Play que você administra.</p>{error && <div className="store-error">{error}</div>}<div className="store-targets">
@@ -328,36 +349,51 @@ function ThemePreviewScene({ id, manifest, desktop, compact = false }: { id: str
   </div>
 }
 
-function StoreCard({ item, desktop, installed, busy, active, onToggle, onUse, onPreview }: { item: StoreItem; desktop: boolean; installed: boolean; busy: boolean; active: boolean; onToggle: () => void; onUse: () => void; onPreview: () => void }) {
+function StoreCard({ item, desktop, installed, busy, active, isOwner, onToggle, onUse, onPreview, onEdit, onDelete }: { item: StoreItem; desktop: boolean; installed: boolean; busy: boolean; active: boolean; isOwner: boolean; onToggle: () => void; onUse: () => void; onPreview: () => void; onEdit: () => void; onDelete: () => void }) {
   const previewStyle = item.kind === 'theme' ? {
     background: `linear-gradient(145deg, ${item.manifest.background || '#08131c'}, ${item.manifest.surface || '#172936'})`,
     color: String(item.manifest.text || '#fff'), '--card-accent': item.manifest.accent || '#22d3ee',
   } as CSSProperties : undefined
+  // O card da Loja ainda mostrava so a miniatura estatica (preview_url) pra sempre, mesmo em itens
+  // marcados como GIF animado - a troca por hover (igual NameplateArt/AvatarBox ja fazem) nunca
+  // tinha sido ligada aqui, entao o GIF "nao funcionava" na vitrine como o esperado.
+  const [thumbHovered, setThumbHovered] = useState(false)
+  const thumbAnimated = item.manifest.animated === true
+  const thumbSrc = resolveAssetUrl((thumbAnimated && thumbHovered ? item.asset_url : item.preview_url || item.asset_url) || item.asset_url)
   return <article className="store-card">
-    <div className={`store-preview ${item.kind}`} style={previewStyle}>
-      {item.kind === 'theme' ? <ThemePreviewScene id="community" manifest={item.manifest} desktop={desktop} compact /> : item.preview_url || item.asset_url ? <img src={resolveAssetUrl(item.preview_url || item.asset_url) || ''} alt="" /> : <span className="store-preview-glyph">{item.kind === 'sound' ? '♫' : item.kind === 'wink' ? '✦' : item.kind === 'emoji' ? '☺' : '▣'}</span>}
+    <div className={`store-preview ${item.kind}`} style={previewStyle} onMouseEnter={() => setThumbHovered(true)} onMouseLeave={() => setThumbHovered(false)}>
+      {item.kind === 'theme' ? <ThemePreviewScene id="community" manifest={item.manifest} desktop={desktop} compact /> : thumbSrc ? <img src={thumbSrc} alt="" /> : <span className="store-preview-glyph">{item.kind === 'sound' ? '♫' : item.kind === 'wink' ? '✦' : item.kind === 'emoji' ? '☺' : '▣'}</span>}
     </div>
     <div className="store-card-body"><span className="store-kind">{kindNames[item.kind]}</span><h3>{item.name}</h3><p>{item.description || 'Uma criação da comunidade Thoth.'}</p>
       <div className="store-author">{item.creator?.avatar_url ? <img src={item.creator.avatar_url} alt="" /> : <i /> }<span>por {item.creator?.display_name || item.creator?.username || 'comunidade'}</span></div>
       <div className="store-card-actions"><button className="secondary" disabled={busy || active} onClick={onToggle}>{installed ? 'Remover' : 'Baixar'}</button>{(item.kind === 'avatar_frame' || item.kind === 'nameplate' || item.kind === 'messenger_nameplate' || item.kind === 'profile_background') && <button disabled={busy} onClick={onUse}>{active ? 'Tirar' : 'Usar'}</button>}{(item.kind === 'theme' || item.kind === 'sound') && <button onClick={onPreview}>{item.kind === 'sound' ? 'Ouvir prévia' : 'Ver prévia'}</button>}</div>
+      {isOwner && <div className="store-card-actions store-card-owner-actions"><button className="secondary" disabled={busy} onClick={onEdit}>Editar</button><button className="secondary store-card-delete" disabled={busy} onClick={onDelete}>Excluir</button></div>}
       <small>{item.installs_count} instalações · {item.likes_count} curtidas</small>
     </div></article>
 }
 
-function CreatorModal({ me, initialKind, botSubmission, onClose, onDone }: { me: Profile; initialKind: StoreKind; botSubmission: boolean; onClose: () => void; onDone: () => void }) {
+function CreatorModal({ me, initialKind, botSubmission, editItem, onClose, onDone }: { me: Profile; initialKind: StoreKind; botSubmission: boolean; editItem?: StoreItem; onClose: () => void; onDone: () => void }) {
   // A categoria ja vem decidida por onde a pessoa clicou "Criar" (a loja so mostra o botao
-  // dentro de uma categoria especifica) - um seletor aqui so duplicava uma escolha obvia.
-  const kind = initialKind
-  const [name, setName] = useState('')
-  const [description, setDescription] = useState('')
+  // dentro de uma categoria especifica) - um seletor aqui so duplicava uma escolha obvia. Editando
+  // um item existente, a categoria e travada no kind original (nao da pra trocar o tipo do item).
+  const kind = editItem?.kind || initialKind
+  const [name, setName] = useState(editItem?.name || '')
+  const [description, setDescription] = useState(editItem?.description || '')
   const [file, setFile] = useState<File | null>(null)
   const [soundFile, setSoundFile] = useState<File | null>(null)
-  const [soundType, setSoundType] = useState<'message' | 'nudge'>('message')
-  const [colors, setColors] = useState({ primary: '#0b1720', accent: '#22d3ee', background: '#071017', surface: '#122531', text: '#f4fbff', muted: '#b4c3cc', incoming: '#173746', outgoing: '#164e63' })
+  const [soundType, setSoundType] = useState<'message' | 'nudge'>((editItem?.manifest.soundType as 'message' | 'nudge') || 'message')
+  const [colors, setColors] = useState(() => {
+    const base = { primary: '#0b1720', accent: '#22d3ee', background: '#071017', surface: '#122531', text: '#f4fbff', muted: '#b4c3cc', incoming: '#173746', outgoing: '#164e63' }
+    if (editItem?.kind !== 'theme') return base
+    const m = editItem.manifest
+    return { ...base, ...Object.fromEntries(Object.keys(base).map((key) => [key, typeof m[key] === 'string' ? m[key] as string : base[key as keyof typeof base]])) }
+  })
   const [busy, setBusy] = useState(false); const [error, setError] = useState('')
   const accepts = kind === 'sound' ? 'audio/*' : 'image/png,image/jpeg,image/webp,image/gif'
-  const needsFile = kind !== 'theme'
-  const help = useMemo(() => botSubmission ? 'Bots executam ações, então a publicação passa por revisão antes de entrar no catálogo.' : 'Você escolhe o nome; seu perfil aparece como autor em todos os aparelhos.', [botSubmission])
+  // Editando, o arquivo so e obrigatorio se o item nunca teve asset (nao deveria acontecer, mas
+  // nao trava a edicao por causa disso) - trocar o arquivo e sempre opcional, mantem o anterior.
+  const needsFile = kind !== 'theme' && !editItem?.asset_url
+  const help = useMemo(() => botSubmission ? 'Bots executam ações, então a publicação passa por revisão antes de entrar no catálogo.' : editItem ? 'Trocar o arquivo é opcional - sem escolher um novo, o atual continua valendo.' : 'Você escolhe o nome; seu perfil aparece como autor em todos os aparelhos.', [botSubmission, editItem])
 
   // Moldura/placa/fundo podem ser GIF animado e tem um recorte fixo quando exibidos (pilula
   // estreita, moldura de avatar etc.) - deixa arrastar a imagem dentro de uma previa pra escolher
@@ -365,19 +401,22 @@ function CreatorModal({ me, initialKind, botSubmission, onClose, onDone }: { me:
   // "achata" a imagem numa so frame, destruiria a animacao do GIF) - so guarda um offset em %,
   // aplicado via CSS na hora de exibir.
   const positionable = kind === 'nameplate' || kind === 'messenger_nameplate' || kind === 'avatar_frame' || kind === 'profile_background'
-  const isGif = file?.type === 'image/gif'
-  const [filePreviewUrl, setFilePreviewUrl] = useState<string | null>(null)
-  const [position, setPosition] = useState('50% 50%')
+  const isGif = file ? file.type === 'image/gif' : editItem?.manifest.animated === true
+  // Editando, parte da arte/posicao ja salva - arrastar pra reajustar funciona em cima do arquivo
+  // ja publicado, sem precisar escolher um novo (pedido explicito: "n tem um editar... nem no
+  // moldura nem no placa" pra mexer na posicao depois de criado).
+  const [filePreviewUrl, setFilePreviewUrl] = useState<string | null>(() => editItem ? resolveAssetUrl(editItem.asset_url) : null)
+  const [position, setPosition] = useState(typeof editItem?.manifest.position === 'string' ? editItem.manifest.position : '50% 50%')
   const previewBoxRef = useRef<HTMLDivElement>(null)
   const dragRef = useRef<{ startX: number; startY: number; startPosX: number; startPosY: number } | null>(null)
 
   useEffect(() => {
-    if (!file) { setFilePreviewUrl(null); return }
+    if (!file) { setFilePreviewUrl(editItem ? resolveAssetUrl(editItem.asset_url) : null); return }
     const url = URL.createObjectURL(file)
     setFilePreviewUrl(url)
     setPosition('50% 50%')
     return () => URL.revokeObjectURL(url)
-  }, [file])
+  }, [file, editItem])
 
   function parsePos(pos: string): [number, number] {
     const [x, y] = pos.split(' ').map((p) => parseFloat(p))
@@ -400,21 +439,41 @@ function CreatorModal({ me, initialKind, botSubmission, onClose, onDone }: { me:
   }
   function onPreviewPointerUp() { dragRef.current = null }
 
-  // GIF: extrai a primeira frame num canvas pra virar a miniatura estatica (preview_url) - o
-  // arquivo animado de verdade (asset_url) so toca no hover (ver NameplateArt). Extrair so da
-  // pra fazer com uma IMG de verdade carregada (nao funciona direto em cima do File/Blob).
-  function extractFirstFrame(url: string): Promise<Blob | null> {
+  // GIF: a pessoa escolhe o instante do quadro que vira miniatura estatica (preview_url) - o
+  // arquivo animado de verdade (asset_url) so toca no hover (ver NameplateArt/AvatarBox). Uma IMG
+  // carregada continua animando sozinha em segundo plano mesmo fora do DOM (Chrome/Edge); esperar
+  // X ms antes de desenhar no canvas equivale a avançar X ms na linha do tempo do GIF.
+  const [frameDelay, setFrameDelay] = useState(600)
+  const [capturedFrame, setCapturedFrame] = useState<{ blob: Blob; url: string } | null>(null)
+  // Fonte do quadro: arquivo novo escolhido, ou (editando sem trocar arquivo) o GIF ja publicado -
+  // assim da pra reescolher o quadro de uma placa/moldura antiga sem reenviar nada.
+  const frameSourceUrl = file ? URL.createObjectURL(file) : editItem?.asset_url ? resolveAssetUrl(editItem.asset_url) : null
+  async function captureFrame() {
+    if (!frameSourceUrl || !isGif) return
+    const blob = await extractFrameAt(frameSourceUrl, frameDelay)
+    if (!blob) return
+    setCapturedFrame((old) => { if (old) URL.revokeObjectURL(old.url); return { blob, url: URL.createObjectURL(blob) } })
+  }
+  useEffect(() => {
+    setCapturedFrame((old) => { if (old) URL.revokeObjectURL(old.url); return null })
+    if (frameSourceUrl && isGif) void captureFrame()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [file, editItem?.id])
+
+  function extractFrameAt(url: string, delayMs: number): Promise<Blob | null> {
     return new Promise((resolve) => {
       const img = new Image()
       img.crossOrigin = 'anonymous'
       img.onload = () => {
-        const canvas = document.createElement('canvas')
-        canvas.width = img.naturalWidth
-        canvas.height = img.naturalHeight
-        const ctx = canvas.getContext('2d')
-        if (!ctx) { resolve(null); return }
-        ctx.drawImage(img, 0, 0)
-        canvas.toBlob((blob) => resolve(blob), 'image/png')
+        setTimeout(() => {
+          const canvas = document.createElement('canvas')
+          canvas.width = img.naturalWidth
+          canvas.height = img.naturalHeight
+          const ctx = canvas.getContext('2d')
+          if (!ctx) { resolve(null); return }
+          ctx.drawImage(img, 0, 0)
+          canvas.toBlob((blob) => resolve(blob), 'image/png')
+        }, delayMs)
       }
       img.onerror = () => resolve(null)
       img.src = url
@@ -430,34 +489,40 @@ function CreatorModal({ me, initialKind, botSubmission, onClose, onDone }: { me:
         if (submissionError) throw submissionError
         onDone(); return
       }
-      const assetUrl = file ? await uploadStoreAsset(me.id, file) : null
-      const manifest: StoreManifest = kind === 'theme' ? { ...colors } : kind === 'sound' ? { soundType } : {}
-      if (kind === 'theme' && assetUrl) manifest.railImage = assetUrl
+      // Trocar arquivo e opcional ao editar - sem escolha nova, mantem o asset ja publicado.
+      const assetUrl = file ? await uploadStoreAsset(me.id, file) : editItem?.asset_url ?? null
+      const manifest: StoreManifest = { ...(editItem?.manifest || {}) }
+      if (kind === 'theme') Object.assign(manifest, colors)
+      if (kind === 'sound') manifest.soundType = soundType
+      if (kind === 'theme' && file && assetUrl) manifest.railImage = assetUrl
       if (kind === 'wink' && soundFile) manifest.soundUrl = await uploadStoreAsset(me.id, soundFile)
-      let previewUrl = kind === 'sound' ? null : assetUrl
+      let previewUrl = kind === 'sound' ? null : file ? assetUrl : editItem?.preview_url ?? assetUrl
       if (positionable) {
         manifest.position = position
         if (isGif && file) {
-          const frameBlob = await extractFirstFrame(URL.createObjectURL(file))
+          // Usa o quadro que a pessoa escolheu no seletor (capturedFrame); se por algum motivo
+          // ainda nao capturou nada (ex.: clicou em Publicar rapido demais), extrai na hora.
+          const frameBlob = capturedFrame?.blob || await extractFrameAt(URL.createObjectURL(file), frameDelay)
           if (frameBlob) {
             previewUrl = await uploadStoreAsset(me.id, new File([frameBlob], 'preview.png', { type: 'image/png' }))
             manifest.animated = true
           }
         }
       }
-      await publishStoreItem({ kind, name: name.trim(), description: description.trim(), creator_id: me.id, manifest, asset_url: assetUrl, preview_url: previewUrl })
+      if (editItem) await updateStoreItem(editItem.id, { name: name.trim(), description: description.trim(), manifest, asset_url: assetUrl, preview_url: previewUrl })
+      else await publishStoreItem({ kind, name: name.trim(), description: description.trim(), creator_id: me.id, manifest, asset_url: assetUrl, preview_url: previewUrl })
       onDone()
     } catch (cause) { setError(getErrorMessage(cause)) }
     finally { setBusy(false) }
   }
 
   return <div className="store-modal-backdrop" onMouseDown={onClose}><div className="store-modal" onMouseDown={(event) => event.stopPropagation()}>
-    <button className="store-modal-close" onClick={onClose}>×</button><span className="store-kicker">ESTÚDIO DA COMUNIDADE</span><h2>{botSubmission ? 'Enviar bot para análise' : `Criar ${kindNames[kind]}`}</h2><p>{help}</p>
+    <button className="store-modal-close" onClick={onClose}>×</button><span className="store-kicker">ESTÚDIO DA COMUNIDADE</span><h2>{botSubmission ? 'Enviar bot para análise' : editItem ? `Editar ${kindNames[kind]}` : `Criar ${kindNames[kind]}`}</h2><p>{help}</p>
     <label>Nome da criação<input maxLength={60} value={name} onChange={(event) => setName(event.target.value)} placeholder="Ex.: Noite em Neo Thoth" /></label>
     <label>Descrição<textarea maxLength={500} value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Conte a ideia e o que torna isso especial" /></label>
     {!botSubmission && kind === 'theme' && <><p className="store-color-help">Essas cores controlam áreas gerais do app; os temas oficiais ainda podem ter detalhes próprios.</p><div className="store-color-grid">{Object.entries(colors).map(([key, value]) => <label key={key}>{({ primary: 'Cor principal', accent: 'Destaque e botões', background: 'Fundo', surface: 'Painéis', text: 'Texto principal', muted: 'Texto secundário', incoming: 'Mensagem recebida', outgoing: 'Mensagem enviada' } as Record<string, string>)[key]}<input type="color" value={value} onChange={(event) => setColors((old) => ({ ...old, [key]: event.target.value }))} /></label>)}</div></>}
     {!botSubmission && kind === 'sound' && <label>Usar para<select value={soundType} onChange={(event) => setSoundType(event.target.value as 'message' | 'nudge')}><option value="message">Nova mensagem</option><option value="nudge">Chamar atenção</option></select></label>}
-    {!botSubmission && (needsFile || kind === 'theme') && <label>{kind === 'theme' ? 'Imagem da barra/fundo (opcional)' : 'Arquivo (aceita GIF animado)'}<input type="file" accept={accepts} onChange={(event) => setFile(event.target.files?.[0] || null)} /></label>}
+    {!botSubmission && <label>{kind === 'theme' ? 'Imagem da barra/fundo (opcional)' : editItem ? 'Trocar arquivo (opcional, aceita GIF animado)' : 'Arquivo (aceita GIF animado)'}<input type="file" accept={accepts} onChange={(event) => setFile(event.target.files?.[0] || null)} /></label>}
     {!botSubmission && positionable && filePreviewUrl && (
       <div className="store-position-field">
         <label>Posição {isGif && <em className="store-gif-badge">GIF - só anima no hover</em>}</label>
@@ -473,7 +538,15 @@ function CreatorModal({ me, initialKind, botSubmission, onClose, onDone }: { me:
         <small>Arrasta a imagem pra ajustar o enquadramento</small>
       </div>
     )}
+    {!botSubmission && isGif && frameSourceUrl && (
+      <div className="store-position-field">
+        <label>Miniatura do GIF (quando ele não está animando)</label>
+        {capturedFrame && <img className="store-frame-preview" src={capturedFrame.url} alt="" />}
+        <input type="range" min={0} max={3000} step={100} value={frameDelay} onChange={(event) => setFrameDelay(Number(event.target.value))} onMouseUp={captureFrame} onTouchEnd={captureFrame} />
+        <small>Arrasta pra escolher o instante do gif que vira a miniatura parada</small>
+      </div>
+    )}
     {!botSubmission && kind === 'wink' && <label>Som do wink (opcional)<input type="file" accept="audio/*" onChange={(event) => setSoundFile(event.target.files?.[0] || null)} /></label>}
-    {error && <div className="store-error">{error}</div>}<button className="store-publish" disabled={busy} onClick={submit}>{busy ? 'Publicando…' : botSubmission ? 'Enviar para análise' : 'Publicar na loja'}</button>
+    {error && <div className="store-error">{error}</div>}<button className="store-publish" disabled={busy} onClick={submit}>{busy ? (editItem ? 'Salvando…' : 'Publicando…') : botSubmission ? 'Enviar para análise' : editItem ? 'Salvar alterações' : 'Publicar na loja'}</button>
   </div></div>
 }

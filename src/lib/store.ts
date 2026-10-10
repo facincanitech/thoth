@@ -105,6 +105,18 @@ export async function publishStoreItem(input: Pick<StoreItem, 'kind' | 'name' | 
   return data as StoreItem
 }
 
+// RLS + grant de coluna (098_store_hardening.sql) so deixam o autor editar estes campos - status,
+// contadores e creator_id continuam travados mesmo que o cliente tente mandar.
+export async function updateStoreItem(itemId: string, patch: Pick<Partial<StoreItem>, 'name' | 'description' | 'manifest' | 'preview_url' | 'asset_url'>) {
+  const { error } = await supabase.from('store_items').update({ ...patch, updated_at: new Date().toISOString() }).eq('id', itemId)
+  if (error) throw error
+}
+
+export async function deleteStoreItem(itemId: string) {
+  const { error } = await supabase.from('store_items').delete().eq('id', itemId)
+  if (error) throw error
+}
+
 // Molduras/placas podem ser GIF animado - por padrao so mostra a primeira frame (preview_url,
 // estatica, gerada no momento da criacao) e so anima de verdade no hover (ver NameplateArt).
 // Guarda os campos extras no cosmetico equipado pra nao precisar voltar no store_items toda vez
