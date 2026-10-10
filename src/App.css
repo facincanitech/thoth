@@ -2938,7 +2938,12 @@ html .desktop-window-shell.desktop-web-shell{
    (.play-identity-plate, ~105-145px) - sem essa mesma largura travada, no Messenger o nome
    podia esticar bem mais, deixando a imagem de fundo (background-size:cover) cortada/zoom
    estranho. Trava na mesma proporcao do Play. */
-.msn-contact-nameplate{display:inline-flex;width:clamp(90px,16ch,145px);height:26px;box-sizing:border-box;flex:0 0 auto}
+/* Na lista de contatos a placa pode crescer pra preencher a linha (estilo Discord, referencia
+   do usuario) - flex:1 ocupa o espaco disponivel na linha sem encostar no avatar (que e um item
+   irmao separado, fora deste flex) nem sair da borda (o pai/.msn-contact-info ja trava a largura
+   com min-width:0 e a linha inteira nunca estoura o card). Minimo garante que nomes curtos nao
+   fiquem minusculos. */
+.msn-contact-nameplate{display:inline-flex;flex:1 1 auto;min-width:90px;max-width:260px;width:auto;height:26px;box-sizing:border-box}
 .chat-info .name .play-nameplate{display:inline-flex;height:24px;width:clamp(80px,14ch,135px);box-sizing:border-box}
 .chat-info .name .msn-contact-tag{flex:none;margin-right:0}
 
